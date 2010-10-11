@@ -51,6 +51,7 @@ class SocketIOServer(WSGIServer):
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def handle(self, socket, address):
+        print "new connection"
         handler = self.handler_class(socket, address, self)
         self.set_environ({'socketio': SocketIOHandler(handler)})
         handler.handle()
@@ -74,8 +75,8 @@ class XHRPollingHandler(WSGIHandler):
         else:
             print "wee", data
 
-        self.socket.shutdown(True)
-        self.socket.close()
+        #self.socket.shutdown(True)
+        #self.socket.close()
 
     def handle_post_response(self):
         self.close_connection = True
@@ -176,7 +177,7 @@ class Handler(WSGIHandler):
         elif request_method == "POST":
             self.handle_post_response()
 
-
+        return
 
 
         # Execute protocol specific tasks
