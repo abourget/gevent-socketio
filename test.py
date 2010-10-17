@@ -4,41 +4,6 @@ from gevent import pywsgi
 from gevent.event import AsyncResult
 from geventwebsocket.handler import WebSocketHandler
 
-def app(environ, start_response):
-    if environ["PATH_INFO"].startswith("/socket.io/xhr-polling/"):
-        start_response("200 OK", [("Content-Type", "text/plain; charset=UTF-8")])
-        return [""]
-    else:
-        start_response("200 OK", [("Content-Type", "text/plain; charset=UTF-8")])
-        return ["blaat"]
-
-
-# server = pywsgi.WSGIServer(('127.0.0.1', 8080), app,
-#         handler_class=WebSocketHandler)
-# server.serve_forever()
-#
-# Palmade::SocketIoRack::Base
-#   app_base: on_connect, on_message
-#
-# Palmade::SocketIoRack::Middleware
-#   resources: /firehose
-#
-# Palmade::SocketIoRack::EchoResource:
-#   /echo
-#
-# io.listen (../)
-# io.on("connection", function(client) {
-#   client.send()
-#   client.broadcast()
-#   client.on("message") {
-#     client.broadcast(message)
-#   }
-#   client.on("disconnect") {
-#     client.broadcast()
-#   }
-# }
-# URLS: /{transport_type}/{session_id}/
-
 from gevent.server import StreamServer
 from gevent.pywsgi import WSGIHandler, WSGIServer
 
@@ -51,51 +16,55 @@ class SocketIOServer(WSGIServer):
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def handle(self, socket, address):
+        print "new connection"
         handler = self.handler_class(socket, address, self)
         self.set_environ({'socketio': SocketIOHandler(handler)})
         handler.handle()
+        print "end of connection"
 
 
 class XHRPollingHandler(WSGIHandler):
     def handle_get_response(self):
         data = None
+        self.status = "200 OK"
 
-        with gevent.Timeout(5, False):
-            data = self.rfile.readline()
+        #towrite = [
+        #    '%s %s\r\n' % (self.request_version, "200 OK"),
+        #    "Access-Control-Allow-Origin: *\r\n",
+        #]
+        self.start_response("200 OK", [("Access-Control-Allow-Origin", "*"),])
 
-        if data is None or len(data) == 0:
-            self.close_connection = True
-            hb=''
-            self.start_response("200 OK", [
-                ("Content-Type", "text/plain; charset=UTF-8"),
-                ("Content-Length", len(hb))
-            ])
-            self.write(hb)
-        else:
-            print "wee", data
+        print "wrote header"
 
-        self.socket.shutdown(True)
-        self.socket.close()
+        gevent.sleep(5)
+        self.write_headers([
+            ("Connection", "close"),
+            ("Content-Type", "text/plain; charset=UTF-8"),
+            ("Content-Length", '0'),
+        ])
+        self.write("\r\n")
+        self.close_connection = True
 
     def handle_post_response(self):
         self.close_connection = True
-# FIXME something blocks this readline
-        data = self.rfile.readline()
+        data = self.wsgi_input.readline()
         print "POST data", data
 
+        self.start_response("200 OK", [("Access-Control-Allow-Origin", "*"),])
 
-        hb = 'ok'
-        self.start_response("200 OK", [
+        print "wrote header"
+
+        self.write_headers([
+            ("Connection", "close"),
             ("Content-Type", "text/plain; charset=UTF-8"),
-            ("Content-Length", len(hb))
+            ("Content-Length", '2'),
         ])
-        self.write(hb)
+        self.write("\r\nok\r\n")
+        self.close_connection = True
 
-        self.socket.shutdown(True)
-        self.socket.close()
 
-    def write(self, data):
-        self.wfile.writelines(data)
+    #def write(self, data):
+    #    self.wfile.writelines(data)
 
     def start_response(self, status, headers, exc_info=None):
         self.status = status
@@ -106,11 +75,19 @@ class XHRPollingHandler(WSGIHandler):
         for header in headers:
             towrite.append("%s: %s\r\n" % header)
 
-        towrite.append("\r\n")
+        #towrite.append("\r\n")
         self.wfile.writelines(towrite)
+
         self.headers_sent = True
 
+    def write_headers(self, headers):
+        towrite = []
 
+        for header in headers:
+            towrite.append("%s: %s\r\n" % header)
+
+        towrite.append("\r\n")
+        self.wfile.writelines(towrite)
 
         #self.result = self.application(self.environ, self.start_response)
 
@@ -129,6 +106,12 @@ class Handler(WSGIHandler):
     }
 
     def handle_one_response(self):
+        self.status = None
+        self.headers_sent = False
+        self.result = None
+        self.response_length = 0
+        self.response_use_chunked = False
+
         path = self.environ.get('PATH_INFO')
         parts = Handler.path_re.match(path)
 
@@ -158,29 +141,29 @@ class Handler(WSGIHandler):
 
                 message = self.environ['socketio']._encode(session.session_id)
                 self.start_response("200 OK", [
+                    ("Connection", "close"),
+                    ("Access-Control-Allow-Origin", "*"),
                     ("Content-Type", "text/plain; charset=UTF-8"),
-                    ("Content-Length", len(message))
+                    ("Content-Length", len(message)),
                 ])
-                self.write(message)
-                self.close_connection = True
+                self.write("\r\n" + message)
+                self.close_connection = 1
             else:
                 session = self.server.sessions.get(session_id)
 
                 if session is None:
                     print "Close connection"
                     self.close_connection = True
-                    return
+                else:
+                    print "eeej?"
+                    self.handle_get_response()
 
-            self.handle_get_response()
 
         elif request_method == "POST":
+            self.close_connection = True
             self.handle_post_response()
 
 
-
-
-        # Execute protocol specific tasks
-        #return super(protocol, self).handle_one_response()
 
 MSG_FRAME = "~m~"
 HEARTBEAT_FRAME = "~h~"
