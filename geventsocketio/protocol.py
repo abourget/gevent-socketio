@@ -1,5 +1,3 @@
-import random
-
 MSG_FRAME = "~m~"
 HEARTBEAT_FRAME = "~h~"
 JSON_FRAME = "~j~"
@@ -44,11 +42,3 @@ class SocketIOProtocol(object):
             return messages
         else:
             return messages
-
-
-class Session(object):
-    def __init__(self, session_id=None):
-        if session_id is None:
-            self.session_id = str(random.random())[2:]
-        else:
-            self.session_id = session_id

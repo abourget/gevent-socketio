@@ -1,3 +1,5 @@
+import random
+
 from gevent.pywsgi import WSGIServer
 from geventsocketio.protocol import SocketIOProtocol
 
@@ -11,3 +13,25 @@ class SocketIOServer(WSGIServer):
         handler = self.handler_class(socket, address, self)
         self.set_environ({'socketio': SocketIOProtocol(handler)})
         handler.handle()
+
+    def get_session(self, session_id):
+        session = self.sessions.get(session_id, Session())
+
+        if session.session_id in self.sessions:
+            session.incr_hits()
+            return session
+        else:
+            self.sessions[session.session_id] = session
+            return session
+
+
+class Session(object):
+    def __init__(self):
+        self.session_id = str(random.random())[2:]
+        self.hits = 0
+
+    def incr_hits(self):
+        self.hits += 1
+
+    def is_new(self):
+        return self.hits == 0

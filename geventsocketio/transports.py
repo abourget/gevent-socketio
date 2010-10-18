@@ -1,35 +1,29 @@
 import gevent
 
 
-class XHRPollingTransport(object):
+from gevent.pywsgi import WSGIHandler
+class XHRPollingTransport(WSGIHandler):
     def __init__(self, handler):
         self.handler = handler
 
     def handle_get_response(self):
-        self.handler.start_response("200 OK", [("Access-Control-Allow-Origin", "*"),])
-
-        print "wrote header"
 
         gevent.sleep(5)
-        self.handler.write_more_headers([
+        self.handler.start_response("200 OK", [
+            ("Access-Control-Allow-Origin", "*"),
             ("Connection", "close"),
             ("Content-Type", "text/plain; charset=UTF-8"),
-            ("Content-Length", '0'),
+            ("Content-Length", 0),
         ])
-        self.handler.write("\r\n")
-        self.handler.close_connection = True
+        self.handler.write("")
 
     def handle_post_response(self):
-        #data = self.handler.wsgi_input.readline()
+        data = self.handler.wsgi_input.readline()
         print "POST data", data
-        #self.handler.socketio_connection = False
-        self.handler.start_response("200 OK", [("Access-Control-Allow-Origin", "*"),])
-
-        print "wrote header"
-
-        self.handler.write_more_headers([
+        self.handler.start_response("200 OK", [
+            ("Access-Control-Allow-Origin", "*"),
             ("Connection", "close"),
             ("Content-Type", "text/plain; charset=UTF-8"),
-            ("Content-Length", '2'),
+            ("Content-Length", 2),
         ])
-        self.handler.write("\r\nok\r\n")
+        self.handler.write("ok")

@@ -1,8 +1,6 @@
 import re
 from gevent.pywsgi import WSGIHandler
 from geventsocketio import transports
-from geventsocketio.protocol import Session
-
 
 class SocketIOHandler(WSGIHandler):
     path_re = re.compile(r"^/(?P<resource>[^/]+)/(?P<transport>[^/]+)/(?P<session_id>[^/]*)/?(?P<rest>.*)$")
@@ -51,61 +49,23 @@ class SocketIOHandler(WSGIHandler):
         self.transport = transport(self)
 
         print request_method
+        session = self.server.get_session(session_id)
 
-        if request_method == "GET":
-            if session_id == '':
-                # Create a new session and close connection
-                session = Session()
-                self.server.sessions[session.session_id] = session
+        if session.is_new():
+            session_id = self.environ['socketio']._encode(session.session_id)
+            self.start_response("200 OK", [
+                ("Access-Control-Allow-Origin", "*"),
+                ("Connection", "close"),
+                ("Content-Type", "text/plain; charset=UTF-8"),
+                ("Content-Length", len(session_id)),
+            ])
+            self.write(session_id)
 
-                message = self.environ['socketio']._encode(session.session_id)
-                self.start_response("200 OK", [
-                    ("Connection", "close"),
-                    ("Access-Control-Allow-Origin", "*"),
-                    ("Content-Type", "text/plain; charset=UTF-8"),
-                    ("Content-Length", len(message)),
-                ])
-                self.write(message)
-            else:
-                # Session has been found, handle this request using a Socket.IO transport
-                self.socketio_connection = True
-                session = self.server.sessions.get(session_id)
-
-                if session is None:
-                    print "Close connection"
-                    self.close_connection = True
-                else:
-                    print "eeej?"
-                    self.transport.handle_get_response()
-
+        elif request_method == "GET":
+            self.transport.handle_get_response()
 
         elif request_method == "POST":
-            self.close_connection = True
-            #self.transport.handle_post_response()
+            self.transport.handle_post_response()
 
-        self.socketio_connection = False
-
-    def start_response(self, status, headers, exc_info=None):
-        if self.socketio_connection:
-            self.status = status
-
-            towrite = []
-            towrite.append('%s %s\r\n' % (self.request_version, self.status))
-
-            for header in headers:
-                towrite.append("%s: %s\r\n" % header)
-
-            self.wfile.writelines(towrite)
-            self.headers_sent = True
         else:
-            super(SocketIOHandler, self).start_response(status, headers, exc_info)
-
-    def write_more_headers(self, headers):
-        towrite = []
-
-        for header in headers:
-            towrite.append("%s: %s\r\n" % header)
-
-        towrite.append("\r\n")
-        self.wfile.writelines(towrite)
-
+            raise Exception("No support for method: " + request_method)
