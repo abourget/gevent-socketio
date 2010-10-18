@@ -9,6 +9,8 @@ from geventsocketio.protocol import SocketIOProtocol
 class SocketIOServer(WSGIServer):
     def __init__(self, *args, **kwargs):
         self.sessions = {}
+        self.resource = kwargs['resource']
+        del kwargs['resource'] # FIXME : hack
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def handle(self, socket, address):
@@ -30,6 +32,7 @@ class SocketIOServer(WSGIServer):
 class Session(object):
     def __init__(self):
         self.session_id = str(random.random())[2:]
+        self.write_queue = Queue()
         self.messages = Queue()
         self.hits = 0
 

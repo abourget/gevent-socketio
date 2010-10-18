@@ -7,7 +7,7 @@ class XHRPollingTransport(object):
 
     def handle_get_response(self, session):
         try:
-            message = session.messages.get(timeout=5.0)
+            message = session.write_queue.get(timeout=5.0)
             message = self.handler._encode(message)
         except Empty:
             message = ""

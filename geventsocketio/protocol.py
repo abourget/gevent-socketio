@@ -5,15 +5,16 @@ JSON_FRAME = "~j~"
 class SocketIOProtocol(object):
     def __init__(self, handler):
         self.handler = handler
+        self.session = None
 
-    def send(self, message, skip_queue=True):
+    def send(self, message, skip_queue=False):
         if skip_queue:
-            self.handler._send(self._encode(message))
-        else:
             pass
+        else:
+            self.session.write_queue.put_nowait(message)
 
     def wait(self):
-        return self._decode(self.handler._wait())
+        return self.session.messages.get()
 
     def _encode(self, message):
         return MSG_FRAME + str(len(message)) + MSG_FRAME + message

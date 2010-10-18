@@ -35,21 +35,22 @@ class SocketIOHandler(WSGIHandler):
             parts = parts.groupdict()
             print parts
         else:
-            print "closed"
-            self.close_connection = True
-            return
+            return super(SocketIOHandler, self).handle_one_response()
 
         resource = parts.get('resource')
         transport = SocketIOHandler.handler_types.get(parts.get('transport'))
         session_id = parts.get('session_id')
         request_method = self.environ.get("REQUEST_METHOD")
 
-        if not transport:
+        if resource != self.server.resource or not transport:
+            print "other resource"
             return super(SocketIOHandler, self).handle_one_response()
+
         self.transport = transport(self)
 
         print request_method
         session = self.server.get_session(session_id)
+        self.environ['socketio'].session = session
 
         if session.is_new():
             session_id = self._encode(session.session_id)
@@ -69,6 +70,8 @@ class SocketIOHandler(WSGIHandler):
 
         else:
             raise Exception("No support for such method: " + request_method)
+
+        self.application(self.environ, lambda x: x())
 
     def _encode(self, data):
         return self.environ['socketio']._encode(data)
