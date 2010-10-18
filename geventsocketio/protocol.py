@@ -21,16 +21,16 @@ class SocketIOProtocol(object):
     def _decode(self, data):
         messages = []
         #data.encode('utf-8')
-        if data is not None:
+        if data:
             while len(data) != 0:
-                if messages[0:3] == MSG_FRAME:
+                if data[0:3] == MSG_FRAME:
                     null, size, data = data.split(MSG_FRAME, 2)
                     size = int(size)
 
                     frame_type = data[0:3]
                     if frame_type == JSON_FRAME:
                         pass # Do some json parsing of data[3:size]
-                    elif frame_type == HFRAME:
+                    elif frame_type == HEARTBEAT_FRAME:
                         pass # let the caller process the message?
                     else:
                         messages.append(data[0:size])

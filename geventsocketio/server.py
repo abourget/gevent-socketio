@@ -1,7 +1,9 @@
 import random
 
 from gevent.pywsgi import WSGIServer
+from gevent.queue import Queue
 from geventsocketio.protocol import SocketIOProtocol
+
 
 
 class SocketIOServer(WSGIServer):
@@ -28,6 +30,7 @@ class SocketIOServer(WSGIServer):
 class Session(object):
     def __init__(self):
         self.session_id = str(random.random())[2:]
+        self.messages = Queue()
         self.hits = 0
 
     def incr_hits(self):

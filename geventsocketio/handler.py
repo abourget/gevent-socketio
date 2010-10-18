@@ -52,7 +52,7 @@ class SocketIOHandler(WSGIHandler):
         session = self.server.get_session(session_id)
 
         if session.is_new():
-            session_id = self.environ['socketio']._encode(session.session_id)
+            session_id = self._encode(session.session_id)
             self.start_response("200 OK", [
                 ("Access-Control-Allow-Origin", "*"),
                 ("Connection", "close"),
@@ -62,10 +62,16 @@ class SocketIOHandler(WSGIHandler):
             self.write(session_id)
 
         elif request_method == "GET":
-            self.transport.handle_get_response()
+            self.transport.handle_get_response(session)
 
         elif request_method == "POST":
-            self.transport.handle_post_response()
+            self.transport.handle_post_response(session)
 
         else:
-            raise Exception("No support for method: " + request_method)
+            raise Exception("No support for such method: " + request_method)
+
+    def _encode(self, data):
+        return self.environ['socketio']._encode(data)
+
+    def _decode(self, data):
+        return self.environ['socketio']._decode(data)
