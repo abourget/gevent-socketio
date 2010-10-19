@@ -16,6 +16,11 @@ class SocketIOProtocol(object):
     def wait(self):
         return self.session.messages.get()
 
+    def broadcast(self, message, exceptions=[]):
+        for session_id, session in self.handler.server.sessions.iteritems():
+            if self.session != session:
+                session.write_queue.put_nowait(message)
+
     def _encode(self, message):
         return MSG_FRAME + str(len(message)) + MSG_FRAME + message
 

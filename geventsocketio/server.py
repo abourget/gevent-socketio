@@ -10,7 +10,7 @@ class SocketIOServer(WSGIServer):
     def __init__(self, *args, **kwargs):
         self.sessions = {}
         self.resource = kwargs['resource']
-        del kwargs['resource'] # FIXME : hack
+        del kwargs['resource'] # FIXME : quick hack
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def handle(self, socket, address):
