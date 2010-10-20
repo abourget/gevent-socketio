@@ -21,12 +21,11 @@ class SocketIOServer(WSGIServer):
     def get_session(self, session_id):
         session = self.sessions.get(session_id, Session())
 
-        if session.session_id in self.sessions:
-            session.incr_hits()
-            return session
-        else:
+        if session.is_new():
             self.sessions[session.session_id] = session
-            return session
+
+        session.incr_hits()
+        return session
 
 
 class Session(object):
