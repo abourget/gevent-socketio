@@ -34,3 +34,7 @@ class XHRPollingTransport(object):
             ("Content-Length", 2),
         ])
         self.handler.write("ok")
+
+
+class WebsocketTransport(object):
+    pass

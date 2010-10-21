@@ -19,12 +19,14 @@ class SocketIOServer(WSGIServer):
         handler.handle()
 
     def get_session(self, session_id):
-        session = self.sessions.get(session_id, Session())
+        session = self.sessions.get(session_id)
 
-        if session.is_new():
+        if session is None:
+            session = Session()
             self.sessions[session.session_id] = session
+        else:
+            session.incr_hits()
 
-        session.incr_hits()
         return session
 
 
