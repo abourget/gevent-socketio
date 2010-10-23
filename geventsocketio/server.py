@@ -18,7 +18,7 @@ class SocketIOServer(WSGIServer):
         self.set_environ({'socketio': SocketIOProtocol(handler)})
         handler.handle()
 
-    def get_session(self, session_id):
+    def get_session(self, session_id=''):
         session = self.sessions.get(session_id)
 
         if session is None:

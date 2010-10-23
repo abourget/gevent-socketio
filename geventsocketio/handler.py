@@ -1,12 +1,14 @@
 import re
+import gevent
 from gevent.pywsgi import WSGIHandler
 from geventsocketio import transports
+from geventwebsocket.handler import WebSocketHandler
 
 class SocketIOHandler(WSGIHandler):
-    path_re = re.compile(r"^/(?P<resource>[^/]+)/(?P<transport>[^/]+)/(?P<session_id>[^/]*)/?(?P<rest>.*)$")
+    path_re = re.compile(r"^/(?P<resource>[^/]+)/(?P<transport>[^/]+)(/(?P<session_id>[^/]*)/?(?P<rest>.*))?$")
 
     handler_types = {
-        'websocket': 'WebSocketHandler',
+        'websocket': transports.WebsocketTransport,
         'wsgi': WSGIHandler,
         'flashsocket': 'FlashSocketHandler',
         'htmlfile': 'HTMLFileHandler',
@@ -46,35 +48,17 @@ class SocketIOHandler(WSGIHandler):
             print "other resource"
             return super(SocketIOHandler, self).handle_one_response()
 
-        self.transport = transport(self)
-
-        print request_method
-        session = self.server.get_session(session_id)
-        self.environ['socketio'].session = session
-
-        if session.is_new():
-            session_id = self._encode(session.session_id)
-            self.start_response("200 OK", [
-                ("Access-Control-Allow-Origin", "*"),
-                ("Connection", "close"),
-                ("Content-Type", "text/plain; charset=UTF-8"),
-                ("Content-Length", len(session_id)),
-            ])
-            self.write(session_id)
-
-        elif request_method == "GET":
-            self.transport.handle_get_response(session)
-
-        elif request_method == "POST":
-            self.transport.handle_post_response(session)
-
+        if transport == transports.WebsocketTransport:
+            self.__class__ = WebSocketHandler
+            self.handle_one_response(call_wsgi_app=False)
+            session = self.server.get_session()
         else:
-            raise Exception("No support for such method: " + request_method)
+            session = self.server.get_session(session_id)
+
+        self.environ['socketio'].session = session
+        self.transport = transport(self)
+        jobs = self.transport.connect(session, request_method)
 
         self.application(self.environ, lambda x: x())
 
-    def _encode(self, data):
-        return self.environ['socketio']._encode(data)
-
-    def _decode(self, data):
-        return self.environ['socketio']._decode(data)
+        gevent.joinall(jobs)

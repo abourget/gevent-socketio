@@ -9,7 +9,8 @@ def app(environ, start_response):
     if environ['PATH_INFO'].startswith("/test/"):
         message = socketio.wait()
         message = """~j~{"message":["9923330412711948","%s"]}""" % message
-        socketio.broadcast(message)
+        socketio.send(message)
+        return []
     else:
         start_response("500 Server Error", [("Content-Type", "text/plain")])
         return ["root"]
