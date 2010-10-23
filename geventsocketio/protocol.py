@@ -1,3 +1,9 @@
+try:
+    import simplejson as json
+except ImportError:
+    import json
+
+
 MSG_FRAME = "~m~"
 HEARTBEAT_FRAME = "~h~"
 JSON_FRAME = "~j~"
@@ -7,22 +13,41 @@ class SocketIOProtocol(object):
         self.handler = handler
         self.session = None
 
-    def send(self, message, skip_queue=False):
-        if skip_queue:
-            pass
+    def send(self, message, destination=None):
+        if destination is None:
+            self._write(message, session)
         else:
-            self.session.write_queue.put_nowait(message)
+            dst = self.handler.server.sessions.get(destination)
+            self._write(message, dst)
 
     def wait(self):
         return self.session.messages.get()
 
     def broadcast(self, message, exceptions=[]):
+        exceptions.append(self.session.session_id)
+
         for session_id, session in self.handler.server.sessions.iteritems():
-            if self.session != session:
-                session.write_queue.put_nowait(message)
+            if session_id not in exceptions:
+                self._write(message, session)
+
+    def _write(self, message, session=None):
+        if session is None:
+            raise Exception("No client with that session exists")
+        else:
+            session.write_queue.put_nowait(message)
 
     def _encode(self, message):
-        return MSG_FRAME + str(len(message)) + MSG_FRAME + message
+        encoded_msg = ''
+
+        #if isinstance(message, list):
+        #    for msg in message:
+        #        encoded_msg += self._encode(msg)
+        if isinstance(message, basestring):
+            encoded_msg = message
+        elif isinstance(message, (object, dict)):
+            encoded_msg += self._encode(JSON_FRAME + json.dumps(message))
+
+        return MSG_FRAME + str(len(encoded_msg)) + MSG_FRAME + encoded_msg
 
     def _decode(self, data):
         messages = []
@@ -35,7 +60,7 @@ class SocketIOProtocol(object):
 
                     frame_type = data[0:3]
                     if frame_type == JSON_FRAME:
-                        pass # Do some json parsing of data[3:size]
+                        messages.append(json.loads(data[0:size]))
                     elif frame_type == HEARTBEAT_FRAME:
                         pass # let the caller process the message?
                     else:

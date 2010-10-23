@@ -78,17 +78,23 @@ class WebsocketTransport(BaseTransport):
 
         def write():
             while True:
+                print "write", session.session_id
+
                 message = session.write_queue.get()
                 if message is None:
+                    print "write break", session.session_id
                     break
 
                 ws.send(self.encode(message))
 
         def read():
             while True:
+                print "read", session.session_id
+
                 message = ws.wait()
                 if message is None:
-                    session.write_queue.put_nowait(None)
+                    print "read break", session.session_id
+                    session.write_queue.put_nowait(None) # stop write greenlet
                     break
 
                 session.messages.put_nowait(self.decode(message))
