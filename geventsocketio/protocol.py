@@ -23,12 +23,14 @@ class SocketIOProtocol(object):
     def wait(self):
         return self.session.messages.get()
 
-    def broadcast(self, message, exceptions=[]):
-        #exceptions.append(self.session.session_id) # FIXME: somehow this stays in mem
+    def broadcast(self, message, exceptions=None):
+        if exceptions is None:
+            exceptions = []
+
+        exceptions.append(self.session.session_id)
 
         for session_id, session in self.handler.server.sessions.iteritems():
-            #if session_id not in exceptions: # FIXME
-            if session_id != self.session.session_id:
+            if session_id not in exceptions:
                 self._write(message, session)
 
     def _write(self, message, session=None):
