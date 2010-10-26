@@ -58,7 +58,12 @@ class SocketIOHandler(WSGIHandler):
         self.environ['socketio'].session = session
         self.transport = transport(self)
         jobs = self.transport.connect(session, request_method)
+        session.connected = True
+
+        jobs.append(self.environ['socketio'].start_heartbeat())
 
         self.application(self.environ, lambda x: x())
 
+        session.connected = False
+        print "exit"
         gevent.joinall(jobs)

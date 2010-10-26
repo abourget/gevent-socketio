@@ -1,3 +1,5 @@
+import gevent
+
 try:
     import simplejson as json
 except ImportError:
@@ -13,6 +15,9 @@ class SocketIOProtocol(object):
         self.handler = handler
         self.session = None
 
+    def connected(self):
+        return self.session.connected
+
     def send(self, message, destination=None):
         if destination is None:
             self._write(message, session)
@@ -21,7 +26,7 @@ class SocketIOProtocol(object):
             self._write(message, dst)
 
     def wait(self):
-        return self.session.messages.get()
+        return self.session.get_server_msg()
 
     def broadcast(self, message, exceptions=None):
         if exceptions is None:
@@ -33,11 +38,26 @@ class SocketIOProtocol(object):
             if session_id not in exceptions:
                 self._write(message, session)
 
+    def start_heartbeat(self):
+        def ping():
+            while self.connected():
+                gevent.sleep(10)
+                hb = HEARTBEAT_FRAME + str(self.session.heartbeats())
+                print hb
+                self._write(hb, self.session)
+
+        return gevent.spawn(ping)
+
+    def check_heartbeat(self, counter):
+        # TODO: check for valid counter value
+        print "pong", counter
+        # TODO: check if we have a timeout
+
     def _write(self, message, session=None):
         if session is None:
             raise Exception("No client with that session exists")
         else:
-            session.write_queue.put_nowait(message)
+            session.put_client_msg(message)
 
     def _encode(self, message):
         encoded_msg = ''
@@ -46,7 +66,7 @@ class SocketIOProtocol(object):
         #    for msg in message:
         #        encoded_msg += self._encode(msg)
         if isinstance(message, basestring):
-            encoded_msg = message
+            encoded_msg += message
         elif isinstance(message, (object, dict)):
             encoded_msg += self._encode(JSON_FRAME + json.dumps(message))
 
@@ -65,7 +85,7 @@ class SocketIOProtocol(object):
                     if frame_type == JSON_FRAME:
                         messages.append(json.loads(data[0:size]))
                     elif frame_type == HEARTBEAT_FRAME:
-                        pass # let the caller process the message?
+                        self.check_heartbeat(data[0:size])
                     else:
                         messages.append(data[0:size])
 

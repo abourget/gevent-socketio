@@ -7,7 +7,7 @@ def app(environ, start_response):
         start_response("200 OK", [("Content-Type", "text/plain")])
         return ["it works"]
     if environ['PATH_INFO'].startswith("/test/"):
-        while True:
+        while socketio.connected():
             message = socketio.wait()
             message = [socketio.session.session_id, message]
             socketio.broadcast(message, [])

@@ -33,12 +33,38 @@ class SocketIOServer(WSGIServer):
 class Session(object):
     def __init__(self):
         self.session_id = str(random.random())[2:]
-        self.write_queue = Queue()
-        self.messages = Queue()
+        self.client_queue = Queue() # queue for messages to client
+        self.server_queue = Queue() # queue for messages to server
         self.hits = 0
+        self.hearbeats = 0
+        self.connected = False
 
     def incr_hits(self):
         self.hits += 1
 
+    def heartbeats(self):
+        self.hearbeats += 1
+        return self.hearbeats
+
     def is_new(self):
         return self.hits == 0
+
+    def kill(self):
+        if self.connected:
+            self.connected = False
+            self.server_queue.put_nowait(None)
+            self.client_queue.put_nowait(None)
+        else:
+            raise Exception("Session already killed")
+
+    def put_server_msg(self, msg):
+        self.server_queue.put_nowait(msg)
+
+    def put_client_msg(self, msg):
+        self.client_queue.put_nowait(msg)
+
+    def get_client_msg(self):
+        return self.client_queue.get()
+
+    def get_server_msg(self):
+        return self.server_queue.get()

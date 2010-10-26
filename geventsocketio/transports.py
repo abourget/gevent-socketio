@@ -76,31 +76,28 @@ class WebsocketTransport(BaseTransport):
         ws = self.handler.environ['wsgi.websocket']
         ws.send(self.encode(session.session_id))
 
-        def write():
+        def send_into_ws():
             while True:
-                print "write", session.session_id
+                message = session.get_client_msg()
 
-                message = session.write_queue.get()
                 if message is None:
-                    print "write break", session.session_id
+                    session.kill()
                     break
 
                 ws.send(self.encode(message))
 
-        def read():
+        def read_from_ws():
             while True:
-                print "read", session.session_id
-
                 message = ws.wait()
+
                 if message is None:
-                    print "read break", session.session_id
-                    session.write_queue.put_nowait(None) # stop write greenlet
+                    session.kill()
                     break
+                else:
+                    session.put_server_msg(self.decode(message))
 
-                session.messages.put_nowait(self.decode(message))
-
-        gr1 = gevent.spawn(write)
-        gr2 = gevent.spawn(read)
+        gr1 = gevent.spawn(send_into_ws)
+        gr2 = gevent.spawn(read_from_ws)
 
         return [gr1, gr2]
 
