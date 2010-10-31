@@ -63,8 +63,8 @@ class Session(object):
     def put_client_msg(self, msg):
         self.client_queue.put_nowait(msg)
 
-    def get_client_msg(self):
-        return self.client_queue.get()
+    def get_client_msg(self, **kwargs):
+        return self.client_queue.get(**kwargs)
 
-    def get_server_msg(self):
-        return self.server_queue.get()
+    def get_server_msg(self, **kwargs):
+        return self.server_queue.get(**kwargs)

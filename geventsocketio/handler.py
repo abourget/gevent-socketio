@@ -12,7 +12,7 @@ class SocketIOHandler(WSGIHandler):
         'wsgi': WSGIHandler,
         'flashsocket': 'FlashSocketHandler',
         'htmlfile': 'HTMLFileHandler',
-        'xhr-multipart': 'XHRMultipartHandler',
+        'xhr-multipart': transports.XHRMultipartTransport,
         'xhr-polling': transports.XHRPollingTransport,
         'jsonp-polling': 'JSONPollingHandler',
     }
@@ -59,8 +59,6 @@ class SocketIOHandler(WSGIHandler):
         self.transport = transport(self)
         jobs = self.transport.connect(session, request_method)
         session.connected = True
-
-        jobs.append(self.environ['socketio'].start_heartbeat())
 
         self.application(self.environ, lambda x: x())
 
