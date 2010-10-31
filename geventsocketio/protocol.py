@@ -1,3 +1,4 @@
+import urllib
 import gevent
 
 try:
@@ -74,7 +75,8 @@ class SocketIOProtocol(object):
 
     def _decode(self, data):
         messages = []
-        #data.encode('utf-8')
+        data.encode('utf-8', 'replace')
+        data = urllib.unquote_plus(data)
         if data:
             while len(data) != 0:
                 if data[0:3] == MSG_FRAME:

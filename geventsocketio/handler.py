@@ -14,7 +14,7 @@ class SocketIOHandler(WSGIHandler):
         'htmlfile': 'HTMLFileHandler',
         'xhr-multipart': transports.XHRMultipartTransport,
         'xhr-polling': transports.XHRPollingTransport,
-        'jsonp-polling': 'JSONPollingHandler',
+        'jsonp-polling': transports.JSONPolling,
     }
 
     def __init__(self, *args, **kwargs):
