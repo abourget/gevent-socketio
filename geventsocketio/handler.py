@@ -11,7 +11,7 @@ class SocketIOHandler(WSGIHandler):
         'websocket': transports.WebsocketTransport,
         'wsgi': WSGIHandler,
         'flashsocket': 'FlashSocketHandler',
-        'htmlfile': 'HTMLFileHandler',
+        'htmlfile': transports.HTMLFileTransport,
         'xhr-multipart': transports.XHRMultipartTransport,
         'xhr-polling': transports.XHRPollingTransport,
         'jsonp-polling': transports.JSONPolling,

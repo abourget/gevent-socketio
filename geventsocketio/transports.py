@@ -103,6 +103,33 @@ class XHRPollingTransport(BaseTransport):
             raise Exception("No support for such method: " + request_method)
 
 
+class HTMLFileTransport(XHRPollingTransport):
+    """Not tested"""
+
+    def __init__(self, handler):
+        super(JSONPolling, self).__init__(handler)
+        self.content_type = ("Content-Type", "text/html")
+
+    def write_packed(self, data):
+        self.write("<script>parent.s._('%s', document);</script>" % data)
+
+    def handle_get_response(self, session):
+        self.start_response("200 OK", [
+            ("Connection", "keep-alive"),
+            ("Content-Type", "text/html"),
+            ("Transfer-Encoding", "chunked"),
+        ])
+        self.write("<html><body>" + " " * 244)
+
+        try:
+            message = session.get_client_msg(timeout=5.0)
+            message = self.encode(message)
+        except Empty:
+            message = ""
+
+        self.write_packed(message)
+
+
 class JSONPolling(XHRPollingTransport):
     def __init__(self, handler):
         super(JSONPolling, self).__init__(handler)
@@ -110,6 +137,7 @@ class JSONPolling(XHRPollingTransport):
 
     def write_packed(self, data):
         self.write("io.JSONP[0]._('%s');" % data)
+
 
 
 class XHRMultipartTransport(XHRPollingTransport):
