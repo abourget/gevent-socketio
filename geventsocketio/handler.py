@@ -10,7 +10,7 @@ class SocketIOHandler(WSGIHandler):
     handler_types = {
         'websocket': transports.WebsocketTransport,
         'wsgi': WSGIHandler,
-        'flashsocket': 'FlashSocketHandler',
+        'flashsocket': transports.FlaskSocketTransport,
         'htmlfile': transports.HTMLFileTransport,
         'xhr-multipart': transports.XHRMultipartTransport,
         'xhr-polling': transports.XHRPollingTransport,
