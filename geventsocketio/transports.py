@@ -221,6 +221,3 @@ class WebsocketTransport(BaseTransport):
 
 class FlaskSocketTransport(WebsocketTransport):
     pass
-    #def connect(self, session, request_method):
-    #    while True:
-    #        print self.handler.rfile.readline()

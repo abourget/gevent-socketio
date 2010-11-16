@@ -49,14 +49,10 @@ class SocketIOHandler(WSGIHandler):
             print "other resource"
             return super(SocketIOHandler, self).handle_one_response()
 
-        if transport == transports.WebsocketTransport or transports == \
-            transports.FlaskSocketTransport:
+        if transport == transports.WebsocketTransport or \
+           transport == transports.FlaskSocketTransport:
             self.__class__ = WebSocketHandler
             self.handle_one_response(call_wsgi_app=False)
-            session = self.server.get_session()
-        elif transport == transports.FlaskSocketTransport:
-            ws = WebSocket(self.rfile, self.wfile, self.socket, self.environ)
-            self.environ['wsgi.websocket'] = ws
             session = self.server.get_session()
         else:
             session = self.server.get_session(session_id)
