@@ -14,6 +14,7 @@ class SocketIOServer(WSGIServer):
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def handle(self, socket, address):
+        print "handle"
         handler = self.handler_class(socket, address, self)
         self.set_environ({'socketio': SocketIOProtocol(handler)})
         handler.handle()

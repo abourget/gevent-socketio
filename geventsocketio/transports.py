@@ -220,21 +220,7 @@ class WebsocketTransport(BaseTransport):
 
 
 class FlaskSocketTransport(WebsocketTransport):
-    def connect(self, session, request_method):
-        if request_method == "GET":
-            # FIXME Doesn't work, a policy server is no HTTP server :-/
-            data = self.handler.wsgi_input.readline() # read only x chars
-
-            if data == "<policy-file-request/>":
-                policy = """
-                <?xml version="1.0"?>
-                <!DOCTYPE cross-domain-policy SYSTEM "/xml/dtds/cross-domain-policy.dtd">
-                <cross-domain-policy>
-                   <allow-access-from domain="*" to-ports="*" />
-                </cross-domain-policy>
-                """
-                self.handler.write(policy + "\0")
-            else:
-                return super(FlaskSocketTransport, self).connect(session, request_method)
-
-        return []
+    pass
+    #def connect(self, session, request_method):
+    #    while True:
+    #        print self.handler.rfile.readline()
