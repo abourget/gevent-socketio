@@ -8,7 +8,7 @@ def app(environ, start_response):
         return ["it works"]
     if environ['PATH_INFO'].startswith("/test/"):
         while socketio.connected():
-            message = socketio.wait()
+            message = socketio.recv()
             message = [socketio.session.session_id, message]
             socketio.broadcast(message, [])
         return []

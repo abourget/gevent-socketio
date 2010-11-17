@@ -26,7 +26,7 @@ class SocketIOProtocol(object):
             dst = self.handler.server.sessions.get(destination)
             self._write(message, dst)
 
-    def wait(self):
+    def recv(self):
         return self.session.get_server_msg()
 
     def broadcast(self, message, exceptions=None):
