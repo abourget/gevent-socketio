@@ -46,6 +46,9 @@ class Session(object):
         self.hearbeats += 1
         return self.hearbeats
 
+    def valid_heartbeat(self, counter):
+        return self.hearbeats == counter
+
     def is_new(self):
         return self.hits == 0
 

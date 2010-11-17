@@ -33,11 +33,8 @@ class SocketIOHandler(WSGIHandler):
         path = self.environ.get('PATH_INFO')
         parts = SocketIOHandler.path_re.match(path)
 
-        print "Arrived at", path
-
         if parts:
             parts = parts.groupdict()
-            print parts
         else:
             return super(SocketIOHandler, self).handle_one_response()
 
@@ -47,7 +44,6 @@ class SocketIOHandler(WSGIHandler):
         request_method = self.environ.get("REQUEST_METHOD")
 
         if resource != self.server.resource or not transport:
-            print "other resource"
             return super(SocketIOHandler, self).handle_one_response()
 
         if transport == transports.WebsocketTransport or \
@@ -66,5 +62,4 @@ class SocketIOHandler(WSGIHandler):
         self.application(self.environ, lambda x: x())
 
         session.connected = False
-        print "exit"
         gevent.joinall(jobs)

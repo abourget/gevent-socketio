@@ -44,15 +44,17 @@ class SocketIOProtocol(object):
             while self.connected():
                 gevent.sleep(10)
                 hb = HEARTBEAT_FRAME + str(self.session.heartbeats())
-                print hb
                 self._write(hb, self.session)
 
         return gevent.spawn(ping)
 
     def check_heartbeat(self, counter):
-        # TODO: check for valid counter value
-        print "pong", counter
-        # TODO: check if we have a timeout
+        counter = int(counter[len(HEARTBEAT_FRAME):])
+
+        if self.session.valid_heartbeat(counter):
+            return
+        else:
+            self.session.kill()
 
     def _write(self, message, session=None):
         if session is None:
