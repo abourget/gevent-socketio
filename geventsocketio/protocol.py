@@ -51,8 +51,8 @@ class SocketIOProtocol(object):
         def ping():
             while self.connected():
                 gevent.sleep(10) # FIXME: make this a setting
-                hb = HEARTBEAT_FRAME + str(self.session.heartbeats())
-                self._write(hb, self.session)
+                hb_msg = HEARTBEAT_FRAME + str(self.session.heartbeats())
+                self._write(hb_msg, self.session)
 
         return gevent.spawn(ping)
 
@@ -72,7 +72,7 @@ class SocketIOProtocol(object):
         else:
             session.put_client_msg(message)
 
-    def _encode(self, message):
+    def encode(self, message):
         if isinstance(message, basestring):
             encoded_msg = message
         elif isinstance(message, (object, dict)):
@@ -82,7 +82,7 @@ class SocketIOProtocol(object):
 
         return MSG_FRAME + str(len(encoded_msg)) + MSG_FRAME + encoded_msg
 
-    def _decode(self, data):
+    def decode(self, data):
         messages = []
         data.encode('utf-8', 'replace')
         data = urllib.unquote_plus(data)

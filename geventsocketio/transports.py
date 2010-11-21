@@ -10,10 +10,10 @@ class BaseTransport(object):
         self.handler = handler
 
     def encode(self, data):
-        return self.handler.environ['socketio']._encode(data)
+        return self.handler.environ['socketio'].encode(data)
 
     def decode(self, data):
-        return self.handler.environ['socketio']._decode(data)
+        return self.handler.environ['socketio'].decode(data)
 
     def write_packed(self, data):
         self.write(data)
@@ -107,7 +107,7 @@ class HTMLFileTransport(XHRPollingTransport):
     """Not tested at all!"""
 
     def __init__(self, handler):
-        super(JSONPolling, self).__init__(handler)
+        super(HTMLFileTransport, self).__init__(handler)
         self.content_type = ("Content-Type", "text/html")
 
     def write_packed(self, data):
@@ -142,10 +142,10 @@ class JSONPolling(XHRPollingTransport):
 class XHRMultipartTransport(XHRPollingTransport):
     def connect(self, session, request_method):
         if request_method == "GET":
-            hb = self.handler.environ['socketio'].start_heartbeat()
+            heartbeat = self.handler.environ['socketio'].start_heartbeat()
             response = self.handle_get_response(session)
 
-            return [hb, response]
+            return [heartbeat, response]
 
         elif request_method == "POST":
             return self.handle_post_response(session)
@@ -189,8 +189,8 @@ class XHRMultipartTransport(XHRPollingTransport):
 
 class WebsocketTransport(BaseTransport):
     def connect(self, session, request_method):
-        ws = self.handler.environ['wsgi.websocket']
-        ws.send(self.encode(session.session_id))
+        websocket = self.handler.environ['wsgi.websocket']
+        websocket.send(self.encode(session.session_id))
 
         def send_into_ws():
             while True:
@@ -200,11 +200,11 @@ class WebsocketTransport(BaseTransport):
                     session.kill()
                     break
 
-                ws.send(self.encode(message))
+                websocket.send(self.encode(message))
 
         def read_from_ws():
             while True:
-                message = ws.wait()
+                message = websocket.wait()
 
                 if message is None:
                     session.kill()
@@ -214,9 +214,9 @@ class WebsocketTransport(BaseTransport):
 
         gr1 = gevent.spawn(send_into_ws)
         gr2 = gevent.spawn(read_from_ws)
-        hb = self.handler.environ['socketio'].start_heartbeat()
+        heartbeat = self.handler.environ['socketio'].start_heartbeat()
 
-        return [gr1, gr2, hb]
+        return [gr1, gr2, heartbeat]
 
 
 class FlaskSocketTransport(WebsocketTransport):
