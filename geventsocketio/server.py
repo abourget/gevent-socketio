@@ -3,6 +3,7 @@ import random
 from gevent.pywsgi import WSGIServer
 from gevent.queue import Queue
 from geventsocketio.protocol import SocketIOProtocol
+from geventsocketio.handler import SocketIOHandler
 
 
 __all__ = ['SocketIOServer']
@@ -13,6 +14,7 @@ class SocketIOServer(WSGIServer):
     def __init__(self, *args, **kwargs):
         self.sessions = {}
         self.resource = kwargs.pop('resource')
+        kwargs['handler_class'] = SocketIOHandler
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def handle(self, socket, address):
