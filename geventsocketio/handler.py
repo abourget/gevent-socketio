@@ -4,14 +4,12 @@ import gevent
 from gevent.pywsgi import WSGIHandler
 from geventsocketio import transports
 from geventwebsocket.handler import WebSocketHandler
-from geventwebsocket import WebSocket
 
 class SocketIOHandler(WSGIHandler):
     path_re = re.compile(r"^/(?P<resource>[^/]+)/(?P<transport>[^/]+)(/(?P<session_id>[^/]*)/?(?P<rest>.*))?$")
 
     handler_types = {
         'websocket': transports.WebsocketTransport,
-        'wsgi': WSGIHandler,
         'flashsocket': transports.FlaskSocketTransport,
         'htmlfile': transports.HTMLFileTransport,
         'xhr-multipart': transports.XHRMultipartTransport,
@@ -33,6 +31,7 @@ class SocketIOHandler(WSGIHandler):
         path = self.environ.get('PATH_INFO')
         parts = SocketIOHandler.path_re.match(path)
 
+        # Is this a valid SocketIO path?
         if parts:
             parts = parts.groupdict()
         else:
@@ -43,9 +42,11 @@ class SocketIOHandler(WSGIHandler):
         session_id = parts.get('session_id')
         request_method = self.environ.get("REQUEST_METHOD")
 
+        # Is the resource the same as the predefined server resource?
         if resource != self.server.resource or not transport:
             return super(SocketIOHandler, self).handle_one_response()
 
+        # In case this is WebSocket request, switch to the WebSocketHandler
         if transport == transports.WebsocketTransport or \
            transport == transports.FlaskSocketTransport:
             self.__class__ = WebSocketHandler
@@ -54,12 +55,16 @@ class SocketIOHandler(WSGIHandler):
         else:
             session = self.server.get_session(session_id)
 
+        # Make the session object available for WSGI apps
         self.environ['socketio'].session = session
+
+        # Create a transport and handle the request likewise
         self.transport = transport(self)
         jobs = self.transport.connect(session, request_method)
+
+        # Call the WSGI application
         session.connected = True
-
-        self.application(self.environ, lambda x: x())
-
+        self.application(self.environ, None)
         session.connected = False
+
         gevent.joinall(jobs)

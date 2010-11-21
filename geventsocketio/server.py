@@ -5,12 +5,14 @@ from gevent.queue import Queue
 from geventsocketio.protocol import SocketIOProtocol
 
 
+__all__ = ['SocketIOServer']
 
 class SocketIOServer(WSGIServer):
+    """A WSGI Server with a resource that acts like an SocketIO."""
+
     def __init__(self, *args, **kwargs):
         self.sessions = {}
-        self.resource = kwargs['resource']
-        del kwargs['resource'] # FIXME : quick hack
+        self.resource = kwargs.pop('resource')
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def handle(self, socket, address):
@@ -19,6 +21,8 @@ class SocketIOServer(WSGIServer):
         handler.handle()
 
     def get_session(self, session_id=''):
+        """Return an existing or new client Session."""
+
         session = self.sessions.get(session_id)
 
         if session is None:
@@ -31,6 +35,11 @@ class SocketIOServer(WSGIServer):
 
 
 class Session(object):
+    """
+    Client session which checks the connection health and the queues for
+    message passing.
+    """
+
     def __init__(self):
         self.session_id = str(random.random())[2:]
         self.client_queue = Queue() # queue for messages to client

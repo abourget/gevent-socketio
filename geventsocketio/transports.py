@@ -1,13 +1,13 @@
 import gevent
-
-from urlparse import parse_qsl
 from gevent.queue import Empty
 
 
 class BaseTransport(object):
+    """Base class for all transports. Mostly wraps handler class functions."""
+
     def __init__(self, handler):
-        self.handler = handler
         self.content_type = ("Content-Type", "text/plain; charset=UTF-8")
+        self.handler = handler
 
     def encode(self, data):
         return self.handler.environ['socketio']._encode(data)
@@ -104,7 +104,7 @@ class XHRPollingTransport(BaseTransport):
 
 
 class HTMLFileTransport(XHRPollingTransport):
-    """Not tested"""
+    """Not tested at all!"""
 
     def __init__(self, handler):
         super(JSONPolling, self).__init__(handler)
