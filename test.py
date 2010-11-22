@@ -8,14 +8,19 @@ def app(environ, start_response):
         return ["it works"]
 
     elif environ['PATH_INFO'].startswith("/socket.io/"):
-        socketio.send({'buffer': []})
-        socketio.broadcast({'announcement': socketio.session.session_id + ' connected'})
+        if socketio.connected():
+            socketio.send({'buffer': []})
+            socketio.broadcast({'announcement': socketio.session.session_id + ' connected'})
 
-        while socketio.connected():
-            message = socketio.recv()
-            message = {'message': [socketio.session.session_id, message[0]]}
-            socketio.broadcast(message)
-        return []
+            while socketio.connected():
+                message = socketio.recv()
+                message = {'message': [socketio.session.session_id, message[0]]}
+                socketio.broadcast(message)
+
+            return []
+        else:
+            start_response("400 Bad Request", [("Content-Type", "text/plain")])
+            return ['no socketio connection']
 
     else:
         start_response("200 OK", [("Content-Type", "text/plain")])

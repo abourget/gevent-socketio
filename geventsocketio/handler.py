@@ -42,10 +42,6 @@ class SocketIOHandler(WSGIHandler):
         session_id = parts.get('session_id')
         request_method = self.environ.get("REQUEST_METHOD")
 
-        # Is the resource the same as the predefined server resource?
-        if resource != self.server.resource or not transport:
-            return super(SocketIOHandler, self).handle_one_response()
-
         # In case this is WebSocket request, switch to the WebSocketHandler
         if transport == transports.WebsocketTransport or \
            transport == transports.FlaskSocketTransport:

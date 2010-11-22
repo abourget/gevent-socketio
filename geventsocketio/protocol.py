@@ -19,7 +19,10 @@ class SocketIOProtocol(object):
         self.session = None
 
     def connected(self):
-        return self.session.connected
+        if getattr(self, 'session'):
+            return self.session.connected
+        else:
+            return False
 
     def send(self, message, destination=None):
         if destination is None:
