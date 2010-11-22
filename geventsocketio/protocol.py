@@ -21,8 +21,12 @@ class SocketIOProtocol(object):
     def connected(self):
         return self.session.connected
 
-    def send(self, message, destination):
-        dst_client = self.handler.server.sessions.get(destination)
+    def send(self, message, destination=None):
+        if destination is None:
+            dst_client = self.session
+        else:
+            dst_client = self.handler.server.sessions.get(destination)
+
         self._write(message, dst_client)
 
     def recv(self):
@@ -76,7 +80,7 @@ class SocketIOProtocol(object):
         if isinstance(message, basestring):
             encoded_msg = message
         elif isinstance(message, (object, dict)):
-            encoded_msg = self._encode(JSON_FRAME + json.dumps(message))
+            return self.encode(JSON_FRAME + json.dumps(message))
         else:
             raise ValueError("Can't encode message")
 

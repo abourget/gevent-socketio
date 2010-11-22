@@ -195,6 +195,7 @@ class WebsocketTransport(BaseTransport):
         def send_into_ws():
             while True:
                 message = session.get_client_msg()
+                print message
 
                 if message is None:
                     session.kill()

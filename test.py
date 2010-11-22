@@ -7,16 +7,19 @@ def app(environ, start_response):
         start_response("200 OK", [("Content-Type", "text/plain")])
         return ["it works"]
 
-    elif environ['PATH_INFO'].startswith("/test/"):
+    elif environ['PATH_INFO'].startswith("/socket.io/"):
+        socketio.send({'buffer': []})
+        socketio.broadcast({'announcement': socketio.session.session_id + ' connected'})
+
         while socketio.connected():
             message = socketio.recv()
-            message = [socketio.session.session_id, message]
+            message = {'message': [socketio.session.session_id, message[0]]}
             socketio.broadcast(message)
         return []
 
     else:
-        start_response("500 Server Error", [("Content-Type", "text/plain")])
+        start_response("200 OK", [("Content-Type", "text/plain")])
         return ["root"]
 
-server = SocketIOServer(('', 8080), app, resource="test")
+server = SocketIOServer(('', 8080), app, resource="socket.io")
 server.serve_forever()
