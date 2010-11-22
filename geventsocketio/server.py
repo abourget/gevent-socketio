@@ -69,7 +69,7 @@ class Session(object):
             self.server_queue.put_nowait(None)
             self.client_queue.put_nowait(None)
         else:
-            raise Exception("Session already killed")
+            pass # Fail silently
 
     def put_server_msg(self, msg):
         self.server_queue.put_nowait(msg)

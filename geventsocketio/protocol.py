@@ -35,7 +35,12 @@ class SocketIOProtocol(object):
     def recv(self):
         """Wait for incoming messages."""
 
-        return self.session.get_server_msg()
+        msg = self.session.get_server_msg()
+
+        if msg is None:
+            return []
+        else:
+            return msg
 
     def broadcast(self, message, exceptions=None):
         """

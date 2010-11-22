@@ -13,9 +13,11 @@ def app(environ, start_response):
             socketio.broadcast({'announcement': socketio.session.session_id + ' connected'})
 
             while socketio.connected():
-                message = socketio.recv()
-                message = {'message': [socketio.session.session_id, message[0]]}
-                socketio.broadcast(message)
+                inc_msg = socketio.recv()
+                if len(inc_msg) == 1:
+                    inc_msg = inc_msg[0]
+                    message = {'message': [socketio.session.session_id, inc_msg]}
+                    socketio.broadcast(message)
 
             return []
         else:
