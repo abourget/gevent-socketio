@@ -219,5 +219,5 @@ class WebsocketTransport(BaseTransport):
         return [gr1, gr2, heartbeat]
 
 
-class FlaskSocketTransport(WebsocketTransport):
+class FlashSocketTransport(WebsocketTransport):
     pass

@@ -71,18 +71,18 @@ class Session(object):
         self.client_queue = Queue() # queue for messages to client
         self.server_queue = Queue() # queue for messages to server
         self.hits = 0
-        self.hearbeats = 0
+        self.heartbeats = 0
         self.connected = False
 
     def incr_hits(self):
         self.hits += 1
 
     def heartbeats(self):
-        self.hearbeats += 1
-        return self.hearbeats
+        self.heartbeats += 1
+        return self.heartbeats
 
     def valid_heartbeat(self, counter):
-        return self.hearbeats == counter
+        return self.heartbeats == counter
 
     def is_new(self):
         return self.hits == 0

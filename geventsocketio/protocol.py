@@ -69,7 +69,7 @@ class SocketIOProtocol(object):
         return gevent.spawn(ping)
 
     def check_heartbeat(self, counter):
-        """Check for a valid incoming hearbeat."""
+        """Check for a valid incoming heartbeat."""
 
         counter = int(counter[len(HEARTBEAT_FRAME):])
 
