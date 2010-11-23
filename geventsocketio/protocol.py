@@ -18,6 +18,9 @@ class SocketIOProtocol(object):
         self.handler = handler
         self.session = None
 
+    def on_connect(self):
+        return self.connected() and self.session.is_new()
+
     def connected(self):
         if getattr(self, 'session'):
             return self.session.connected

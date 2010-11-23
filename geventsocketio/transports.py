@@ -63,8 +63,8 @@ class XHRPollingTransport(BaseTransport):
         data = self.handler.wsgi_input.readline().replace("data=", "")
         messages = self.decode(data)
 
-        for msg in messages:
-            session.server_queue.put(msg)
+        #for msg in messages:
+        session.put_server_msg(messages)
 
         self.start_response("200 OK", [
             ("Access-Control-Allow-Origin", "*"),
