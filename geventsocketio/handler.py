@@ -37,8 +37,15 @@ class SocketIOHandler(WSGIHandler):
         else:
             return super(SocketIOHandler, self).handle_one_response()
 
-        resource = parts.get('resource')
-        transport = SocketIOHandler.handler_types.get(parts.get('transport'))
+        resource = parts['resource']
+        if resource != self.server.resource:
+            return super(SocketIOHandler, self).handle_one_response()
+
+        transport_name = parts['transport']
+        transport = SocketIOHandler.handler_types.get(transport_name)
+        if transport is None:
+            return super(SocketIOHandler, self).handle_one_response()
+
         session_id = parts.get('session_id')
         request_method = self.environ.get("REQUEST_METHOD")
 
