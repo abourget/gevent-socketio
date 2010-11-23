@@ -77,7 +77,7 @@ class Session(object):
     def incr_hits(self):
         self.hits += 1
 
-    def heartbeats(self):
+    def heartbeat(self):
         self.heartbeats += 1
         return self.heartbeats
 

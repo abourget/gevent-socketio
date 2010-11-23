@@ -51,7 +51,7 @@ class SocketIOHandler(WSGIHandler):
 
         # In case this is WebSocket request, switch to the WebSocketHandler
         if transport == transports.WebsocketTransport or \
-           transport == transports.FlaskSocketTransport:
+           transport == transports.FlashSocketTransport:
             self.__class__ = WebSocketHandler
             self.handle_one_response(call_wsgi_app=False)
             session = self.server.get_session()
