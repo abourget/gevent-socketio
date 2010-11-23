@@ -1,9 +1,13 @@
+import sys
 import random
+import traceback
+from socket import error
 
 from gevent.pywsgi import WSGIServer
 from gevent.queue import Queue
 from geventsocketio.protocol import SocketIOProtocol
 from geventsocketio.handler import SocketIOHandler
+from geventsocketio.policyserver import FlashPolicyServer
 
 
 __all__ = ['SocketIOServer']
@@ -14,8 +18,28 @@ class SocketIOServer(WSGIServer):
     def __init__(self, *args, **kwargs):
         self.sessions = {}
         self.resource = kwargs.pop('resource')
+        if kwargs.pop('policy_server', True):
+            self.policy_server = FlashPolicyServer()
+        else:
+            self.policy_server = None
         kwargs['handler_class'] = SocketIOHandler
         super(SocketIOServer, self).__init__(*args, **kwargs)
+
+    def start_accepting(self):
+        if self.policy_server is not None:
+            try:
+                self.policy_server.start()
+            except error, ex:
+                sys.stderr.write('FAILED to start flash policy server: %s\n' % (ex, ))
+            except Exception:
+                traceback.print_exc()
+                sys.stderr.write('FAILED to start flash policy server.\n\n')
+        super(SocketIOServer, self).start_accepting()
+
+    def kill(self):
+        if self.policy_server is not None:
+            self.policy_server.kill()
+        super(SocketIOServer, self).kill()
 
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)
