@@ -26,27 +26,26 @@ class Application(object):
 
         if path.startswith("socket.io"):
             socketio = environ['socketio']
-            if socketio.connected():
+            if socketio.on_connect():
                 socketio.send({'buffer': self.buffer})
                 socketio.broadcast({'announcement': socketio.session.session_id + ' connected'})
-                while True:
-                    message = socketio.recv()
-                    if message is None:
+
+            while True:
+                message = socketio.recv()
+
+                if len(message) == 1:
+                    message = message[0]
+                    message = {'message': [socketio.session.session_id, message]}
+                    self.buffer.append(message)
+                    if len(self.buffer) > 15:
+                        del self.buffer[0]
+                    socketio.broadcast(message)
+                else:
+                    if not socketio.connected():
                         socketio.broadcast({'announcement': socketio.session.session_id + ' disconnected'})
-                        break
-                    else:
-                        print message
-                        if len(message) == 1:
-                            message = message[0]
-                            message = {'message': [socketio.session.session_id, message]}
-                            self.buffer.append(message)
-                            if len(self.buffer) > 15:
-                                del self.buffer[0]
-                            socketio.broadcast(message)
-                return []
-            else:
-                start_response("400 Bad Request", [("Content-Type", "text/plain")])
-                return ['no socketio connection']
+
+            return []
+
         else:
             return not_found(start_response)
 
