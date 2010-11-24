@@ -7,9 +7,9 @@ from socket import error
 from gevent.pywsgi import WSGIServer
 from gevent.queue import Queue
 from gevent.event import Event
-from geventsocketio.protocol import SocketIOProtocol
-from geventsocketio.handler import SocketIOHandler
-from geventsocketio.policyserver import FlashPolicyServer
+from socketio.protocol import SocketIOProtocol
+from socketio.handler import SocketIOHandler
+from socketio.policyserver import FlashPolicyServer
 
 
 __all__ = ['SocketIOServer']

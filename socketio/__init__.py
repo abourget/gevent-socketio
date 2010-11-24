@@ -4,4 +4,4 @@ __version__ = ".".join(map(str, version_info))
 __all__ = ['SocketIOServer']
 
 
-from geventsocketio.server import SocketIOServer
+from socketio.server import SocketIOServer

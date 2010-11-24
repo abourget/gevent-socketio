@@ -1,5 +1,5 @@
 import traceback
-from geventsocketio import SocketIOServer
+from socketio import SocketIOServer
 
 
 class Application(object):
