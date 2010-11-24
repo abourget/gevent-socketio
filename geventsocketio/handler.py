@@ -5,6 +5,7 @@ from gevent.pywsgi import WSGIHandler
 from geventsocketio import transports
 from geventwebsocket.handler import WebSocketHandler
 
+
 class SocketIOHandler(WSGIHandler):
     path_re = re.compile(r"^/(?P<resource>[^/]+)/(?P<transport>[^/]+)(/(?P<session_id>[^/]*)/?(?P<rest>.*))?$")
 
@@ -50,8 +51,8 @@ class SocketIOHandler(WSGIHandler):
         request_method = self.environ.get("REQUEST_METHOD")
 
         # In case this is WebSocket request, switch to the WebSocketHandler
-        if transport == transports.WebsocketTransport or \
-           transport == transports.FlashSocketTransport:
+        if transport in (transports.WebsocketTransport, \
+                transports.FlashSocketTransport):
             self.__class__ = WebSocketHandler
             self.handle_one_response(call_wsgi_app=False)
             session = self.server.get_session()
