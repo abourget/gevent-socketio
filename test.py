@@ -11,18 +11,18 @@ def app(environ, start_response):
         if socketio.on_connect():
             socketio.send({'buffer': []})
             socketio.broadcast({'announcement': socketio.session.session_id + ' connected'})
-        else:
-            while socketio.connected():
-                inc_msg = socketio.recv()
-                if len(inc_msg) == 1:
-                    inc_msg = inc_msg[0]
-                    message = {'message': [socketio.session.session_id, inc_msg]}
-                    socketio.broadcast(message)
 
-            return []
-        #else:
-        #    start_response("400 Bad Request", [("Content-Type", "text/plain")])
-        #    return ['no socketio connection']
+        while True:
+            inc_msg = socketio.recv()
+            if len(inc_msg) == 1:
+                inc_msg = inc_msg[0]
+                message = {'message': [socketio.session.session_id, inc_msg]}
+                socketio.broadcast(message)
+            else:
+                if not socketio.connected():
+                    socketio.broadcast({'announcement': socketio.session.session_id + ' disconnected'})
+
+        return []
 
     else:
         start_response("200 OK", [("Content-Type", "text/plain")])
