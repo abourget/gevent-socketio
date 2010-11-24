@@ -25,6 +25,9 @@ class BaseTransport(object):
 
         self.handler.write(data)
 
+    def write_multipart(self, data):
+        self.handler.write(data)
+
     def start_response(self, *args, **kwargs):
         self.handler.start_response(*args, **kwargs)
 
@@ -91,6 +94,7 @@ class XHRPollingTransport(BaseTransport):
             return []
 
         elif request_method == "GET":
+            session.clear_disconnect_timeout();
             return self.handle_get_response(session)
 
         elif request_method == "POST":
@@ -166,10 +170,10 @@ class XHRMultipartTransport(XHRPollingTransport):
             ("Connection", "keep-alive"),
             ("Content-Type", "multipart/x-mixed-replace;boundary=\"socketio\""),
         ])
-        self.write("--socketio\r\n")
-        self.write(header)
-        self.write(self.encode(session.session_id) + "\r\n")
-        self.write("--socketio\r\n")
+        self.write_multipart("--socketio\r\n")
+        self.write_multipart(header)
+        self.write_multipart(self.encode(session.session_id) + "\r\n")
+        self.write_multipart("--socketio\r\n")
 
         def send_part():
             while True:
@@ -180,9 +184,9 @@ class XHRMultipartTransport(XHRPollingTransport):
                     break
                 else:
                     message = self.encode(message)
-                    self.write(header)
-                    self.write(message)
-                    self.write("--socketio\r\n")
+                    self.write_multipart(header)
+                    self.write_multipart(message)
+                    self.write_multipart("--socketio\r\n")
 
         return [gevent.spawn(send_part)]
 
