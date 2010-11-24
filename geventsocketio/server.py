@@ -1,10 +1,12 @@
 import sys
 import random
 import traceback
+import gevent
 from socket import error
 
 from gevent.pywsgi import WSGIServer
 from gevent.queue import Queue
+from gevent.event import Event
 from geventsocketio.protocol import SocketIOProtocol
 from geventsocketio.handler import SocketIOHandler
 from geventsocketio.policyserver import FlashPolicyServer
@@ -73,15 +75,43 @@ class Session(object):
         self.hits = 0
         self.heartbeats = 0
         self.connected = False
+        self.timeout = Event()
+
+        def disconnect_timeout():
+            self.timeout.clear()
+            if self.timeout.wait(10.0):
+                gevent.spawn(disconnect_timeout)
+            else:
+                self.kill()
+        gevent.spawn(disconnect_timeout)
+
+    def __str__(self):
+        result = ['session_id=%r' % self.session_id]
+        if self.connected:
+            result.append('connected')
+        if self.client_queue.qsize():
+            result.append('client_queue[%s]' % self.client_queue.qsize())
+        if self.server_queue.qsize():
+            result.append('server_queue[%s]' % self.server_queue.qsize())
+        if self.hits:
+            result.append('hits=%s' % self.hits)
+        if self.heartbeats:
+            result.append('heartbeats=%s' % self.heartbeats)
+
+        return ' '.join(result)
 
     def incr_hits(self):
         self.hits += 1
+
+    def clear_disconnect_timeout(self):
+        self.timeout.set()
 
     def heartbeat(self):
         self.heartbeats += 1
         return self.heartbeats
 
     def valid_heartbeat(self, counter):
+        self.clear_disconnect_timeout()
         return self.heartbeats == counter
 
     def is_new(self):
@@ -96,9 +126,11 @@ class Session(object):
             pass # Fail silently
 
     def put_server_msg(self, msg):
+        self.clear_disconnect_timeout()
         self.server_queue.put_nowait(msg)
 
     def put_client_msg(self, msg):
+        self.clear_disconnect_timeout()
         self.client_queue.put_nowait(msg)
 
     def get_client_msg(self, **kwargs):

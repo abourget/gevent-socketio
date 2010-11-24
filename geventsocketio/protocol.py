@@ -65,7 +65,7 @@ class SocketIOProtocol(object):
 
         def ping():
             while self.connected():
-                gevent.sleep(10) # FIXME: make this a setting
+                gevent.sleep(9.0) # FIXME: make this a setting
                 hb_msg = HEARTBEAT_FRAME + str(self.session.heartbeat())
                 self._write(hb_msg, self.session)
 
