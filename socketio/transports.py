@@ -1,6 +1,6 @@
 import gevent
-from gevent.queue import Empty
 import socket
+from gevent.queue import Empty
 
 class BaseTransport(object):
     """Base class for all transports. Mostly wraps handler class functions."""

@@ -1,10 +1,9 @@
-from gevent import monkey; monkey.patch_all()
 import traceback
+from gevent import monkey; monkey.patch_all()
 from socketio import SocketIOServer
 
 
 class Application(object):
-
     def __init__(self):
         self.buffer = []
 

@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="socketio",
-    version="0.1.0",
+    name="gevent-socketio",
+    version="0.2.0",
     description="SocketIO server based on the Gevent pywsgi server, a Python network library",
     #long_description=open("README.rst").read(),
     author="Jeffrey Gelens",

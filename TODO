@@ -1,0 +1,3 @@
+
+* Remove the need for socketio.connected() in apps.
+* Check if the idle wsgi app instances make sense
