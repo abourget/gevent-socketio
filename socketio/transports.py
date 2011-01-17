@@ -149,7 +149,7 @@ class XHRMultipartTransport(XHRPollingTransport):
             heartbeat = self.handler.environ['socketio'].start_heartbeat()
             response = self.handle_get_response(session)
 
-            return [heartbeat, response]
+            return [heartbeat] + response
 
         elif request_method == "POST":
             return self.handle_post_response(session)
