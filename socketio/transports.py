@@ -1,6 +1,6 @@
 import gevent
 from gevent.queue import Empty
-
+import socket
 
 class BaseTransport(object):
     """Base class for all transports. Mostly wraps handler class functions."""
@@ -184,9 +184,13 @@ class XHRMultipartTransport(XHRPollingTransport):
                     break
                 else:
                     message = self.encode(message)
-                    self.write_multipart(header)
-                    self.write_multipart(message)
-                    self.write_multipart("--socketio\r\n")
+                    try:
+                        self.write_multipart(header)
+                        self.write_multipart(message)
+                        self.write_multipart("--socketio\r\n")
+                    except socket.error:
+                        session.kill()
+                        break
 
         return [gevent.spawn(send_part)]
 
