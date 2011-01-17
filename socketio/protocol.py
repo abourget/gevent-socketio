@@ -110,7 +110,7 @@ class SocketIOProtocol(object):
                     frame_type = data[0:3]
 
                     if frame_type == JSON_FRAME:
-                        messages.append(json.loads(data[0:size]))
+                        messages.append(json.loads(data[3:size]))
 
                     elif frame_type == HEARTBEAT_FRAME:
                         self.check_heartbeat(data[0:size])
