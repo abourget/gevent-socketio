@@ -76,6 +76,7 @@ class Session(object):
         self.heartbeats = 0
         self.connected = False
         self.timeout = Event()
+        self.wsgi_app_greenlet = None
 
         def disconnect_timeout():
             self.timeout.clear()

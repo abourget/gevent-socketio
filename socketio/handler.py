@@ -5,7 +5,6 @@ from gevent.pywsgi import WSGIHandler
 from socketio import transports
 from geventwebsocket.handler import WebSocketHandler
 
-
 class SocketIOHandler(WSGIHandler):
     path_re = re.compile(r"^/(?P<resource>[^/]+)/(?P<transport>[^/]+)(/(?P<session_id>[^/]*)/?(?P<rest>.*))?$")
 
@@ -66,9 +65,14 @@ class SocketIOHandler(WSGIHandler):
         self.transport = transport(self)
         jobs = self.transport.connect(session, request_method)
 
-        # Call the WSGI application
-        session.connected = True
-        self.application(self.environ, None)
-        session.connected = False
+        if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
+            # Call the WSGI application, and let it run until the Socket.IO
+            # is *disconnected*, even though many POST/polling requests
+            # come through.
+            session.wsgi_app_greenlet = gevent.getcurrent()
+            session.connected = True
+            self.application(self.environ,
+                             lambda status, headers, exc=None: None)
+            session.connected = False
 
         gevent.joinall(jobs)
