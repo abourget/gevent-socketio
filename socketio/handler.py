@@ -19,6 +19,7 @@ class SocketIOHandler(WSGIHandler):
 
     def __init__(self, *args, **kwargs):
         self.socketio_connection = False
+        self.allowed_paths
         super(SocketIOHandler, self).__init__(*args, **kwargs)
 
     def handle_one_response(self):
