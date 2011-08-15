@@ -19,11 +19,13 @@ class SocketIOServer(WSGIServer):
 
     def __init__(self, *args, **kwargs):
         self.sessions = {}
-        self.resource = kwargs.pop('resource')
+        self.namespace = kwargs.pop('namespace')
+
         if kwargs.pop('policy_server', True):
             self.policy_server = FlashPolicyServer()
         else:
             self.policy_server = None
+
         kwargs['handler_class'] = SocketIOHandler
         super(SocketIOServer, self).__init__(*args, **kwargs)
 

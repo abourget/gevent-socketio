@@ -4,7 +4,7 @@
     <title>socket.io client test</title>
 
     <script src="/json.js"></script> <!-- for ie -->
-    <script src="http://cdn.socket.io/stable/socket.io.js"></script>
+    <script src="socket.io.js"></script>
   </head>
   <body>
 
@@ -28,8 +28,7 @@
         return String(msg).replace(/</g, '&lt;').replace(/>/g, '&gt;');
       };
 
-      var socket = new io.Socket(null, {port: 8080, rememberTransport: false});
-      socket.connect();
+      var socket = io.connect("http://localhost:8080", {rememberTransport: false});
       socket.on('message', function(obj){
         if ('buffer' in obj){
           document.getElementById('form').style.display='block';

@@ -7,10 +7,6 @@ except ImportError:
     import json
 
 
-MSG_FRAME = "~m~"
-HEARTBEAT_FRAME = "~h~"
-JSON_FRAME = "~j~"
-
 class SocketIOProtocol(object):
     """SocketIO protocol specific functions."""
 
@@ -100,28 +96,55 @@ class SocketIOProtocol(object):
     def decode(self, data):
         messages = []
         data.encode('utf-8', 'replace')
-        data = urllib.unquote_plus(data)
+        msg_type, msg_id, msg_endpoint, data = urllib.unquote_plus(data).split(":", 3)
 
-        if data:
-            while len(data) != 0:
-                if data[0:3] == MSG_FRAME:
-                    _, size, data = data.split(MSG_FRAME, 2)
-                    size = int(size)
-                    frame_type = data[0:3]
+        if msg_type == 0:
+            # Disconnect
+            pass
+        elif msg_type == 1:
+            pass
+        elif msg_type == 2:
+            # send back heartbeat
+            pass
+        elif msg_type == 3:
+            messages.append(data)
+        elif msg_type == 4:
+            message.append(json.loads(data))
+        elif msg_type == 5:
+            # some event
+            pass
+        elif msg_type == 6:
+            # ACK
+            pass
+        elif msg_type == 7:
+            pass
+        elif msg_type == 8:
+            pass
 
-                    if frame_type == JSON_FRAME:
-                        messages.append(json.loads(data[3:size]))
+        return messages
 
-                    elif frame_type == HEARTBEAT_FRAME:
-                        self.check_heartbeat(data[0:size])
 
-                    else:
-                        messages.append(data[0:size])
 
-                    data = data[size:]
-                else:
-                    raise Exception("Unsupported frame type")
+        #if data:
+        #    while len(data) != 0:
+        #        if data[0:3] == MSG_FRAME:
+        #            _, size, data = data.split(MSG_FRAME, 2)
+        #            size = int(size)
+        #            frame_type = data[0:3]
 
-            return messages
-        else:
-            return messages
+        #            if frame_type == JSON_FRAME:
+        #                messages.append(json.loads(data[3:size]))
+
+        #            elif frame_type == HEARTBEAT_FRAME:
+        #                self.check_heartbeat(data[0:size])
+
+        #            else:
+        #                messages.append(data[0:size])
+
+        #            data = data[size:]
+        #        else:
+        #            raise Exception("Unsupported frame type")
+
+        #    return messages
+        #else:
+        #    return messages

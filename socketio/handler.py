@@ -6,7 +6,14 @@ from socketio import transports
 from geventwebsocket.handler import WebSocketHandler
 
 class SocketIOHandler(WSGIHandler):
-    path_re = re.compile(r"^/(?P<resource>[^/]+)/(?P<transport>[^/]+)(/(?P<session_id>[^/]*)/?(?P<rest>.*))?$")
+    RE_REQUEST_URL = re.compile(r"""
+        ^/(?P<namespace>[^/]+)
+         /(?P<protocol_version>[^/]+)
+         /(?P<transport_id>[^/]+)
+         /(?P<session_id>[^/]+)
+         /?(?P<rest>.*)$
+         """, re.X)
+    RE_HANDSHAKE_URL = re.compile(r"^/(?P<namespace>[^/]+)/1/?(?P<rest>.*)$", re.X)
 
     handler_types = {
         'websocket': transports.WebsocketTransport,
@@ -23,6 +30,16 @@ class SocketIOHandler(WSGIHandler):
 
         super(SocketIOHandler, self).__init__(*args, **kwargs)
 
+    def _do_handshake(self, tokens):
+        if tokens["namespace"] != self.server.namespace:
+            raise Exception("TODO")
+        else:
+            super(WSGIHandler, self).start_response("200 OK", (), None)
+
+            session = self.server.get_session()
+            data = "%s:15:10:" % (session.session_id, ",".join(self.handler_types.keys()))
+            self.socket.sendall(data)
+
     def handle_one_response(self):
         self.status = None
         self.headers_sent = False
@@ -31,25 +48,25 @@ class SocketIOHandler(WSGIHandler):
         self.response_use_chunked = False
 
         path = self.environ.get('PATH_INFO')
-        parts = SocketIOHandler.path_re.match(path)
-
-        # Is this a valid SocketIO path?
-        if parts:
-            parts = parts.groupdict()
-        else:
-            return super(SocketIOHandler, self).handle_one_response()
-
-        resource = parts['resource']
-        if resource != self.server.resource:
-            return super(SocketIOHandler, self).handle_one_response()
-
-        transport_name = parts['transport']
-        transport = SocketIOHandler.handler_types.get(transport_name)
-        if transport is None:
-            return super(SocketIOHandler, self).handle_one_response()
-
-        session_id = parts.get('session_id')
         request_method = self.environ.get("REQUEST_METHOD")
+        request_tokens = self.RE_REQUEST_URL.match(path)
+
+        if request_tokens:
+            request_tokens = request_tokens.groupdict()
+        else:
+            handshake_tokens = self.RE_HANDSHAKE_URL.match(path)
+
+            if handshake_tokens:
+                return self._do_handshake(handshake_tokens.groupdict())
+            else:
+                raise Exception("TODO")
+
+
+        if request_tokens["namespace"] != self.server.namespace:
+            raise Exception("TODO")
+
+        transport = self.handler_types.get(request_tokens["transport_id"])
+        session_id = request_tokens["session_id"]
 
         # In case this is WebSocket request, switch to the WebSocketHandler
         if transport in (transports.WebsocketTransport, \

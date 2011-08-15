@@ -57,4 +57,4 @@ def not_found(start_response):
 
 if __name__ == '__main__':
     print 'Listening on port 8080 and on port 843 (flash policy server)'
-    SocketIOServer(('', 8080), Application(), resource="socket.io").serve_forever()
+    SocketIOServer(('', 8080), Application(), namespace="socket.io").serve_forever()
