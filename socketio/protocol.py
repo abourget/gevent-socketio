@@ -1,10 +1,6 @@
 import urllib
 import gevent
-
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import anyjson as json
 
 
 class SocketIOProtocol(object):
