@@ -1,5 +1,6 @@
 import re
 import gevent
+import urlparse
 
 from gevent.pywsgi import WSGIHandler
 from socketio import transports
@@ -10,10 +11,9 @@ class SocketIOHandler(WSGIHandler):
         ^/(?P<namespace>[^/]+)
          /(?P<protocol_version>[^/]+)
          /(?P<transport_id>[^/]+)
-         /(?P<session_id>[^/]+)
-         /?(?P<rest>.*)$
+         /(?P<session_id>[^/]+)/?$
          """, re.X)
-    RE_HANDSHAKE_URL = re.compile(r"^/(?P<namespace>[^/]+)/1/?(?P<rest>.*)$", re.X)
+    RE_HANDSHAKE_URL = re.compile(r"^/(?P<namespace>[^/]+)/1/$", re.X)
 
     handler_types = {
         'websocket': transports.WebsocketTransport,
@@ -34,11 +34,32 @@ class SocketIOHandler(WSGIHandler):
         if tokens["namespace"] != self.server.namespace:
             raise Exception("TODO")
         else:
-            super(WSGIHandler, self).start_response("200 OK", (), None)
-
             session = self.server.get_session()
-            data = "%s:15:10:" % (session.session_id, ",".join(self.handler_types.keys()))
-            self.socket.sendall(data)
+            data = "%s:15:10:xhr-polling" % (session.session_id,)
+            #data = "%s:15:10:%s" % (session.session_id, ",".join(self.handler_types.keys()))
+            self.write_smart(data)
+
+    def write_jsonp_result(self, data, wrapper="0"):
+            self.start_response("200 OK", [
+                ("Content-Type", "application/javascript"),
+            ])
+            self.result = ['io.j[%s]("%s");' % (wrapper, data)]
+
+    def write_plain_result(self, data):
+            self.start_response("200 OK", [
+                ("Content-Type", "text/plain")
+            ])
+            self.result = [data]
+
+    def write_smart(self, data):
+        args = urlparse.parse_qs(self.environ.get("QUERY_STRING"))
+
+        if "jsonp" in args:
+            self.write_jsonp_result(data, args["jsonp"][0])
+        else:
+            self.write_plain_result(data)
+
+        self.process_result()
 
     def handle_one_response(self):
         self.status = None
@@ -59,11 +80,10 @@ class SocketIOHandler(WSGIHandler):
             if handshake_tokens:
                 return self._do_handshake(handshake_tokens.groupdict())
             else:
-                raise Exception("TODO")
-
+                raise Exception("Unknown request")
 
         if request_tokens["namespace"] != self.server.namespace:
-            raise Exception("TODO")
+            raise Exception("Namespace mismatch")
 
         transport = self.handler_types.get(request_tokens["transport_id"])
         session_id = request_tokens["session_id"]

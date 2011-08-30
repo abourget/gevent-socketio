@@ -29,14 +29,17 @@
       };
 
       var socket = io.connect("http://localhost:8080", {rememberTransport: false});
-      socket.on('message', function(obj){
-        if ('buffer' in obj){
+	  io.transports = ['xhr-multipart']
+      socket.on('connect', function(obj){
+		  alert(obj);
           document.getElementById('form').style.display='block';
           document.getElementById('chat').innerHTML = '';
 
-          for (var i in obj.buffer) message(obj.buffer[i]);
-        } else message(obj);
+        //  for (var i in obj.buffer) message(obj.buffer[i]);
       });
+      socket.on('message', function(obj){
+		  message(obj);
+		});
     </script>
 
     <h1>Sample chat client</h1>

@@ -70,6 +70,11 @@ class Session(object):
     message passing.
     """
 
+    STATE_NEW = "NEW"
+    STATE_CONNECTED = "CONNECTED"
+    STATE_DISCONNECTING = "DISCONNECTING"
+    STATE_DISCONNECTED = "DISCONNECTED"
+
     def __init__(self):
         self.session_id = str(random.random())[2:]
         self.client_queue = Queue() # queue for messages to client
@@ -79,6 +84,8 @@ class Session(object):
         self.connected = False
         self.timeout = Event()
         self.wsgi_app_greenlet = None
+        self.state = "NEW"
+        self.sent_connected = False
 
         def disconnect_timeout():
             self.timeout.clear()
@@ -105,6 +112,9 @@ class Session(object):
 
     def incr_hits(self):
         self.hits += 1
+
+        if self.hits == 1:
+            self.state = self.STATE_CONNECTED
 
     def clear_disconnect_timeout(self):
         self.timeout.set()

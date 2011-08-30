@@ -33,6 +33,9 @@ class BaseTransport(object):
 
 
 class XHRPollingTransport(BaseTransport):
+    def __init__(self, *args, **kwargs):
+        super(XHRPollingTransport, self).__init__(*args, **kwargs)
+
     def handle_options_response(self):
         self.start_response("200 OK", [
             ("Access-Control-Allow-Origin", "*"),
@@ -81,16 +84,14 @@ class XHRPollingTransport(BaseTransport):
         return []
 
     def connect(self, session, request_method):
-        if session.is_new():
-            session_id = self.encode(session.session_id)
+        print session.state, session.hits
+        if not session.sent_connected:
             self.start_response("200 OK", [
                 ("Access-Control-Allow-Origin", "*"),
                 ("Access-Control-Allow-Credentials", "true"),
-                ("Connection", "close"),
-                self.content_type,
             ])
-            self.write_packed(session_id)
-
+            self.handler.write_smart("1::")
+            session.sent_connected = True
             return []
 
         elif request_method == "GET":

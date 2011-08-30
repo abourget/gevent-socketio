@@ -84,10 +84,12 @@ class SocketIOProtocol(object):
             session.put_client_msg(message)
 
     def encode(self, message):
+        print message
+
         if isinstance(message, basestring):
             encoded_msg = message
         elif isinstance(message, (object, dict)):
-            return self.encode(JSON_FRAME + json.dumps(message))
+            return self.encode(json.dumps(message))
         else:
             raise ValueError("Can't encode message")
 
@@ -97,6 +99,8 @@ class SocketIOProtocol(object):
         messages = []
         data.encode('utf-8', 'replace')
         msg_type, msg_id, msg_endpoint, data = urllib.unquote_plus(data).split(":", 3)
+
+        print msg_type, data
 
         if msg_type == 0:
             # Disconnect
