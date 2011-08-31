@@ -85,7 +85,7 @@ class Session(object):
         self.timeout = Event()
         self.wsgi_app_greenlet = None
         self.state = "NEW"
-        self.sent_connected = False
+        self.connection_confirmed = False
 
         def disconnect_timeout():
             self.timeout.clear()

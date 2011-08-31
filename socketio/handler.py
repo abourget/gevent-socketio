@@ -32,7 +32,7 @@ class SocketIOHandler(WSGIHandler):
 
     def _do_handshake(self, tokens):
         if tokens["namespace"] != self.server.namespace:
-            raise Exception("TODO")
+            self.log_error("Namespace mismatch")
         else:
             session = self.server.get_session()
             data = "%s:15:10:xhr-polling" % (session.session_id,)
@@ -72,19 +72,23 @@ class SocketIOHandler(WSGIHandler):
         request_method = self.environ.get("REQUEST_METHOD")
         request_tokens = self.RE_REQUEST_URL.match(path)
 
+
+        # Parse request URL and QUERY_STRING and do handshake
+        print "", ""
+        print "REQUEST", path
         if request_tokens:
             request_tokens = request_tokens.groupdict()
+            print "HANDLE"
         else:
             handshake_tokens = self.RE_HANDSHAKE_URL.match(path)
+            print "HANDSHAKE"
 
             if handshake_tokens:
                 return self._do_handshake(handshake_tokens.groupdict())
             else:
-                raise Exception("Unknown request")
+                self.log_error("Unknown request")
 
-        if request_tokens["namespace"] != self.server.namespace:
-            raise Exception("Namespace mismatch")
-
+        # Setup the transport and session
         transport = self.handler_types.get(request_tokens["transport_id"])
         session_id = request_tokens["session_id"]
 
@@ -102,16 +106,22 @@ class SocketIOHandler(WSGIHandler):
 
         # Create a transport and handle the request likewise
         self.transport = transport(self)
+        print "CONNECT"
         jobs = self.transport.connect(session, request_method)
+        print "DISCONNECT"
+
+
+        #if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
+        #    # Call the WSGI application, and let it run until the Socket.IO
+        #    # is *disconnected*, even though many POST/polling requests
+        #    # come through.
+        #    session.wsgi_app_greenlet = gevent.getcurrent()
+        #    session.connected = True
+        #    self.application(self.environ, lambda status, headers, exc=None: None)
+        #    session.connected = False
 
         if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
-            # Call the WSGI application, and let it run until the Socket.IO
-            # is *disconnected*, even though many POST/polling requests
-            # come through.
-            session.wsgi_app_greenlet = gevent.getcurrent()
-            session.connected = True
-            self.application(self.environ,
-                             lambda status, headers, exc=None: None)
-            session.connected = False
-
+            session.wsgi_app_greenlet = gevent.spawn(self.application, self.environ, lambda status, headers, exc=None: None)
         gevent.joinall(jobs)
+
+        print "JOINED"

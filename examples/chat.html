@@ -1,63 +1,63 @@
-<!doctype html>
-<html>
-  <head>
-    <title>socket.io client test</title>
+<!DOCTYPE html><html><head><link href="stylesheets/style.css" rel="stylesheet"><script src="http://code.jquery.com/jquery-1.6.1.min.js"></script><script src="socket.io.js"></script><script>// socket.io specific code
+io.transports = ['xhr-polling']
+var socket = io.connect("http://localhost:8080");
 
-    <script src="/json.js"></script> <!-- for ie -->
-    <script src="socket.io.js"></script>
-  </head>
-  <body>
+socket.on('connect', function () {
+  $('#chat').addClass('connected');
+});
 
-    <script>
-      function message(obj){
-        var el = document.createElement('p');
-        if ('announcement' in obj) el.innerHTML = '<em>' + esc(obj.announcement) + '</em>';
-        else if ('message' in obj) el.innerHTML = '<b>' + esc(obj.message[0]) + ':</b> ' + esc(obj.message[1]);
-        document.getElementById('chat').appendChild(el);
-        document.getElementById('chat').scrollTop = 1000000;
-      }
+socket.on('announcement', function (msg) {
+	$('#lines').append($('<p>').append($('<em>').text(msg)));
+});
 
-      function send(){
-        var val = document.getElementById('text').value;
-        socket.send(val);
-        message({ message: ['you', val] });
-        document.getElementById('text').value = '';
-      }
+socket.on('nicknames', function (nicknames) {
+	$('#nicknames').empty().append($('<span>Online: </span>'));
+	for (var i in nicknames) {
+	  $('#nicknames').append($('<b>').text(nicknames[i]));
+	}
+});
 
-      function esc(msg){
-        return String(msg).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      };
+socket.on('user message', message);
+socket.on('reconnect', function () {
+$('#lines').remove();
+	message('System', 'Reconnected to the server');
+});
 
-      var socket = io.connect("http://localhost:8080", {rememberTransport: false});
-	  io.transports = ['xhr-multipart']
-      socket.on('connect', function(obj){
-		  alert(obj);
-          document.getElementById('form').style.display='block';
-          document.getElementById('chat').innerHTML = '';
+socket.on('reconnecting', function () {
+	message('System', 'Attempting to re-connect to the server');
+});
 
-        //  for (var i in obj.buffer) message(obj.buffer[i]);
-      });
-      socket.on('message', function(obj){
-		  message(obj);
-		});
-    </script>
+socket.on('error', function (e) {
+	message('System', e ? e : 'A unknown error occurred');
+});
 
-    <h1>Sample chat client</h1>
-    <div id="chat"><p>Connecting...</p></div>
-    <form id="form" onsubmit="send(); return false">
-      <input type="text" autocomplete="off" id="text"><input type="submit" value="Send">
-    </form>
+function message (from, msg) {
+	$('#lines').append($('<p>').append($('<b>').text(from), msg));
+}
 
-    <style>
-      #chat { height: 300px; overflow: auto; width: 800px; border: 1px solid #eee; font: 13px Helvetica, Arial; }
-      #chat p { padding: 8px; margin: 0; }
-      #chat p:nth-child(odd) { background: #F6F6F6; }
-      #form { width: 782px; background: #333; padding: 5px 10px; display: none; }
-      #form input[type=text] { width: 700px; padding: 5px; background: #fff; border: 1px solid #fff; }
-      #form input[type=submit] { cursor: pointer; background: #999; border: none; padding: 6px 8px; -moz-border-radius: 8px; -webkit-border-radius: 8px; margin-left: 5px; text-shadow: 0 1px 0 #fff; }
-      #form input[type=submit]:hover { background: #A2A2A2; }
-      #form input[type=submit]:active { position: relative; top: 2px; }
-    </style>
+// dom manipulation
+$(function () {
+$('#set-nickname').submit(function (ev) {
+  socket.emit('nickname', $('#nick').val(), function (set) {
+    if (!set) {
+      clear();
+      return $('#chat').addClass('nickname-set');
+    }
+    $('#nickname-err').css('visibility', 'visible');
+  });
+  return false;
+});
 
-  </body>
-</html>
+$('#send-message').submit(function () {
+	message('me', $('#message').val());
+	socket.emit('user message', $('#message').val());
+	clear();
+	$('#lines').get(0).scrollTop = 10000000;
+	return false;
+});
+
+function clear () {
+$('#message').val('').focus();
+};
+});
+</script></head><body><div id="chat"><div id="nickname"><form id="set-nickname" class="wrap"><p>Please type in your nickname and press enter.</p><input id="nick"><p id="nickname-err">Nickname already in use</p></form></div><div id="connecting"><div class="wrap">Connecting to socket.io server</div></div><div id="messages"><div id="nicknames"></div><div id="lines"></div></div><form id="send-message"><input id="message"><button>Send</button></form></div></body></html>

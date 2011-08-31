@@ -7,6 +7,13 @@ class BaseTransport(object):
 
     def __init__(self, handler):
         self.content_type = ("Content-Type", "text/plain; charset=UTF-8")
+        self.headers = [
+            ("Access-Control-Allow-Origin", "*"),
+            ("Access-Control-Allow-Credentials", "true"),
+            ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
+            ("Access-Control-Max-Age", 3600),
+            ("Connection", "close"),
+        ]
         self.handler = handler
 
     def encode(self, data):
@@ -15,20 +22,15 @@ class BaseTransport(object):
     def decode(self, data):
         return self.handler.environ['socketio'].decode(data)
 
-    def write_packed(self, data):
-        self.write(data)
-
-    def write(self, data):
+    def write(self, data=""):
         if 'Content-Length' not in self.handler.response_headers_list:
             self.handler.response_headers.append(('Content-Length', len(data)))
             self.handler.response_headers_list.append('Content-Length')
 
         self.handler.write(data)
 
-    def write_multipart(self, data):
-        self.handler.write(data)
-
     def start_response(self, *args, **kwargs):
+        self.headers.append(self.content_type)
         self.handler.start_response(*args, **kwargs)
 
 
@@ -36,103 +38,46 @@ class XHRPollingTransport(BaseTransport):
     def __init__(self, *args, **kwargs):
         super(XHRPollingTransport, self).__init__(*args, **kwargs)
 
-    def handle_options_response(self):
-        self.start_response("200 OK", [
-            ("Access-Control-Allow-Origin", "*"),
-            ("Access-Control-Allow-Credentials", "true"),
-            ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
-            ("Access-Control-Max-Age", 3600),
-            ("Connection", "close"),
-            ("Content-Length", 0)
-        ])
-        self.write('')
-
+    def options(self):
+        self.start_response("200 OK", ())
+        self.write()
         return []
 
-    def handle_get_response(self, session):
+    def get(self, session):
+        session.clear_disconnect_timeout();
+
         try:
             message = session.get_client_msg(timeout=5.0)
             message = self.encode(message)
         except Empty:
-            message = ""
+            message = "8::" # NOOP
 
-        self.start_response("200 OK", [
-            ("Access-Control-Allow-Origin", "*"),
-            ("Connection", "close"),
-            self.content_type,
-        ])
-        self.write_packed(message)
+        self.start_response("200 OK", [])
+        self.write(message)
 
         return []
 
-    def handle_post_response(self, session):
+    def post(self, session):
         data = self.handler.wsgi_input.readline().replace("data=", "")
-        messages = self.decode(data)
+        print data # 5:1+::{"name":"nickname","args":["test"]}
+        session.put_server_msg(self.decode(data))
 
-        #for msg in messages:
-        session.put_server_msg(messages)
-
-        self.start_response("200 OK", [
-            ("Access-Control-Allow-Origin", "*"),
-            ("Access-Control-Allow-Credentials", "true"),
-            ("Connection", "close"),
-            ("Content-Type", "text/plain; charset=UTF-8"),
-            ("Content-Length", "2"),
-        ])
-        self.write("ok")
+        self.start_response("200 OK", [])
+        self.write("1")
 
         return []
 
     def connect(self, session, request_method):
-        print session.state, session.hits
-        if not session.sent_connected:
-            self.start_response("200 OK", [
-                ("Access-Control-Allow-Origin", "*"),
-                ("Access-Control-Allow-Credentials", "true"),
-            ])
-            self.handler.write_smart("1::")
-            session.sent_connected = True
+        if not session.connection_confirmed:
+            session.connection_confirmed = True
+            self.start_response("200 OK", [])
+            self.write("1::")
+
             return []
-
-        elif request_method == "GET":
-            session.clear_disconnect_timeout();
-            return self.handle_get_response(session)
-
-        elif request_method == "POST":
-            return self.handle_post_response(session)
-
-        elif request_method == "OPTIONS":
-            return self.handle_options_response()
-
+        elif request_method in ("GET", "POST", "OPTIONS"):
+            return getattr(self, request_method.lower())(session)
         else:
-            raise Exception("No support for such method: " + request_method)
-
-
-class HTMLFileTransport(XHRPollingTransport):
-    """Not tested at all!"""
-
-    def __init__(self, handler):
-        super(HTMLFileTransport, self).__init__(handler)
-        self.content_type = ("Content-Type", "text/html")
-
-    def write_packed(self, data):
-        self.write("<script>parent.s._('%s', document);</script>" % data)
-
-    def handle_get_response(self, session):
-        self.start_response("200 OK", [
-            ("Connection", "keep-alive"),
-            ("Content-Type", "text/html"),
-            ("Transfer-Encoding", "chunked"),
-        ])
-        self.write("<html><body>" + " " * 244)
-
-        try:
-            message = session.get_client_msg(timeout=5.0)
-            message = self.encode(message)
-        except Empty:
-            message = ""
-
-        self.write_packed(message)
+            raise Exception("No support for the method: " + request_method)
 
 
 class JSONPolling(XHRPollingTransport):
@@ -162,7 +107,7 @@ class XHRMultipartTransport(XHRPollingTransport):
             raise Exception("No support for such method: " + request_method)
 
 
-    def handle_get_response(self, session):
+    def get(self, session):
         header = "Content-Type: text/plain; charset=UTF-8\r\n\r\n"
 
         self.start_response("200 OK", [
@@ -230,3 +175,29 @@ class WebsocketTransport(BaseTransport):
 
 class FlashSocketTransport(WebsocketTransport):
     pass
+
+class HTMLFileTransport(XHRPollingTransport):
+    """Not tested at all!"""
+
+    def __init__(self, handler):
+        super(HTMLFileTransport, self).__init__(handler)
+        self.content_type = ("Content-Type", "text/html")
+
+    def write_packed(self, data):
+        self.write("<script>parent.s._('%s', document);</script>" % data)
+
+    def handle_get_response(self, session):
+        self.start_response("200 OK", [
+            ("Connection", "keep-alive"),
+            ("Content-Type", "text/html"),
+            ("Transfer-Encoding", "chunked"),
+        ])
+        self.write("<html><body>" + " " * 244)
+
+        try:
+            message = session.get_client_msg(timeout=5.0)
+            message = self.encode(message)
+        except Empty:
+            message = ""
+
+        self.write_packed(message)

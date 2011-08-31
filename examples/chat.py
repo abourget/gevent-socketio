@@ -1,4 +1,4 @@
-import traceback
+import redis
 from gevent import monkey; monkey.patch_all()
 from socketio import SocketIOServer
 
@@ -6,48 +6,52 @@ from socketio import SocketIOServer
 class Application(object):
     def __init__(self):
         self.buffer = []
+        self.redis = redis.Redis("127.0.0.1")
+        self.redis.delete("nicknames")
 
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
         print path, start_response
 
-        if not path:
-            start_response('200 OK', [('Content-Type', 'text/html')])
-            return ['<h1>Welcome. Try the <a href="/chat.html">chat</a> example.</h1>']
+        #if not path:
+        #    start_response('200 OK', [('Content-Type', 'text/html')])
+        #    return ['<h1>Welcome. Try the <a href="/chat.html">chat</a> example.</h1>']
 
-        if path in ['json.js', 'chat.html']:
-            try:
-                data = open(path).read()
-            except Exception:
-                traceback.print_exc()
-                return not_found(start_response)
-            start_response('200 OK', [('Content-Type', 'text/javascript' if path.endswith('.js') else 'text/html')])
-            return [data]
+        #if path in ['json.js', 'chat.html']:
+        #    try:
+        #        data = open(path).read()
+        #    except Exception:
+        #        traceback.print_exc()
+        #        return not_found(start_response)
+        #    start_response('200 OK', [('Content-Type', 'text/javascript' if path.endswith('.js') else 'text/html')])
+        #    return [data]
 
         if path.startswith("socket.io"):
             socketio = environ['socketio']
-            if socketio.on_connect():
-                socketio.send({'buffer': self.buffer})
-                socketio.broadcast({'announcement': socketio.session.session_id + ' connected'})
 
             while True:
-                message = socketio.recv()
+                message = socketio.receive()
 
-                if len(message) == 1:
-                    message = message[0]
-                    message = {'message': [socketio.session.session_id, message]}
-                    self.buffer.append(message)
-                    if len(self.buffer) > 15:
-                        del self.buffer[0]
-                    socketio.broadcast(message)
-                else:
-                    if not socketio.connected():
-                        socketio.broadcast({'announcement': socketio.session.session_id + ' disconnected'})
+                print message
 
-            return []
-
+                if message['type'] == "event":
+                    self.handle_event(message, socketio)
         else:
             return not_found(start_response)
+
+    def handle_event(self, message, socketio):
+        if message['name'] == "nickname":
+            nickname = message['args'][0]
+            nickdict = {}
+            nickdict[nickname] = nickname
+            socketio.session.nickname = nickname
+
+            self.redis.rpush("nicknames", nickname)
+
+            socketio.ack(message['id'], ['false'])
+            socketio.broadcast_event("nicknames", self.redis.lrange("nicknames", 0, 20), include_self=True)
+        elif message['name'] == "user message":
+            socketio.broadcast_event("user message", socketio.session.nickname, message['args'][0])
 
 
 def not_found(start_response):
