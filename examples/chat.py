@@ -1,4 +1,3 @@
-import redis
 from gevent import monkey; monkey.patch_all()
 from socketio import SocketIOServer
 
@@ -6,25 +5,13 @@ from socketio import SocketIOServer
 class Application(object):
     def __init__(self):
         self.buffer = []
-        self.redis = redis.Redis("127.0.0.1")
-        self.redis.delete("nicknames")
+        self.cache = {
+            'nicknames': set()
+        }
 
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
         print path, start_response
-
-        #if not path:
-        #    start_response('200 OK', [('Content-Type', 'text/html')])
-        #    return ['<h1>Welcome. Try the <a href="/chat.html">chat</a> example.</h1>']
-
-        #if path in ['json.js', 'chat.html']:
-        #    try:
-        #        data = open(path).read()
-        #    except Exception:
-        #        traceback.print_exc()
-        #        return not_found(start_response)
-        #    start_response('200 OK', [('Content-Type', 'text/javascript' if path.endswith('.js') else 'text/html')])
-        #    return [data]
 
         if path.startswith("socket.io"):
             socketio = environ['socketio']
@@ -46,10 +33,12 @@ class Application(object):
             nickdict[nickname] = nickname
             socketio.session.nickname = nickname
 
-            self.redis.rpush("nicknames", nickname)
+            self.cache['nicknames'].add(nickname)
 
             socketio.ack(message['id'], ['false'])
-            socketio.broadcast_event("nicknames", self.redis.lrange("nicknames", 0, 20), include_self=True)
+            socketio.broadcast_event("announcement", "%s connected" % nickname)
+            socketio.broadcast_event("nicknames", list(self.cache['nicknames']), include_self=True)
+
         elif message['name'] == "user message":
             socketio.broadcast_event("user message", socketio.session.nickname, message['args'][0])
 

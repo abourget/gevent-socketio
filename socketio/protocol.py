@@ -1,4 +1,3 @@
-import urllib
 import gevent
 import anyjson as json
 
@@ -9,15 +8,6 @@ class SocketIOProtocol(object):
     def __init__(self, handler):
         self.handler = handler
         self.session = None
-
-    def on_connect(self):
-        return self.connected() and self.session.is_new()
-
-    def connected(self):
-        if getattr(self, 'session'):
-            return self.session.connected
-        else:
-            return False
 
     def ack(self, msg_id, params):
         self.send("6:::%s%s" % (msg_id, params))
@@ -59,24 +49,14 @@ class SocketIOProtocol(object):
 
     def start_heartbeat(self):
         """Start the heartbeat Greenlet to check connection health."""
-
         def ping():
-            while self.connected():
-                gevent.sleep(9.0) # FIXME: make this a setting
-                hb_msg = HEARTBEAT_FRAME + str(self.session.heartbeat())
-                self._write(hb_msg, self.session)
+            self.session.state = self.session.STATE_CONNECTED
+
+            while self.session.connected:
+                gevent.sleep(5.0) # FIXME: make this a setting
+                self.send("2::")
 
         return gevent.spawn(ping)
-
-    def check_heartbeat(self, counter):
-        """Check for a valid incoming heartbeat."""
-
-        counter = int(counter[len(HEARTBEAT_FRAME):])
-
-        if self.session.valid_heartbeat(counter):
-            return
-        else:
-            self.session.kill()
 
     def _write(self, message, session=None):
         if session is None:
@@ -97,24 +77,34 @@ class SocketIOProtocol(object):
     def decode(self, data):
         messages = []
         data.encode('utf-8', 'replace')
-        msg_type, msg_id, msg_endpoint, data = data.split(":", 3)
+        msg_type, msg_id, tail = data.split(":", 2)
+
+        print "RECEVIED MSG TYPE ", msg_type
 
         if msg_type == "0":
-            # Disconnect
-            pass
+            self.session.kill()
+            return None
+
         elif msg_type == "1":
-            pass
-        elif msg_type == 2:
-            # send back heartbeat
-            pass
-        elif msg_type == 3:
-            messages.append(data)
+            self.send("1::%s" % tail)
+            return None
+
+        elif msg_type == "2":
+            self.session.heartbeat()
+            return None
+
+        msg_endpoint, data = tail.split(":", 1)
+
+        if msg_type == "3":
+            message = {
+                'type': 'message',
+                'data': data,
+            }
+            messages.append(message)
         elif msg_type == 4:
             messages.append(json.loads(data))
         elif msg_type == "5":
-            # e.g. 5:1+::{"name":"nickname","args":["test"]}
             message = json.loads(data)
-
 
             if "+" in msg_id:
                 message['id'] = msg_id
@@ -122,38 +112,7 @@ class SocketIOProtocol(object):
                 pass # TODO send auto ack
             message['type'] = 'event'
             messages.append(message)
-        elif msg_type == 6:
-            # ACK
-            pass
-        elif msg_type == 7:
-            pass
-        elif msg_type == 8:
-            pass
+        else:
+            raise Exception("Unknown message type: %s" % msg_type)
 
         return messages[0]
-
-
-
-        #if data:
-        #    while len(data) != 0:
-        #        if data[0:3] == MSG_FRAME:
-        #            _, size, data = data.split(MSG_FRAME, 2)
-        #            size = int(size)
-        #            frame_type = data[0:3]
-
-        #            if frame_type == JSON_FRAME:
-        #                messages.append(json.loads(data[3:size]))
-
-        #            elif frame_type == HEARTBEAT_FRAME:
-        #                self.check_heartbeat(data[0:size])
-
-        #            else:
-        #                messages.append(data[0:size])
-
-        #            data = data[size:]
-        #        else:
-        #            raise Exception("Unsupported frame type")
-
-        #    return messages
-        #else:
-        #    return messages

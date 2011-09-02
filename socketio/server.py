@@ -81,7 +81,6 @@ class Session(object):
         self.server_queue = Queue() # queue for messages to server
         self.hits = 0
         self.heartbeats = 0
-        self.connected = False
         self.timeout = Event()
         self.wsgi_app_greenlet = None
         self.state = "NEW"
@@ -110,6 +109,10 @@ class Session(object):
 
         return ' '.join(result)
 
+    @property
+    def connected(self):
+        return self.state == self.STATE_CONNECTED
+
     def incr_hits(self):
         self.hits += 1
 
@@ -120,15 +123,7 @@ class Session(object):
         self.timeout.set()
 
     def heartbeat(self):
-        self.heartbeats += 1
-        return self.heartbeats
-
-    def valid_heartbeat(self, counter):
         self.clear_disconnect_timeout()
-        return self.heartbeats == counter
-
-    def is_new(self):
-        return self.hits == 0
 
     def kill(self):
         if self.connected:

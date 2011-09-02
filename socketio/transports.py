@@ -144,7 +144,7 @@ class XHRMultipartTransport(XHRPollingTransport):
 class WebsocketTransport(BaseTransport):
     def connect(self, session, request_method):
         websocket = self.handler.environ['wsgi.websocket']
-        websocket.send(self.encode(session.session_id))
+        websocket.send("1::")
 
         def send_into_ws():
             while True:
@@ -164,10 +164,13 @@ class WebsocketTransport(BaseTransport):
                     session.kill()
                     break
                 else:
-                    session.put_server_msg(self.decode(message))
+                    decoded_message = self.decode(message)
+                    if decoded_message is not None:
+                        session.put_server_msg(decoded_message)
 
         gr1 = gevent.spawn(send_into_ws)
         gr2 = gevent.spawn(read_from_ws)
+
         heartbeat = self.handler.environ['socketio'].start_heartbeat()
 
         return [gr1, gr2, heartbeat]

@@ -1,5 +1,5 @@
 <!DOCTYPE html><html><head><link href="stylesheets/style.css" rel="stylesheet"><script src="http://code.jquery.com/jquery-1.6.1.min.js"></script><script src="socket.io.js"></script><script>// socket.io specific code
-io.transports = ['xhr-polling']
+//io.transports = ['xhr-polling']
 var socket = io.connect("http://localhost:8080");
 
 socket.on('connect', function () {
@@ -51,6 +51,7 @@ $('#set-nickname').submit(function (ev) {
 $('#send-message').submit(function () {
 	message('me', $('#message').val());
 	socket.emit('user message', $('#message').val());
+	socket.send("TESTING !@#")
 	clear();
 	$('#lines').get(0).scrollTop = 10000000;
 	return false;

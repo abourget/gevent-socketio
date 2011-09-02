@@ -35,8 +35,8 @@ class SocketIOHandler(WSGIHandler):
             self.log_error("Namespace mismatch")
         else:
             session = self.server.get_session()
-            data = "%s:15:10:xhr-polling" % (session.session_id,)
-            #data = "%s:15:10:%s" % (session.session_id, ",".join(self.handler_types.keys()))
+            #data = "%s:15:10:xhr-polling" % (session.session_id,)
+            data = "%s:15:10:%s" % (session.session_id, ",".join(self.handler_types.keys()))
             self.write_smart(data)
 
     def write_jsonp_result(self, data, wrapper="0"):
