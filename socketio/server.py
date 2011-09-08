@@ -96,7 +96,7 @@ class Session(object):
 
     def __str__(self):
         result = ['session_id=%r' % self.session_id]
-        if self.connected:
+        if self.state == self.STATE_CONNECTED:
             result.append('connected')
         if self.client_queue.qsize():
             result.append('client_queue[%s]' % self.client_queue.qsize())
@@ -127,9 +127,10 @@ class Session(object):
 
     def kill(self):
         if self.connected:
-            self.connected = False
+            self.state = self.STATE_DISCONNECTING
             self.server_queue.put_nowait(None)
             self.client_queue.put_nowait(None)
+            #gevent.kill(self.wsgi_app_greenlet)
         else:
             pass # Fail silently
 

@@ -10,7 +10,7 @@ class SocketIOProtocol(object):
         self.session = None
 
     def ack(self, msg_id, params):
-        self.send("6:::%s%s" % (msg_id, params))
+        self.send("6:::%s%s" % (msg_id, json.dumps(params)))
 
     def send(self, message, destination=None):
         if destination is None:
@@ -79,7 +79,7 @@ class SocketIOProtocol(object):
         data.encode('utf-8', 'replace')
         msg_type, msg_id, tail = data.split(":", 2)
 
-        print "RECEVIED MSG TYPE ", msg_type
+        print "RECEIVED MSG TYPE ", msg_type
 
         if msg_type == "0":
             self.session.kill()
@@ -101,7 +101,7 @@ class SocketIOProtocol(object):
                 'data': data,
             }
             messages.append(message)
-        elif msg_type == 4:
+        elif msg_type == "4":
             messages.append(json.loads(data))
         elif msg_type == "5":
             message = json.loads(data)

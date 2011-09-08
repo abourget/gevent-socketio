@@ -1,5 +1,7 @@
 import gevent
 import socket
+import urlparse
+
 from gevent.queue import Empty
 
 class BaseTransport(object):
@@ -12,8 +14,8 @@ class BaseTransport(object):
             ("Access-Control-Allow-Credentials", "true"),
             ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
             ("Access-Control-Max-Age", 3600),
-            ("Connection", "close"),
         ]
+        self.headers_list = []
         self.handler = handler
 
     def encode(self, data):
@@ -29,9 +31,13 @@ class BaseTransport(object):
 
         self.handler.write(data)
 
-    def start_response(self, *args, **kwargs):
-        self.headers.append(self.content_type)
-        self.handler.start_response(*args, **kwargs)
+    def start_response(self, status, headers, **kwargs):
+        if "Content-Type" not in [x[0] for x in headers]:
+            headers.append(self.content_type)
+
+        headers.extend(self.headers)
+        print headers
+        self.handler.start_response(status, headers, **kwargs)
 
 
 class XHRPollingTransport(BaseTransport):
@@ -57,12 +63,16 @@ class XHRPollingTransport(BaseTransport):
 
         return []
 
-    def post(self, session):
-        data = self.handler.wsgi_input.readline().replace("data=", "")
-        print data # 5:1+::{"name":"nickname","args":["test"]}
-        session.put_server_msg(self.decode(data))
+    def _request_body(self):
+        return self.handler.wsgi_input.readline()
 
-        self.start_response("200 OK", [])
+    def post(self, session):
+        session.put_server_msg(self.decode(self._request_body()))
+
+        self.start_response("200 OK", [
+            ("Connection", "close"),
+            ("Content-Type", "text/plain")
+        ])
         self.write("1")
 
         return []
@@ -70,7 +80,9 @@ class XHRPollingTransport(BaseTransport):
     def connect(self, session, request_method):
         if not session.connection_confirmed:
             session.connection_confirmed = True
-            self.start_response("200 OK", [])
+            self.start_response("200 OK", [
+                ("Connection", "close"),
+            ])
             self.write("1::")
 
             return []
@@ -85,43 +97,41 @@ class JSONPolling(XHRPollingTransport):
         super(JSONPolling, self).__init__(handler)
         self.content_type = ("Content-Type", "text/javascript; charset=UTF-8")
 
-    def write_packed(self, data):
-        self.write("io.JSONP[0]._('%s');" % data)
+    def _request_body(self):
+        data = super(JSONPolling, self)._request_body()
+        return urlparse.unquote(data).replace("d=", "")
+
+    def write(self, data):
+        super(JSONPolling, self).write("io.j[0]('%s');" % data)
 
 
 class XHRMultipartTransport(XHRPollingTransport):
+    def __init__(self, handler):
+        super(JSONPolling, self).__init__(handler)
+        self.content_type = (
+            "Content-Type",
+            "multipart/x-mixed-replace;boundary=\"socketio\""
+        )
+
     def connect(self, session, request_method):
         if request_method == "GET":
             heartbeat = self.handler.environ['socketio'].start_heartbeat()
-            response = self.handle_get_response(session)
-
-            return [heartbeat] + response
-
+            return [heartbeat] + self.get(session)
         elif request_method == "POST":
-            return self.handle_post_response(session)
-
-        elif request_method == "OPTIONS":
-            return self.handle_options_response()
-
+            return self.post(session)
         else:
             raise Exception("No support for such method: " + request_method)
-
 
     def get(self, session):
         header = "Content-Type: text/plain; charset=UTF-8\r\n\r\n"
 
-        self.start_response("200 OK", [
-            ("Access-Control-Allow-Origin", "*"),
-            ("Access-Control-Allow-Credentials", "true"),
-            ("Connection", "keep-alive"),
-            ("Content-Type", "multipart/x-mixed-replace;boundary=\"socketio\""),
-        ])
+        self.start_response("200 OK", [("Connection", "keep-alive")])
         self.write_multipart("--socketio\r\n")
         self.write_multipart(header)
         self.write_multipart(self.encode(session.session_id) + "\r\n")
         self.write_multipart("--socketio\r\n")
 
-        def send_part():
+        def chunk():
             while True:
                 message = session.get_client_msg()
 
@@ -130,6 +140,7 @@ class XHRMultipartTransport(XHRPollingTransport):
                     break
                 else:
                     message = self.encode(message)
+
                     try:
                         self.write_multipart(header)
                         self.write_multipart(message)
@@ -138,7 +149,7 @@ class XHRMultipartTransport(XHRPollingTransport):
                         session.kill()
                         break
 
-        return [gevent.spawn(send_part)]
+        return [gevent.spawn(chunk)]
 
 
 class WebsocketTransport(BaseTransport):
@@ -178,6 +189,7 @@ class WebsocketTransport(BaseTransport):
 
 class FlashSocketTransport(WebsocketTransport):
     pass
+
 
 class HTMLFileTransport(XHRPollingTransport):
     """Not tested at all!"""

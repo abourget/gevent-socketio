@@ -11,7 +11,26 @@ class Application(object):
 
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
-        print path, start_response
+
+        if not path:
+            start_response('200 OK', [('Content-Type', 'text/html')])
+            return ['<h1>Welcome. Try the <a href="/chat.html">chat</a> example.</h1>']
+
+        if path in ['socket.io.js', 'chat.html', 'stylesheets/style.css']:
+            try:
+                data = open(path).read()
+            except Exception:
+                return not_found(start_response)
+
+            if path.endswith(".js"):
+                content_type = "text/javascript"
+            elif path.endswith(".css"):
+                content_type = "text/css"
+            else:
+                content_type = "text/html"
+
+            start_response('200 OK', [('Content-Type', content_type)])
+            return [data]
 
         if path.startswith("socket.io"):
             socketio = environ['socketio']

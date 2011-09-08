@@ -1,3 +1,4 @@
+import sys
 import re
 import gevent
 import urlparse
@@ -35,21 +36,21 @@ class SocketIOHandler(WSGIHandler):
             self.log_error("Namespace mismatch")
         else:
             session = self.server.get_session()
-            #data = "%s:15:10:xhr-polling" % (session.session_id,)
+            #data = "%s:15:10:jsonp-polling,htmlfile" % (session.session_id,)
             data = "%s:15:10:%s" % (session.session_id, ",".join(self.handler_types.keys()))
             self.write_smart(data)
 
     def write_jsonp_result(self, data, wrapper="0"):
-            self.start_response("200 OK", [
-                ("Content-Type", "application/javascript"),
-            ])
-            self.result = ['io.j[%s]("%s");' % (wrapper, data)]
+        self.start_response("200 OK", [
+            ("Content-Type", "application/javascript"),
+        ])
+        self.result = ['io.j[%s]("%s");' % (wrapper, data)]
 
     def write_plain_result(self, data):
-            self.start_response("200 OK", [
-                ("Content-Type", "text/plain")
-            ])
-            self.result = [data]
+        self.start_response("200 OK", [
+            ("Content-Type", "text/plain")
+        ])
+        self.result = [data]
 
     def write_smart(self, data):
         args = urlparse.parse_qs(self.environ.get("QUERY_STRING"))
@@ -72,27 +73,24 @@ class SocketIOHandler(WSGIHandler):
         request_method = self.environ.get("REQUEST_METHOD")
         request_tokens = self.RE_REQUEST_URL.match(path)
 
-
         # Parse request URL and QUERY_STRING and do handshake
-        print "", ""
-        print "REQUEST", path
         if request_tokens:
             request_tokens = request_tokens.groupdict()
-            print "HANDLE"
         else:
             handshake_tokens = self.RE_HANDSHAKE_URL.match(path)
-            print "HANDSHAKE"
 
             if handshake_tokens:
                 return self._do_handshake(handshake_tokens.groupdict())
             else:
-                self.log_error("Unknown request")
+                # This is no socket.io request. Let the WSGI app handle it.
+                return super(SocketIOHandler, self).handle_one_response()
 
         # Setup the transport and session
         transport = self.handler_types.get(request_tokens["transport_id"])
         session_id = request_tokens["session_id"]
 
         # In case this is WebSocket request, switch to the WebSocketHandler
+        # FIXME: fix this ugly class change
         if transport in (transports.WebsocketTransport, \
                 transports.FlashSocketTransport):
             self.__class__ = WebSocketHandler
@@ -106,22 +104,20 @@ class SocketIOHandler(WSGIHandler):
 
         # Create a transport and handle the request likewise
         self.transport = transport(self)
-        print "CONNECT"
         jobs = self.transport.connect(session, request_method)
-        print "DISCONNECT"
 
+        try:
+            if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
+                session.wsgi_app_greenlet = gevent.spawn(self.application, self.environ, lambda status, headers, exc=None: None)
+        except:
+            self.handle_error(*sys.exc_info())
 
-        #if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
-        #    # Call the WSGI application, and let it run until the Socket.IO
-        #    # is *disconnected*, even though many POST/polling requests
-        #    # come through.
-        #    session.wsgi_app_greenlet = gevent.getcurrent()
-        #    session.connected = True
-        #    self.application(self.environ, lambda status, headers, exc=None: None)
-        #    session.connected = False
-
-        if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
-            session.wsgi_app_greenlet = gevent.spawn(self.application, self.environ, lambda status, headers, exc=None: None)
         gevent.joinall(jobs)
 
-        print "JOINED"
+    def handle_bad_request(self):
+        self.close_connection = True
+        self.start_reponse("400 Bad Request", [
+            ('Content-Type', 'text/plain'),
+            ('Connection', 'close'),
+            ('Content-Length', 0)
+        ])
