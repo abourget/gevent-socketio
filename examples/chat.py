@@ -40,7 +40,7 @@ class Application(object):
 
                 print message
 
-                if message['type'] == "event":
+                if message and message['type'] == "event":
                     self.handle_event(message, socketio)
         else:
             return not_found(start_response)
@@ -54,7 +54,7 @@ class Application(object):
 
             self.cache['nicknames'].add(nickname)
 
-            socketio.ack(message['id'], ['false'])
+            socketio.ack(message['id'], [0])
             socketio.broadcast_event("announcement", "%s connected" % nickname)
             socketio.broadcast_event("nicknames", list(self.cache['nicknames']), include_self=True)
 
