@@ -10,7 +10,11 @@ class SocketIOProtocol(object):
         self.session = None
 
     def ack(self, msg_id, params):
-        self.send("6:::%s%s" % (msg_id, json.dumps(params)))
+        self.send("6:::%s+%s" % (msg_id, json.dumps(params)))
+
+    def emit(self, event, endpoint, *args):
+        self.send("5::%s:%s" % (endpoint, json.dumps({'name': event,
+                                                      'args': args})))
 
     def send(self, message, destination=None):
         if destination is None:
@@ -75,44 +79,52 @@ class SocketIOProtocol(object):
         return encoded_msg
 
     def decode(self, data):
-        messages = []
         data.encode('utf-8', 'replace')
         msg_type, msg_id, tail = data.split(":", 2)
 
-        print "RECEIVED MSG TYPE ", msg_type
+        print "RECEIVED MSG TYPE ", msg_type, data
 
-        if msg_type == "0":
+        if msg_type == "0": # disconnect
             self.session.kill()
-            return None
+            return {'endpoint': tail, 'type': 'disconnect'}
 
-        elif msg_type == "1":
+        elif msg_type == "1": # connect
             self.send("1::%s" % tail)
-            return None
+            return {'endpoint': tail, 'type': 'connect'}
 
-        elif msg_type == "2":
+        elif msg_type == "2": # heartbeat
             self.session.heartbeat()
             return None
 
         msg_endpoint, data = tail.split(":", 1)
+        message = {'endpoint': msg_endpoint}
 
-        if msg_type == "3":
-            message = {
-                'type': 'message',
-                'data': data,
-            }
-            messages.append(message)
-        elif msg_type == "4":
-            messages.append(json.loads(data))
-        elif msg_type == "5":
-            message = json.loads(data)
+        if msg_type == "3": # message
+            message['type'] = 'message'
+            message['data'] = data
+        elif msg_type == "4": # json msg
+            message['type'] = 'json'
+            message['data'] = json.loads(data)
+        elif msg_type == "5": # event
+            print "EVENT with data", data
+            message.update(json.loads(data))
 
             if "+" in msg_id:
                 message['id'] = msg_id
             else:
                 pass # TODO send auto ack
             message['type'] = 'event'
-            messages.append(message)
+        elif msg_type == "6": # ack
+            message['type'] = 'ack?'
+        elif msg_type == "7": # error
+            message['type'] = 'error'
+            els = data.split('+', 1)
+            message['reason'] = els[0]
+            if len(els) == 2:
+                message['advice'] = els[1]
+        elif msg_type == "8": # noop
+            return None
         else:
             raise Exception("Unknown message type: %s" % msg_type)
 
-        return messages[0]
+        return message
