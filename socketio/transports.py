@@ -169,7 +169,7 @@ class WebsocketTransport(BaseTransport):
 
         def read_from_ws():
             while True:
-                message = websocket.wait()
+                message = websocket.receive()
 
                 if message is None:
                     session.kill()
