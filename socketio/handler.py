@@ -98,7 +98,7 @@ class SocketIOHandler(WSGIHandler):
         if transport in (transports.WebsocketTransport, \
                 transports.FlashSocketTransport):
             self.__class__ = WebSocketHandler
-            self.handle_one_response(call_wsgi_app=False)
+            self.handle_one_response()
             session = self.server.get_session()
         else:
             session = self.server.get_session(session_id)
