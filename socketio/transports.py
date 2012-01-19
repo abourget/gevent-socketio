@@ -171,7 +171,7 @@ class WebsocketTransport(BaseTransport):
             while True:
                 message = websocket.receive()
 
-                if message is None:
+                if not message:
                     session.kill()
                     break
                 else:
