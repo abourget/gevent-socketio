@@ -99,7 +99,8 @@ class JSONPolling(XHRPollingTransport):
 
     def _request_body(self):
         data = super(JSONPolling, self)._request_body()
-        return urlparse.unquote(data).replace("d=", "")
+        # resolve %20%3F's, take out wrapping d="...", etc..
+        return urlparse.unquote(data)[3:-1].replace(r'\"', '"')
 
     def write(self, data):
         super(JSONPolling, self).write("io.j[0]('%s');" % data)
