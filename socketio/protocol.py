@@ -79,7 +79,7 @@ class SocketIOProtocol(object):
         return encoded_msg
 
     def decode(self, data):
-        data.encode('utf-8', 'replace')
+        data.encode('utf-8', 'ignore')
         msg_type, msg_id, tail = data.split(":", 2)
 
         print "RECEIVED MSG TYPE ", msg_type, data
