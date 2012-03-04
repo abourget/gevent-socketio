@@ -10,13 +10,13 @@ class SocketIOProtocol(object):
         self.session = None
 
     def ack(self, msg_id, params):
-        self.send("6:::%s+%s" % (msg_id, json.dumps(params)))
+        self.send_message("6:::%s+%s" % (msg_id, json.dumps(params)))
 
     def emit(self, event, endpoint, *args):
-        self.send("5::%s:%s" % (endpoint, json.dumps({'name': event,
+        self.send_message("5::%s:%s" % (endpoint, json.dumps({'name': event,
                                                       'args': args})))
 
-    def send(self, message, destination=None):
+    def send_message(self, message, destination=None):
         if destination is None:
             dst_client = self.session
         else:
@@ -24,8 +24,11 @@ class SocketIOProtocol(object):
 
         self._write(message, dst_client)
 
+    def send(self, message):
+        self.send_message("3:::%s" % message)
+
     def send_event(self, name, *args):
-        self.send("5:::" + json.dumps({'name': name, 'args': args}))
+        self.send_message("5:::" + json.dumps({'name': name, 'args': args}))
 
     def receive(self):
         """Wait for incoming messages."""
@@ -58,7 +61,7 @@ class SocketIOProtocol(object):
 
             while self.session.connected:
                 gevent.sleep(5.0) # FIXME: make this a setting
-                self.send("2::")
+                self.send_message("2::")
 
         return gevent.spawn(ping)
 
@@ -89,7 +92,7 @@ class SocketIOProtocol(object):
             return {'endpoint': tail, 'type': 'disconnect'}
 
         elif msg_type == "1": # connect
-            self.send("1::%s" % tail)
+            self.send_message("1::%s" % tail)
             return {'endpoint': tail, 'type': 'connect'}
 
         elif msg_type == "2": # heartbeat
