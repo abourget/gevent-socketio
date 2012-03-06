@@ -28,6 +28,9 @@ class SocketIOHandler(WSGIHandler):
     def __init__(self, *args, **kwargs):
         self.socketio_connection = False
         self.allowed_paths = None
+        self.transports = kwargs.pop('transports', self.handler_types.keys())
+        if not set(self.transports).issubset(set(self.handler_types)):
+            raise Exception("transports should be elements of: %s" % (self.handler_types.keys()))
 
         super(SocketIOHandler, self).__init__(*args, **kwargs)
 
@@ -37,7 +40,7 @@ class SocketIOHandler(WSGIHandler):
         else:
             session = self.server.get_session()
             #data = "%s:15:10:jsonp-polling,htmlfile" % (session.session_id,)
-            data = "%s:15:10:%s" % (session.session_id, ",".join(self.handler_types.keys()))
+            data = "%s:15:10:%s" % (session.session_id, ",".join(self.transports))
             self.write_smart(data)
 
     def write_jsonp_result(self, data, wrapper="0"):
