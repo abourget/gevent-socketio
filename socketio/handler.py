@@ -97,9 +97,10 @@ class SocketIOHandler(WSGIHandler):
         # FIXME: fix this ugly class change
         if transport in (transports.WebsocketTransport, \
                 transports.FlashSocketTransport):
+            session = self.server.get_session(session_id)
+            self.environ['socketio'].session = session
             self.__class__ = WebSocketHandler
             self.handle_one_response()
-            session = self.server.get_session()
         else:
             session = self.server.get_session(session_id)
 
