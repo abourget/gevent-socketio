@@ -85,7 +85,7 @@ class SocketIOProtocol(object):
         data.encode('utf-8', 'ignore')
         msg_type, msg_id, tail = data.split(":", 2)
 
-        print "RECEIVED MSG TYPE ", msg_type, data
+        #print "RECEIVED MSG TYPE ", msg_type, data
 
         if msg_type == "0": # disconnect
             self.session.kill()
@@ -109,7 +109,7 @@ class SocketIOProtocol(object):
             message['type'] = 'json'
             message['data'] = json.loads(data)
         elif msg_type == "5": # event
-            print "EVENT with data", data
+            #print "EVENT with data", data
             message.update(json.loads(data))
 
             if "+" in msg_id:
