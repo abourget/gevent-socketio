@@ -28,11 +28,14 @@ class SocketIOHandler(WSGIHandler):
     def __init__(self, *args, **kwargs):
         self.socketio_connection = False
         self.allowed_paths = None
-        self.transports = kwargs.pop('transports', self.handler_types.keys())
-        if not set(self.transports).issubset(set(self.handler_types)):
-            raise Exception("transports should be elements of: %s" % (self.handler_types.keys()))
 
         super(SocketIOHandler, self).__init__(*args, **kwargs)
+
+        self.transports = self.handler_types.keys()
+        if self.server.transports:
+            self.transports = self.server.transports
+            if not set(self.transports).issubset(set(self.handler_types)):
+                raise Exception("transports should be elements of: %s" % (self.handler_types.keys()))
 
     def _do_handshake(self, tokens):
         if tokens["namespace"] != self.server.namespace:
@@ -66,13 +69,17 @@ class SocketIOHandler(WSGIHandler):
         self.process_result()
 
     def handle_one_response(self):
+        path = self.environ.get('PATH_INFO')
+
+        # Kick non-socket.io requests to our superclass
+        if not path.lstrip('/').startswith(self.server.namespace):
+            return super(SocketIOHandler, self).handle_one_response()
+
         self.status = None
         self.headers_sent = False
         self.result = None
         self.response_length = 0
         self.response_use_chunked = False
-
-        path = self.environ.get('PATH_INFO')
         request_method = self.environ.get("REQUEST_METHOD")
         request_tokens = self.RE_REQUEST_URL.match(path)
 
@@ -97,7 +104,7 @@ class SocketIOHandler(WSGIHandler):
         if transport in (transports.WebsocketTransport, \
                 transports.FlashSocketTransport):
             self.__class__ = WebSocketHandler
-            self.handle_one_response(call_wsgi_app=False)
+            self.handle_one_response()
             session = self.server.get_session()
         else:
             session = self.server.get_session(session_id)
@@ -110,11 +117,16 @@ class SocketIOHandler(WSGIHandler):
         jobs = self.transport.connect(session, request_method)
 
         try:
-            if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
-                session.wsgi_app_greenlet = gevent.spawn(self.application, self.environ, lambda status, headers, exc=None: None)
+            # We'll run the WSGI app if it wasn't already done.
+            if session.wsgi_app_greenlet is None:
+                start_response = lambda status, headers, exc=None: None
+                session.wsgi_app_greenlet = gevent.spawn(self.application,
+                                                         self.environ,
+                                                         start_response)
         except:
             self.handle_error(*sys.exc_info())
 
+        # DOUBLE-CHECK: do we need to joinall here ?
         gevent.joinall(jobs)
 
     def handle_bad_request(self):
