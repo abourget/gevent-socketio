@@ -98,16 +98,16 @@ class SocketIOHandler(WSGIHandler):
         # Setup the transport and session
         transport = self.handler_types.get(request_tokens["transport_id"])
         session_id = request_tokens["session_id"]
+        session = self.server.get_session(session_id)
 
         # In case this is WebSocket request, switch to the WebSocketHandler
         # FIXME: fix this ugly class change
-        if transport in (transports.WebsocketTransport, \
-                transports.FlashSocketTransport):
+        if issubclass(transport, (transports.WebsocketTransport,
+                                  transports.FlashSocketTransport)):
             self.__class__ = WebSocketHandler
+            self.prevent_wsgi_call = True # thank you
+            # TODO: any errors, treat them ??
             self.handle_one_response()
-            session = self.server.get_session()
-        else:
-            session = self.server.get_session(session_id)
 
         # Make the session object available for WSGI apps
         self.environ['socketio'].session = session
@@ -119,6 +119,8 @@ class SocketIOHandler(WSGIHandler):
         try:
             # We'll run the WSGI app if it wasn't already done.
             if session.wsgi_app_greenlet is None:
+                # TODO: why don't we spawn a call to handle_one_response here ?
+                #       why call directly the WSGI machinery ?
                 start_response = lambda status, headers, exc=None: None
                 session.wsgi_app_greenlet = gevent.spawn(self.application,
                                                          self.environ,
