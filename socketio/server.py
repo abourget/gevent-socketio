@@ -20,7 +20,7 @@ class SocketIOServer(WSGIServer):
     def __init__(self, *args, **kwargs):
         self.sessions = {}
         self.namespace = kwargs.pop('namespace')
-        self.transports = kwargs.pop('transports')
+        self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):
             self.policy_server = FlashPolicyServer()
