@@ -83,10 +83,6 @@ class SocketIOHandler(WSGIHandler):
         request_method = self.environ.get("REQUEST_METHOD")
         request_tokens = self.RE_REQUEST_URL.match(path)
 
-        # Kick non-socket.io requests to our superclass
-        if not path.lstrip('/').startswith(self.server.namespace):
-            return super(SocketIOHandler, self).handle_one_response()
-
         # Parse request URL and QUERY_STRING and do handshake
         if request_tokens:
             request_tokens = request_tokens.groupdict()
