@@ -1,0 +1,5 @@
+.hg
+gevent_socketio.egg-info
+*~
+*.pyc
+versiontools-*/

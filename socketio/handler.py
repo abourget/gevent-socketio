@@ -31,13 +31,19 @@ class SocketIOHandler(WSGIHandler):
 
         super(SocketIOHandler, self).__init__(*args, **kwargs)
 
+        self.transports = self.handler_types.keys()
+        if self.server.transports:
+            self.transports = self.server.transports
+            if not set(self.transports).issubset(set(self.handler_types)):
+                raise Exception("transports should be elements of: %s" % (self.handler_types.keys()))
+
     def _do_handshake(self, tokens):
         if tokens["namespace"] != self.server.namespace:
             self.log_error("Namespace mismatch")
         else:
             session = self.server.get_session()
             #data = "%s:15:10:jsonp-polling,htmlfile" % (session.session_id,)
-            data = "%s:15:10:%s" % (session.session_id, ",".join(self.handler_types.keys()))
+            data = "%s:15:10:%s" % (session.session_id, ",".join(self.transports))
             self.write_smart(data)
 
     def write_jsonp_result(self, data, wrapper="0"):
@@ -63,13 +69,17 @@ class SocketIOHandler(WSGIHandler):
         self.process_result()
 
     def handle_one_response(self):
+        path = self.environ.get('PATH_INFO')
+
+        # Kick non-socket.io requests to our superclass
+        if not path.lstrip('/').startswith(self.server.namespace):
+            return super(SocketIOHandler, self).handle_one_response()
+
         self.status = None
         self.headers_sent = False
         self.result = None
         self.response_length = 0
         self.response_use_chunked = False
-
-        path = self.environ.get('PATH_INFO')
         request_method = self.environ.get("REQUEST_METHOD")
         request_tokens = self.RE_REQUEST_URL.match(path)
 
@@ -92,16 +102,16 @@ class SocketIOHandler(WSGIHandler):
         # Setup the transport and session
         transport = self.handler_types.get(request_tokens["transport_id"])
         session_id = request_tokens["session_id"]
+        session = self.server.get_session(session_id)
 
         # In case this is WebSocket request, switch to the WebSocketHandler
         # FIXME: fix this ugly class change
-        if transport in (transports.WebsocketTransport, \
-                transports.FlashSocketTransport):
+        if issubclass(transport, (transports.WebsocketTransport,
+                                  transports.FlashSocketTransport)):
             self.__class__ = WebSocketHandler
+            self.prevent_wsgi_call = True # thank you
+            # TODO: any errors, treat them ??
             self.handle_one_response()
-            session = self.server.get_session()
-        else:
-            session = self.server.get_session(session_id)
 
         # Make the session object available for WSGI apps
         self.environ['socketio'].session = session
@@ -111,11 +121,18 @@ class SocketIOHandler(WSGIHandler):
         jobs = self.transport.connect(session, request_method)
 
         try:
-            if not session.wsgi_app_greenlet or not bool(session.wsgi_app_greenlet):
-                session.wsgi_app_greenlet = gevent.spawn(self.application, self.environ, lambda status, headers, exc=None: None)
+            # We'll run the WSGI app if it wasn't already done.
+            if session.wsgi_app_greenlet is None:
+                # TODO: why don't we spawn a call to handle_one_response here ?
+                #       why call directly the WSGI machinery ?
+                start_response = lambda status, headers, exc=None: None
+                session.wsgi_app_greenlet = gevent.spawn(self.application,
+                                                         self.environ,
+                                                         start_response)
         except:
             self.handle_error(*sys.exc_info())
 
+        # DOUBLE-CHECK: do we need to joinall here ?
         gevent.joinall(jobs)
 
     def handle_bad_request(self):
