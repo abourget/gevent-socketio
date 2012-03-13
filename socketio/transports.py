@@ -49,11 +49,11 @@ class XHRPollingTransport(BaseTransport):
         self.write()
         return []
 
-    def get(self, session):
-        session.clear_disconnect_timeout();
+    def get(self, socket):
+        socket.clear_disconnect_timeout();
 
         try:
-            message = session.get_client_msg(timeout=5.0)
+            message = socket.get_client_msg(timeout=5.0)
             message = self.encode(message)
         except Empty:
             message = "8::" # NOOP
@@ -66,8 +66,8 @@ class XHRPollingTransport(BaseTransport):
     def _request_body(self):
         return self.handler.wsgi_input.readline()
 
-    def post(self, session):
-        session.put_server_msg(self.decode(self._request_body()))
+    def post(self, socket):
+        socket.put_server_msg(self.decode(self._request_body()))
 
         self.start_response("200 OK", [
             ("Connection", "close"),
@@ -77,9 +77,9 @@ class XHRPollingTransport(BaseTransport):
 
         return []
 
-    def connect(self, session, request_method):
-        if not session.connection_confirmed:
-            session.connection_confirmed = True
+    def connect(self, socket, request_method):
+        if not socket.connection_confirmed:
+            socket.connection_confirmed = True
             self.start_response("200 OK", [
                 ("Connection", "close"),
             ])
@@ -87,7 +87,7 @@ class XHRPollingTransport(BaseTransport):
 
             return []
         elif request_method in ("GET", "POST", "OPTIONS"):
-            return getattr(self, request_method.lower())(session)
+            return getattr(self, request_method.lower())(socket)
         else:
             raise Exception("No support for the method: " + request_method)
 
@@ -114,30 +114,30 @@ class XHRMultipartTransport(XHRPollingTransport):
             "multipart/x-mixed-replace;boundary=\"socketio\""
         )
 
-    def connect(self, session, request_method):
+    def connect(self, socket, request_method):
         if request_method == "GET":
             heartbeat = self.handler.environ['socketio'].start_heartbeat()
-            return [heartbeat] + self.get(session)
+            return [heartbeat] + self.get(socket)
         elif request_method == "POST":
-            return self.post(session)
+            return self.post(socket)
         else:
             raise Exception("No support for such method: " + request_method)
 
-    def get(self, session):
+    def get(self, socket):
         header = "Content-Type: text/plain; charset=UTF-8\r\n\r\n"
 
         self.start_response("200 OK", [("Connection", "keep-alive")])
         self.write_multipart("--socketio\r\n")
         self.write_multipart(header)
-        self.write_multipart(self.encode(session.session_id) + "\r\n")
+        self.write_multipart(self.encode(socket.sessid) + "\r\n")
         self.write_multipart("--socketio\r\n")
 
         def chunk():
             while True:
-                message = session.get_client_msg()
+                message = socket.get_client_msg()
 
                 if message is None:
-                    session.kill()
+                    socket.kill()
                     break
                 else:
                     message = self.encode(message)
@@ -147,23 +147,23 @@ class XHRMultipartTransport(XHRPollingTransport):
                         self.write_multipart(message)
                         self.write_multipart("--socketio\r\n")
                     except socket.error:
-                        session.kill()
+                        socket.kill()
                         break
 
         return [gevent.spawn(chunk)]
 
 
 class WebsocketTransport(BaseTransport):
-    def connect(self, session, request_method):
+    def connect(self, socket, request_method):
         websocket = self.handler.environ['wsgi.websocket']
         websocket.send("1::")
 
         def send_into_ws():
             while True:
-                message = session.get_client_msg()
+                message = socket.get_client_msg()
 
                 if message is None:
-                    session.kill()
+                    socket.kill()
                     break
 
                 websocket.send(self.encode(message))
@@ -173,12 +173,12 @@ class WebsocketTransport(BaseTransport):
                 message = websocket.receive()
 
                 if not message:
-                    session.kill()
+                    socket.kill()
                     break
                 else:
                     decoded_message = self.decode(message)
                     if decoded_message is not None:
-                        session.put_server_msg(decoded_message)
+                        socket.put_server_msg(decoded_message)
 
         gr1 = gevent.spawn(send_into_ws)
         gr2 = gevent.spawn(read_from_ws)
@@ -202,7 +202,7 @@ class HTMLFileTransport(XHRPollingTransport):
     def write_packed(self, data):
         self.write("<script>parent.s._('%s', document);</script>" % data)
 
-    def handle_get_response(self, session):
+    def handle_get_response(self, socket):
         self.start_response("200 OK", [
             ("Connection", "keep-alive"),
             ("Content-Type", "text/html"),
@@ -211,7 +211,7 @@ class HTMLFileTransport(XHRPollingTransport):
         self.write("<html><body>" + " " * 244)
 
         try:
-            message = session.get_client_msg(timeout=5.0)
+            message = socket.get_client_msg(timeout=5.0)
             message = self.encode(message)
         except Empty:
             message = ""

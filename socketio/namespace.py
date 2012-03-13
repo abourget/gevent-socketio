@@ -7,12 +7,6 @@ GLOBAL_NS = None
 class ChatNamespace(BaseNamespace):
     """We're in the /chat namespace"""
 
-    requires_connect = True
-    """When ths is defined, you MUST send a 'connect' packet to call
-    on_connect(), which MUST return True
-    """
-    connected = False
-
     def receive_packet(self, packet):
         """If you override this, NONE of the functions in this class will
         be called.  It is responsible for dispatching to event() (which in turn
@@ -55,6 +49,13 @@ class ChatNamespace(BaseNamespace):
 
         self.socket[GLOBAL_NS].join('blah')
         self.socket.sessid # Like in node, for hooking back sessions to sockets.
+
+        a = 'thisvalue'
+        def callback()
+            self.superbob = a
+        self.emit('bob_event', {'something': 'blah'}, callback=callback)
+
+
     def message_(self, msg):
         """When you get a message, which is just a string"""
         # This message should be decoded already, according to the flags it was
@@ -122,15 +123,17 @@ class GlobalNamespace(BaseNamespace):
         pass
 
 
-# the Session object must be renamed to Socket(), to follow the Node.js semantics
 class BaseNamespace(object):
     def __init__(self, socket, request):
         self.request = request
         self.acl_methods = None # be careful, None means OPEN, while an empty
                                 # list means totally closed.
-        self.socket (session)
+        self.socket = socket
+        self.ack_count = 0
 
-    
+    def _get_next_ack(self):
+        self.ack_count += 1
+        return self.ack_count
 
     def is_method_allowed(self, acl):
         if self.acl_events is None:

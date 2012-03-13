@@ -12,7 +12,7 @@ class SocketIOHandler(WSGIHandler):
         ^/(?P<namespace>[^/]+)
          /(?P<protocol_version>[^/]+)
          /(?P<transport_id>[^/]+)
-         /(?P<session_id>[^/]+)/?$
+         /(?P<sessid>[^/]+)/?$
          """, re.X)
     RE_HANDSHAKE_URL = re.compile(r"^/(?P<namespace>[^/]+)/1/$", re.X)
 
@@ -41,9 +41,9 @@ class SocketIOHandler(WSGIHandler):
         if tokens["namespace"] != self.server.namespace:
             self.log_error("Namespace mismatch")
         else:
-            session = self.server.get_session()
-            #data = "%s:15:10:jsonp-polling,htmlfile" % (session.session_id,)
-            data = "%s:15:10:%s" % (session.session_id, ",".join(self.transports))
+            socket = self.server.get_socket()
+            #data = "%s:15:10:jsonp-polling,htmlfile" % (socket.sessid,)
+            data = "%s:15:10:%s" % (socket.sessid, ",".join(self.transports))
             self.write_smart(data)
 
     def write_jsonp_result(self, data, wrapper="0"):
@@ -95,10 +95,10 @@ class SocketIOHandler(WSGIHandler):
                 # This is no socket.io request. Let the WSGI app handle it.
                 return super(SocketIOHandler, self).handle_one_response()
 
-        # Setup the transport and session
+        # Setup the transport and socket
         transport = self.handler_types.get(request_tokens["transport_id"])
-        session_id = request_tokens["session_id"]
-        session = self.server.get_session(session_id)
+        sessid = request_tokens["sessid"]
+        socket = self.server.get_socket(sessid)
 
         # In case this is WebSocket request, switch to the WebSocketHandler
         # FIXME: fix this ugly class change
@@ -109,22 +109,22 @@ class SocketIOHandler(WSGIHandler):
             # TODO: any errors, treat them ??
             self.handle_one_response()
 
-        # Make the session object available for WSGI apps
-        self.environ['socketio'].session = session
+        # Make the socket object available for WSGI apps
+        self.environ['socketio'].socket = socket
 
         # Create a transport and handle the request likewise
         self.transport = transport(self)
-        jobs = self.transport.connect(session, request_method)
+        jobs = self.transport.connect(socket, request_method)
 
         try:
             # We'll run the WSGI app if it wasn't already done.
-            if session.wsgi_app_greenlet is None:
+            if socket.wsgi_app_greenlet is None:
                 # TODO: why don't we spawn a call to handle_one_response here ?
                 #       why call directly the WSGI machinery ?
                 start_response = lambda status, headers, exc=None: None
-                session.wsgi_app_greenlet = gevent.spawn(self.application,
-                                                         self.environ,
-                                                         start_response)
+                socket.wsgi_app_greenlet = gevent.spawn(self.application,
+                                                        self.environ,
+                                                        start_response)
         except:
             self.handle_error(*sys.exc_info())
 

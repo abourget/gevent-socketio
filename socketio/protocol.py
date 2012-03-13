@@ -22,8 +22,8 @@ class Packet(object):
     # Advices
     ADVICE_RECONNECT = "0"
 
-    def __init__(self, type, name=None, data=None, endpoint=None, id=None,
-                 ack=None):
+    def __init__(self, type, name=None, data=None, endpoint=None, msgid=None,
+                 ack_with_data=False):
         """Models a packet
 
         ``type`` - One of the packet types above (MESSAGE, JSON, EVENT, etc..)
@@ -31,14 +31,16 @@ class Packet(object):
         ``data`` - The actual data, before encoding
         ``endpoint`` - the Namespace's name to send the packet
         ``id`` - TODO: TO BE UNDERSTOOD!
-        ``ack`` - TODO: TO BE UNDERSTOOD!
+        ``ack_with_data`` - If True, return data (should be a sequence) with ack.
         """
         self.type = type
         self.name = name
-        self.id = id
+        self.msgid = msgid
         self.endpoint = endpoint
-        self.ack = ack
+        self.ack_with_data = ack_with_data
         self.data = data
+        if self.type == Packet.ACK and not msgid:
+            raise ValueError("An ACK packet must have a message 'msgid'")
 
     def encode(self):
         """Encode this packet into a byte string"""
@@ -47,7 +49,14 @@ class Packet(object):
             data = self.data
         if self.type == Packet.EVENT:
             data = {"name": "something"}
-        pass
+        type = self.type
+        msgid = self.msgid or ''
+        if self.type == Packet.ACK and msgid:
+            msgid += '+'  # if its an ACK, btw, this is duplication, since its in
+                          # the data, but it seems in the protocol, probably for
+                          # backwards compatibility issue
+        endpoint = self.endpoint or ''
+        return type + ':' + msgid + ':' + endpoint + ':'
 
     @staticmethod
     def decode(data):
@@ -60,7 +69,7 @@ class Packet(object):
         #print "RECEIVED MSG TYPE ", msg_type, data
 
         if msg_type == "0": # disconnect
-            self.session.kill()
+            self.socket.kill()
             return {'endpoint': tail, 'type': 'disconnect'}
 
         elif msg_type == "1": # connect
@@ -68,7 +77,7 @@ class Packet(object):
             return {'endpoint': tail, 'type': 'connect'}
 
         elif msg_type == "2": # heartbeat
-            self.session.heartbeat()
+            self.socket.heartbeat()
             return None
 
         msg_endpoint, data = tail.split(":", 1)
@@ -102,7 +111,8 @@ class Packet(object):
         else:
             raise Exception("Unknown message type: %s" % msg_type)
 
-        return Packet(type, data, endpoint, id, ack)
+        return Packet(type, data, endpoint, msgid, ack)
+
 
 
 class SocketIOProtocol(object):
@@ -110,7 +120,8 @@ class SocketIOProtocol(object):
 
     def __init__(self, handler):
         self.handler = handler
-        self.session = None
+        self.socket = None
+        self.ack_count = 0
 
     def ack(self, msg_id, params):
         self.send_message("6:::%s+%s" % (msg_id, json.dumps(params)))
@@ -121,9 +132,9 @@ class SocketIOProtocol(object):
 
     def send_message(self, message, destination=None):
         if destination is None:
-            dst_client = self.session
+            dst_client = self.socket
         else:
-            dst_client = self.handler.server.sessions.get(destination)
+            dst_client = self.handler.server.sockets.get(destination)
 
         self._write(message, dst_client)
 
@@ -136,7 +147,7 @@ class SocketIOProtocol(object):
     def receive(self):
         """Wait for incoming messages."""
 
-        return self.session.get_server_msg()
+        return self.socket.get_server_msg()
 
     def broadcast(self, message, exceptions=None, include_self=False):
         """
@@ -148,11 +159,11 @@ class SocketIOProtocol(object):
             exceptions = []
 
         if not include_self:
-            exceptions.append(self.session.session_id)
+            exceptions.append(self.socket.sessid)
 
-        for session_id, session in self.handler.server.sessions.iteritems():
-            if session_id not in exceptions:
-                self._write(message, session)
+        for sessid, socket in self.handler.server.sockets.iteritems():
+            if sessid not in exceptions:
+                self._write(message, socket)
 
     def broadcast_event(self, name, *args, **kwargs):
         self.broadcast("5:::" + json.dumps({'name': name, 'args': args}), **kwargs)
@@ -160,21 +171,21 @@ class SocketIOProtocol(object):
     def start_heartbeat(self):
         """Start the heartbeat Greenlet to check connection health."""
         def ping():
-            self.session.state = self.session.STATE_CONNECTED
+            self.socket.state = self.socket.STATE_CONNECTED
 
-            while self.session.connected:
+            while self.socket.connected:
                 gevent.sleep(5.0) # FIXME: make this a setting
                 self.send_message("2::")
 
         return gevent.spawn(ping)
 
-    def _write(self, message, session=None):
-        if session is None:
-            raise Exception("No client with that session exists")
+    def _write(self, message, socket=None):
+        if socket is None:
+            raise Exception("No client with that socket exists")
         else:
-            session.put_client_msg(message)
+            socket.put_client_msg(message)
 
-    def encode(self, message):
+    def encode(self):
         if isinstance(message, basestring):
             encoded_msg = message
         elif isinstance(message, (object, dict)):

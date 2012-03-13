@@ -18,7 +18,7 @@ class SocketIOServer(WSGIServer):
     """A WSGI Server with a resource that acts like an SocketIO."""
 
     def __init__(self, *args, **kwargs):
-        self.sessions = {}
+        self.sockets = {}
         self.namespace = kwargs.pop('namespace')
         self.transports = kwargs.pop('transports', None)
 
@@ -51,100 +51,17 @@ class SocketIOServer(WSGIServer):
         self.set_environ({'socketio': SocketIOProtocol(handler)})
         handler.handle()
 
-    def get_session(self, session_id=''):
-        """Return an existing or new client Session."""
+    def get_socket(self, sessid=''):
+        """Return an existing or new client Socket."""
 
-        session = self.sessions.get(session_id)
+        socket = self.sockets.get(sessid)
 
-        if session is None:
-            session = Session()
-            self.sessions[session.session_id] = session
+        if socket is None:
+            socket = Socket()
+            self.sockets[socket.sessid] = socket
         else:
-            session.incr_hits()
+            socket.incr_hits()
 
-        return session
+        return socket
 
 
-class Session(object):
-    """
-    Client session which checks the connection health and the queues for
-    message passing.
-    """
-
-    STATE_NEW = "NEW"
-    STATE_CONNECTED = "CONNECTED"
-    STATE_DISCONNECTING = "DISCONNECTING"
-    STATE_DISCONNECTED = "DISCONNECTED"
-
-    def __init__(self):
-        self.session_id = str(random.random())[2:]
-        self.client_queue = Queue() # queue for messages to client
-        self.server_queue = Queue() # queue for messages to server
-        self.hits = 0
-        self.heartbeats = 0
-        self.timeout = Event()
-        self.wsgi_app_greenlet = None
-        self.state = "NEW"
-        self.connection_confirmed = False
-
-        def disconnect_timeout():
-            self.timeout.clear()
-            if self.timeout.wait(10.0):
-                gevent.spawn(disconnect_timeout)
-            else:
-                self.kill()
-        gevent.spawn(disconnect_timeout)
-
-    def __str__(self):
-        result = ['session_id=%r' % self.session_id]
-        if self.state == self.STATE_CONNECTED:
-            result.append('connected')
-        if self.client_queue.qsize():
-            result.append('client_queue[%s]' % self.client_queue.qsize())
-        if self.server_queue.qsize():
-            result.append('server_queue[%s]' % self.server_queue.qsize())
-        if self.hits:
-            result.append('hits=%s' % self.hits)
-        if self.heartbeats:
-            result.append('heartbeats=%s' % self.heartbeats)
-
-        return ' '.join(result)
-
-    @property
-    def connected(self):
-        return self.state == self.STATE_CONNECTED
-
-    def incr_hits(self):
-        self.hits += 1
-
-        if self.hits == 1:
-            self.state = self.STATE_CONNECTED
-
-    def clear_disconnect_timeout(self):
-        self.timeout.set()
-
-    def heartbeat(self):
-        self.clear_disconnect_timeout()
-
-    def kill(self):
-        if self.connected:
-            self.state = self.STATE_DISCONNECTING
-            self.server_queue.put_nowait(None)
-            self.client_queue.put_nowait(None)
-            #gevent.kill(self.wsgi_app_greenlet)
-        else:
-            pass # Fail silently
-
-    def put_server_msg(self, msg):
-        self.clear_disconnect_timeout()
-        self.server_queue.put_nowait(msg)
-
-    def put_client_msg(self, msg):
-        self.clear_disconnect_timeout()
-        self.client_queue.put_nowait(msg)
-
-    def get_client_msg(self, **kwargs):
-        return self.client_queue.get(**kwargs)
-
-    def get_server_msg(self, **kwargs):
-        return self.server_queue.get(**kwargs)
