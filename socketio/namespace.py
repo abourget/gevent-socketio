@@ -2,12 +2,15 @@
 import gevent
 
 class BaseNamespace(object):
-    def __init__(self, environ, request):
+    def __init__(self, environ, channel, request=None):
         self.environ = environ
         self.request = request
         self.acl_methods = None # be careful, None means OPEN, while an empty
                                 # list means totally closed.
         self.jobs = []
+
+    def debug(*args, **kwargs):
+        print "Not implemented"
 
     @property
     def socket(self):
