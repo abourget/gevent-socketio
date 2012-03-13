@@ -23,7 +23,8 @@ class Packet(object):
     ADVICE_RECONNECT = "0"
 
     def __init__(self, type, name=None, data=None, endpoint=None, msgid=None,
-                 ack_with_data=False):
+                 ack_with_data=False, query_string=None, error_reason=None,
+                 error_advice=None, error_msg=None):
         """Models a packet
 
         ``type`` - One of the packet types above (MESSAGE, JSON, EVENT, etc..)
@@ -32,6 +33,9 @@ class Packet(object):
         ``endpoint`` - the Namespace's name to send the packet
         ``id`` - TODO: TO BE UNDERSTOOD!
         ``ack_with_data`` - If True, return data (should be a sequence) with ack.
+        ``error_reason`` - one of ERROR_* values
+        ``error_advice`` - one of ADVICE_* values
+        ``error_msg``- an error message to be displayed
         """
         self.type = type
         self.name = name
@@ -39,24 +43,49 @@ class Packet(object):
         self.endpoint = endpoint
         self.ack_with_data = ack_with_data
         self.data = data
+        self.query_string = query_string
         if self.type == Packet.ACK and not msgid:
             raise ValueError("An ACK packet must have a message 'msgid'")
 
+    @property
+    def query(self):
+        """Transform the query_string into a dictionary"""
+        # TODO: do it
+        return {}
+
     def encode(self):
         """Encode this packet into a byte string"""
-        data = None
-        if self.type == Packet.MESSAGE and self.data:
-            data = self.data
-        if self.type == Packet.EVENT:
-            data = {"name": "something"}
+        data = ''
         type = self.type
         msgid = self.msgid or ''
-        if self.type == Packet.ACK and msgid:
-            msgid += '+'  # if its an ACK, btw, this is duplication, since its in
-                          # the data, but it seems in the protocol, probably for
-                          # backwards compatibility issue
         endpoint = self.endpoint or ''
-        return type + ':' + msgid + ':' + endpoint + ':'
+
+        if type == Packet.ACK:
+            # TODO: distinguish between the ACK_ID and the PACKET ID!?!
+            if self.ack_with_data:
+                # TODO: check! in that case, `data` should be a sequence!
+                data = msgid + '+' + json.dumps(list(self.data))
+                msgid += '+'
+        elif type == Packet.EVENT:
+            ev = {"name": self.name}
+            if self.data:
+                ev['args'] = self.data
+            data = json.dumps(ev)
+        elif type == Packet.MESSAGE and self.data:
+            data = self.data
+        elif type == Packet.JSON:
+            data = json.dumps(self.data)
+        elif type == Packet.CONNECT:
+            data = self.query_string or ''
+        elif type == Packet.ERROR:
+            data = self.error_reason or ''
+            if self.error_advice:
+                data += '+' + self.error_advice
+
+        out = type + ':' + msgid + ':' + endpoint
+        if data:
+            out += ':' + data
+        return out
 
     @staticmethod
     def decode(data):
