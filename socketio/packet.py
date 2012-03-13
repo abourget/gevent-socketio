@@ -72,6 +72,7 @@ def encode(data):
                 msg += ':'
         else:
             msg += '::'
+
         msg += data['endpoint'] + ':' + payload
 
     elif type == '6':

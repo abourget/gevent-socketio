@@ -20,9 +20,8 @@ def default_error_handler(socket, error_name, error_message, endpoint, msg_id,
                only log for the server developer.
     """
     pkt = dict(type='event', name='error',
-               args=[error_name, error_message])
-    if endpoint:
-        pkt['endpoint'] = endpoint
+               args=[error_name, error_message],
+               endpoint=endpoint)
     if msg_id:
         pkt['id'] = msg_id
     
@@ -45,11 +44,6 @@ class Socket(object):
     if you used a WebSocket only...
     """
 
-    error_handler = default_error_handler
-    """You can attach a different error_handler. Look at default_error_handler
-    for inspiration.
-    """
-
     STATE_NEW = "NEW"
     STATE_CONNECTED = "CONNECTED"
     STATE_DISCONNECTING = "DISCONNECTING"
@@ -59,7 +53,7 @@ class Socket(object):
     """Use this to be explicit when specifying a Global Namespace (an endpoint
     with no name, not '/chat' or anything."""
 
-    def __init__(self, server):
+    def __init__(self, server, error_handler=None):
         self.server = weakref.proxy(server)
         self.sessid = str(random.random())[2:]
         self.client_queue = Queue() # queue for messages to client
@@ -76,6 +70,9 @@ class Socket(object):
         self.namespaces = {}
         self.active_ns = {} # Namespace sessions that were instantiated (/chat)
         self.jobs = []
+        self.error_handler = default_error_handler
+        if error_handler is not None:
+            self.error_handler = error_handler
 
     def _set_namespaces(self, namespaces):
         """This is a mapping (dict) of the different '/namespaces' to their
@@ -198,8 +195,8 @@ class Socket(object):
                   The default handler will not send a message to the user, but
                   only log.
         """
-        self.error_handler(self, error_name, error_message, endpoint, msg_id,
-                           quiet)
+        handler = self.error_handler
+        return handler(self, error_name, error_message, endpoint, msg_id, quiet)
 
     # User facing low-level function
     def disconnect(self):
