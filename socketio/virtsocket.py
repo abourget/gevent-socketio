@@ -143,6 +143,37 @@ class Socket(object):
         """Used by the transports"""
         return self.server_queue.get(**kwargs)
 
+
+
+    # User facing low-level function
+    def disconnect(self):
+        """Calling this method will call the disconnect() method on all the
+        active Namespaces that were open, and remove them from the ``active_ns``
+        map.
+        """
+        for ns_name, ns in self.active_ns.iteritems():
+            ns.disconnect()
+        # TODO: Find a better way to remove the Namespaces from the ``active_ns``
+        #       zone.  Have the Ns.disconnect() call remove itself from the
+        #       underlying socket ?
+        self.active_ns = {}
+
+    def send_packet(self, packet):
+        """Low-level interface to queue a packet on the wire (encoded as wire
+        protocol"""
+        self.put_client_msg(packet.encode())
+
+    def spawn(self, fn, *args, **kwargs):
+        """Spawn a new Greenlet, attached to this Socket instance.
+
+        It will be monitored by the "watcher" method
+        """
+
+        self.debug("Spawning sub-Socket Greenlet: %s" % fn.__name__)
+        job = gevent.spawn(fn, *args, **kwargs)
+        self.jobs.append(job)
+        return job
+
     def _reader_loop(self):
         """This is the loop that takes messages from the queue for the server
         to consume, decodes them and dispatches them.
@@ -186,22 +217,27 @@ class Socket(object):
     def _spawn_reader_loop(self):
         """Spawns the reader loop.  This is called internall by socketio_manage()
         """
-        self.jobs.append(gevent.spawn(self._reader_loop))
-
-    # User facing low-level function
-    def disconnect(self):
-        """Calling this method will call the disconnect() method on all the
-        active Namespaces that were open, and remove them from the ``active_ns``
-        map.
+        job = gevent.spawn(self._reader_loop)
+        self.jobs.append(job)
+        return job
+    def _watcher(self):
+        """Watch if any of the greenlets for a request have died. If so, kill the
+        request and the socket.
         """
-        for ns_name, ns in self.active_ns.iteritems():
-            ns.disconnect()
-        # TODO: Find a better way to remove the Namespaces from the ``active_ns``
-        #       zone.  Have the Ns.disconnect() call remove itself from the
-        #       underlying socket ?
-        self.active_ns = {}
+        # TODO: add that if any of the request.jobs die, kill them all and exit
+        gevent.sleep(5.0)
 
-    def send_packet(self, packet):
-        """Low-level interface to queue a packet on the wire (encoded as wire
-        protocol"""
-        self.put_client_msg(packet.encode())
+        while True:
+            gevent.sleep(1.0)
+
+            if not self.connected:
+                # Killing Socket-level jobs
+                gevent.killall(self.jobs)
+                for ns_name, ns in self.active_ns:
+                    ns.disconnect()
+                    ns.kill_local_jobs()
+
+    def _spawn_watcher(self):
+        job = gevent.spawn(self._watcher)
+        return job
+    
