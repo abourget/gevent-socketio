@@ -10,7 +10,7 @@ from gevent.event import Event
 from socketio.protocol import SocketIOProtocol
 from socketio.handler import SocketIOHandler
 from socketio.policyserver import FlashPolicyServer
-
+from socketio.virtsocket import Socket
 
 __all__ = ['SocketIOServer']
 
