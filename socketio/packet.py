@@ -14,6 +14,8 @@ MSG_TYPES = {
     'noop': 8,
     }
 
+MSG_VALUES = dict((v,k) for k, v in MSG_TYPES.iteritems())
+
 ERROR_REASONS = {
     'transport not supported': 0,
     'client not handshaken': 1,
@@ -142,55 +144,55 @@ class Packet(object):
 
     @staticmethod
     def decode(data):
-        """Decode a rawstr arriving from the channel into a valid Packet object
         """
-        # decode the stuff
-        #data.encode('utf-8', 'ignore')
+        Decode a rawstr packet arriving from the socket 
+        into a dict.
+        """
+        decoded_msg = {}
         msg_type, msg_id, tail = data.split(":", 2)
 
-        #print "RECEIVED MSG TYPE ", msg_type, data
+        decoded_msg['type'] = MSG_VALUES[int(msg_type)]
 
         if msg_type == "0": # disconnect
-            self.socket.kill()
-            return {'endpoint': tail, 'type': 'disconnect'}
-
+            decoded_msg['endpoint'] = tail
+        
         elif msg_type == "1": # connect
-            self.send_message("1::%s" % tail)
-            return {'endpoint': tail, 'type': 'connect'}
+            decoded_msg['endpoint'] = tail
+            decoded_msg['qs'] = tail
 
         elif msg_type == "2": # heartbeat
-            self.socket.heartbeat()
-            return None
+            decoded_msg['endpoint'] = tail
 
-        msg_endpoint, data = tail.split(":", 1)
-        message = {'endpoint': msg_endpoint}
+        elif msg_type == "3": # message
+            decoded_msg['data'] = tail
+            decoded_msg['endpoint'] = ''
 
-        if msg_type == "3": # message
-            message['type'] = 'message'
-            message['data'] = data
         elif msg_type == "4": # json msg
-            message['type'] = 'json'
-            message['data'] = json.loads(data)
+            decoded_msg['data'] = json.loads(data)
+
         elif msg_type == "5": # event
             #print "EVENT with data", data
-            message.update(json.loads(data))
+            decoded_msg.update(json.loads(data))
 
             if "+" in msg_id:
-                message['id'] = msg_id
+                decoded_msg['id'] = msg_id
             else:
                 pass # TODO send auto ack
-            message['type'] = 'event'
+
         elif msg_type == "6": # ack
-            message['type'] = 'ack?'
+            tail = tail.split(':')[1]
+            decoded_msg['ackId'] = tail
+            decoded_msg['endpoint'] = ''
+
         elif msg_type == "7": # error
-            message['type'] = 'error'
             els = data.split('+', 1)
-            message['reason'] = els[0]
+            decoded_msg['reason'] = els[0]
             if len(els) == 2:
-                message['advice'] = els[1]
+                decoded_msg['advice'] = els[1]
+
         elif msg_type == "8": # noop
             return None
         else:
             raise Exception("Unknown message type: %s" % msg_type)
 
-        return Packet(type, data, endpoint, msgid, ack)
+        return decoded_msg
