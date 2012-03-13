@@ -164,6 +164,7 @@ class Socket(object):
                 if endpoint not in self.namespaces:
                     #log.debug("unknown packet arriving: ", endpoint)
                     print "WE DON'T HAVE SUCH A NAMESPACE"
+                    continue
                 elif endpoint in self.active_ns:
                     active_ns = self.active_ns[endpoint]
                 else:
