@@ -11,6 +11,7 @@ class BaseNamespace(object):
 
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
+        self.socket = environ['socketio']
         self.request = request
         self.ns_name = ns_name
         self.allowed_methods = None # be careful, None means OPEN, while an empty
@@ -18,11 +19,9 @@ class BaseNamespace(object):
         self.ack_count = 0
         self.jobs = []
 
-    @property
-    def socket(self):
-        return self.environ['socketio']
-
     def _get_next_ack(self):
+        # TODO: this is currently unused, but we'll probably need it to implement
+        #       the ACK methods.
         self.ack_count += 1
         return self.ack_count
 
@@ -64,7 +63,7 @@ class BaseNamespace(object):
         to have access to.
 
         If you do not define this function, the user will have free access
-        to all of the on_function(), json(), message(), etc.. methods.
+        to all of the on_*() and recv_*() functions, etc.. methods.
 
         Return something like: ['on_connect', 'on_public_method']
 
@@ -89,6 +88,17 @@ class BaseNamespace(object):
         calls on_evname() functions), connect, disconnect, etc..
 
         If the packet arrived here, it is because it belongs to this endpoint.
+
+        For every packet arriving, the only possible path of execution, that is,
+        the only methods that *can* be called are the following:
+
+          recv_connect()
+          recv_message()
+          recv_json()
+          recv_error()
+          recv_disconnect()
+          on_*()
+
         """
         # TODO: take the packet, and dispatch it, execute connect(), message(),
         #       json(), event(), and this event will call the on_functions().
@@ -98,6 +108,12 @@ class BaseNamespace(object):
             return self.call_method('recv_message', packet['data'])
         elif packet['type'] == 'json':
             return self.call_method('recv_json', packet['data'])
+        elif packet['type'] == 'connect':
+            return self.call_method('recv_connect')
+        elif packet['type'] == 'error':
+            return self.call_method('recv_error', packet)
+        else:
+            print "UNprocessed packet", packet
         # TODO: manage the other packet types
 
 
@@ -163,25 +179,37 @@ class BaseNamespace(object):
         """
         pass
 
-    def disconnect(self):
-        """This would get called ONLY when the FULL socket gets disconnected,
-        as part of a loop through all namespaces, calling disconnect() on the
-        way.
+    def recv_disconnect(self):
+        """Override this function if you want to do something when you get a
+        *force disconnect* packet.
 
-        Override this method with clean-up instructions and processes.
+        By default, this function calls the ``disconnect()`` clean-up function.
+        You probably want to call it yourself also, and put your clean-up
+        routines in ``disconnect()`` rather than here, because that function
+        gets called automatically upon disconnection.  This function is a
+        pre-handle for when you get the `disconnect packet`.
+        """
+        self.disconnect()
+
+    def recv_connect(self):
+        """The first time a client connection is open on a Namespace, this gets
+        called, and allows you to do boilerplate stuff for the namespace, like
+        connecting to rooms, broadcasting events to others, doing authorization
+        work, tweaking the ACLs to open up the rest of the namespace (if it
+        was closed at the beginning by having get_initial_acl() return only
+        ['recv_connect'])
+
+        Also see the different mixins (RoomsMixin, BroadcastMixin).
         """
         pass
 
-    def connect(self):
-        """If you return False here, the Namespace will not be active for that
-        Socket.  You *should* return True for anything to succeed in here.
-
-        In this function, you can do things like authorization, making sure
-        someone will have access to these methods.
-
-        If you use the RoomsMixin, you can auto-join rooms, or other things.
+    def recv_error(self, packet):
+        """Override this function to handle the errors we get from the client.
+        
+        You get the full packet in here, since it is not clear what you should
+        get otherwise [TODO: change this sentence, this doesn't help :P]
         """
-        return True
+        pass
 
     def error(self, error_name, error_message, msg_id=None, quiet=False):
         """Use this to use the configured ``error_handler`` yield an
@@ -235,6 +263,8 @@ class BaseNamespace(object):
         # TODO: implement the callback stuff ??
 
         self.socket.send_packet(pkt)
+
+
 
 
     def spawn(self, fn, *args, **kwargs):
