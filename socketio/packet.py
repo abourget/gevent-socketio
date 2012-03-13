@@ -113,7 +113,7 @@ def decode(raw_data):
         data = split_data[3]
 
     decoded_msg['type'] = MSG_VALUES[int(msg_type)]
-    decoded_msg['endpoint'] = None
+    decoded_msg['endpoint'] = ''
 
     if msg_type == "0": # disconnect
         decoded_msg['endpoint'] = endpoint
