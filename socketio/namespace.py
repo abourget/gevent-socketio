@@ -2,16 +2,11 @@
 import gevent
 
 
-        a = 'thisvalue'
-        def callback()
-            self.superbob = a
-        self.emit('bob_event', {'something': 'blah'}, callback=callback)
-
-
 class BaseNamespace(object):
-    def __init__(self, environ, request):
+    def __init__(self, environ, ns_name, request=None):
         self.environ = environ
         self.request = request
+        self.ns_name = ns_name
         self.acl_methods = None # be careful, None means OPEN, while an empty
                                 # list means totally closed.
         self.socket = socket
@@ -80,6 +75,33 @@ class BaseNamespace(object):
         """
         return None
 
+
+    def process_packet(self, packet):
+        """If you override this, NONE of the functions in this class will
+        be called.  It is responsible for dispatching to event() (which in turn
+        calls on_evname() functions), connect, disconnect, etc..
+
+        If the packet arrived here, it is because it belongs to this endpoint.
+        """
+        # TODO: take the packet, and dispatch it, execute connect(), message(),
+        #       json(), event(), and this event will call the on_functions().
+        pass
+
+    def event(self, packet):
+        """This function dispatches ``event`` messages to the correct functions.
+
+        Override this function if you want to not dispatch messages 
+        automatically to "on_event_name" methods.
+
+        If you override this function, none of the on_functions will get called
+        by default.
+        """
+        data = packet.data
+        name = packat.name
+
+        # TODO: call the on_ and respect the ACLs
+
+
     def spawn(self, fn, *args, **kwargs):
         """Spawn a new process in the context of this request.
 
@@ -124,130 +146,4 @@ class BaseNamespace(object):
 
             if not self.socket.connected:
                 gevent.killall(self.jobs)
-
-#class GlobalNamespace(BaseNamespace):
-#    def get_initial_acl(self):
-#        if self.request.user:
-#            return ['on_public_method', 'on_private_method']
-#        return ['on_connect', 'on_public_method']
-#
-#    def on_connect(self, data):
-#        """Do auth stuff, and other stuff"""
-#        if auth:
-#            self.add_acl_event('private_method')
-#            self.del_acl_event('connect')
-#        pass
-#
-#    def on_public_method(self, data):
-#        """This can be accessed without authentication, on the GLOBAL_NS
-#        namespace"""
-#        pass
-#
-#
-
-#def view(request):
-#    nmsp_map = {'/chat': ChatNamespace,
-#                '/home': HomeNamespace,
-#                GLOBAL_NS: GlobalNamespace}
-#    pyramid_socketio_manage(request, namespaces=nmsp_map)
-#
-#
-#### inside __init__.py for a Pyramid app, using pyramid_socketio integration
-#def main():
-#
-#    config = Configurator()
-#    # These things should configure the SocketIOHandler or Protocol or whatever
-#    # 
-#    # See options in: https://github.com/LearnBoost/socket.io/blob/master/lib/manager.js
-#    #
-#    # Put that in the .ini file.. at the server level, import in the SocketIOServer
-#    config.set_socketio_transports(['websocket'])
-#    config.set_socketio_namespace('socket.io')
-#    config.set_socketio_heartbeats(True, interval=5, timeout=60)
-#    #config.set_socketio_origins("*:*") ?
-
-#GLOBAL_NS = None
-
-#"""This is just a sample of the protocol we want to implement"""
-
-#class ChatNamespace(BaseNamespace):
-#    """We're in the /chat namespace"""
-#    def receive_packet(self, packet):
-#        """If you override this, NONE of the functions in this class will
-#        be called.  It is responsible for dispatching to event() (which in turn
-#        calls on_evname() functions), connect, disconnect, etc..
-#        """
-#        pass
-#
-#    def event(self, packet):
-#        """Override this function if you want to not dispatch messages
-#        automatically to "on_event_name" methods.
-#
-#        If you override this function, none of the on_functions will get called.
-#        """
-#        data = packet.data
-#        name = packat.name
-#
-#    def on_publish(self, data):
-#        """Called by client-side: chat.emit("publish", {"foo": "bar"});"""
-#        pass
-#
-#    def on_new_message(self, data):
-#        
-#        blah blah..
-#        with self.broadcast:
-#            with self.json:
-#                self.emit(blah)
-#
-#        self.emit('blah', {"blah": "blah"}, broadcast=True, json=True,
-#                  room='justin bieber')
-#        self.emit_json('blah', data={"super": "bob"})
-#
-#        
-#        self.join('blah')
-#        self.leave('blah')
-#        self.socket.join('blah')
-#
-#        self.socket['/chat'].join('this channel')
-#        if '/chat' in self.socket:
-#            print "We're connected to '/chat'"
-#
-#        self.socket[GLOBAL_NS].join('blah')
-#        self.socket.sessid # Like in node, for hooking back sessions to sockets.
-#    def message_(self, msg):
-#        """When you get a message, which is just a string"""
-#        # This message should be decoded already, according to the flags it was
-#        # sent with (OR NOT ???)
-#        print "We received a message that wasn't an event", msg
-#        
-#    def json_(self, data):
-#        """This is triggered on GLOBAL_NS"""
-#        pass
-#
-#    def disconnect(self):
-#        """This would get called ONLY when the FULL socket gets disconnected,
-#        as part of a loop through all namespaces, calling disconnect() on the
-#        way
-#        """
-#        pass
-#    def connect(self):
-#        """If you return False here, the Namespace will not be active for that
-#        Socket.
-#
-#        In this function, you can do things like authorization, making sure
-#        someone will have access to these methods.  Otherwise, raise
-#        AuthorizationError.
-#
-#        You can also make this socket join a room, and later on leave it by 
-#        calling one of your events (on_leave_this_ns_or_something()), and
-#        at some point, check with 'blah' in socket.rooms
-#
-#        join() and leave() would affect the content of 'rooms'
-#        """
-#        pass
-#
-#    def error(self):
-#        """???"""
-#        pass
-
 
