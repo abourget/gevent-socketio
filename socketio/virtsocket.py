@@ -1,4 +1,5 @@
 
+import weakref
 
 class Socket(object):
     """
@@ -14,7 +15,8 @@ class Socket(object):
     STATE_DISCONNECTING = "DISCONNECTING"
     STATE_DISCONNECTED = "DISCONNECTED"
 
-    def __init__(self):
+    def __init__(self, server):
+        self.server = weakref.proxy(server)
         self.sessid = str(random.random())[2:]
         self.client_queue = Queue() # queue for messages to client
         self.server_queue = Queue() # queue for messages to server

@@ -19,7 +19,12 @@ class SocketIOServer(WSGIServer):
 
     def __init__(self, *args, **kwargs):
         self.sockets = {}
-        self.namespace = kwargs.pop('namespace')
+        resource = kwargs.pop('resource', None)
+        if resource:
+            print "DEPRECATED: use `namespace` instead of 'resource' as a SocketIOServer parameter"
+            self.namespace = resource
+        else:
+            self.namespace = kwargs.pop('namespace', 'socket.io')
         self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):
@@ -57,7 +62,7 @@ class SocketIOServer(WSGIServer):
         socket = self.sockets.get(sessid)
 
         if socket is None:
-            socket = Socket()
+            socket = Socket(self)
             self.sockets[socket.sessid] = socket
         else:
             socket.incr_hits()
