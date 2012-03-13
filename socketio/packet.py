@@ -149,13 +149,22 @@ class Packet(object):
         into a dict.
         """
         decoded_msg = {}
-        msg_type, msg_id, endpoint, end_data = data.split(":", 3)
+        split_data = data.split(":", 3)
+
+        msg_type = split_data[0]
+        msg_id = split_data[1]
+        endpoint = split_data[2]
+
+        end_data = None
+
+        if len(split_data) > 3:
+            end_data = split_data[3]
 
         decoded_msg['type'] = MSG_VALUES[int(msg_type)]
 
         if msg_type == "0": # disconnect
             decoded_msg['endpoint'] = endpoint
-        
+
         elif msg_type == "1": # connect
             decoded_msg['endpoint'] = endpoint
             decoded_msg['qs'] = endpoint
