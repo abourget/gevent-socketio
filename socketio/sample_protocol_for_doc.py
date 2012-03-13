@@ -56,22 +56,39 @@ class ChatNamespace(BaseNamespace):
         self.emit('bob_event', {'something': 'blah'}, callback=callback)
 
 
-    def message_(self, msg):
-        """When you get a message, which is just a string"""
+    def recv_message(self, msg):
+        """This is more of a backwards compatibility hack.  This will be
+        called for messages sent with the original send() call on the JavaScript
+        side.  This is NOT the 'message' event, which you will catch with
+        'on_message()'.  The data arriving here is a simple string, with no other
+        info.
+
+        If you want to use this, you should override this method.
+        """
         # This message should be decoded already, according to the flags it was
         # sent with (OR NOT ???)
-        print "We received a message that wasn't an event", msg
+        pass
         
-    def json_(self, data):
-        """This is triggered on GLOBAL_NS"""
+    def recv_json(self, data):
+        """This is more of a backwards compatibility hack.  This will be
+        called for JSON packets sent with the original json() call on the
+        JavaScript side.  This is NOT the 'json' event, which you will catch with
+        'on_json()'.  The data arriving here is a python dict, with no event
+        name.
+
+        If you want to use this feature, you should override this method.
+        """
         pass
 
     def disconnect(self):
         """This would get called ONLY when the FULL socket gets disconnected,
         as part of a loop through all namespaces, calling disconnect() on the
-        way
+        way.
+
+        Override this method with clean-up instructions and processes.
         """
         pass
+
     def connect(self):
         """If you return False here, the Namespace will not be active for that
         Socket.

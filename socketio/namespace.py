@@ -1,61 +1,67 @@
 # -=- encoding: utf-8 -=-
 import gevent
+import re
+import socketio.packet
 
 class BaseNamespace(object):
+
+    _event_name_regex = re.compile(r'^[A-Za-z][A-Za-z0-9_ ]*$')
+    """Used to match the event names, so they don't leak bizarre characters"""
+
+
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
         self.request = request
         self.ns_name = ns_name
-        self.acl_methods = None # be careful, None means OPEN, while an empty
-                                # list means totally closed.
-        self.jobs = []
+        self.allowed_methods = None # be careful, None means OPEN, while an empty
+                                    # list means totally closed.
         self.ack_count = 0
         self.jobs = []
 
-    def debug(*args, **kwargs):
-        print "Not implemented"
-        
     @property
     def socket(self):
         return self.environ['socketio']
+
     def _get_next_ack(self):
         self.ack_count += 1
         return self.ack_count
 
-    def is_method_allowed(self, acl):
-        if self.acl_events is None:
+    def is_method_allowed(self, method_name):
+        """ACL system: this checks if you have access to that method_name,
+        according to the set ACLs"""
+        if self.allowed_methods is None:
             return True
         else:
-            return acl in self.acl_events
+            return method_name in self.allowed_methods
 
     def add_acl_method(self, method_name):
-        """ Make the method_name accessible to the current socket """
+        """ACL system: make the method_name accessible to the current socket"""
 
-        if isinstance(self.acl_events, set):
-            self.acl_events.add(method_name)
+        if isinstance(self.allowed_methods, set):
+            self.allowed_methods.add(method_name)
         else:
-            self.acl_events = set([method_name])
+            self.allowed_methods = set([method_name])
 
     def del_acl_method(self, method_name):
-        """ Ensure the user will not have access to that method. """
-        if self.acl_events is None:
+        """ACL system: ensure the user will not have access to that method. """
+        if self.allowed_methods is None:
             raise ValueError("""Trying to delete an ACL method, but none were 
             defined yet! Or: No ACL restrictions yet, why would you delete
             one?""")
 
-        self.acl_events.remove(method_name)
+        self.allowed_methods.remove(method_name)
 
     def lift_acl_restrictions(self):
-        """This removes restrictions on the Namespace's methods, so that
-        all the on_function(), event(), message() and other automatically
+        """ACL system: This removes restrictions on the Namespace's methods, so
+        that all the on_function(), event(), message() and other automatically
         dispatched methods can be accessed.
         """
-        self.acl_events = None
+        self.allowed_methods = None
 
     def get_initial_acl(self):
-        """If you define this function, you must return all the 'event' names
-        that you want your User (the established virtual Socket) to have access
-        to.
+        """ACL system: If you define this function, you must return all the
+        'event' names that you want your User (the established virtual Socket)
+        to have access to.
 
         If you do not define this function, the user will have free access
         to all of the on_function(), json(), message(), etc.. methods.
@@ -86,9 +92,16 @@ class BaseNamespace(object):
         """
         # TODO: take the packet, and dispatch it, execute connect(), message(),
         #       json(), event(), and this event will call the on_functions().
-        pass
+        if packet['type'] == 'event':
+            return self.process_event(packet)
+        elif packet['type'] == 'message':
+            return self.call_method('recv_message', packet['data'])
+        elif packet['type'] == 'json':
+            return self.call_method('recv_json', packet['data'])
+        # TODO: manage the other packet types
 
-    def event(self, packet):
+
+    def process_event(self, pkt):
         """This function dispatches ``event`` messages to the correct functions.
 
         Override this function if you want to not dispatch messages 
@@ -97,54 +110,161 @@ class BaseNamespace(object):
         If you override this function, none of the on_functions will get called
         by default.
         """
-        data = packet.data
-        name = packat.name
+        args = pkt['args']
+        name = pkt['name']
+        if not self._event_name_regex.match(name):
+            print "Message ignored, the bastard", name
+            return
 
-        # TODO: call the on_ and respect the ACLs
+        method_name = 'on_' + name.replace(' ', '_')
+        # This means the args, passed as a list, will be expanded to Python args
+        # and if you passed a dict, it will be a dict as the first parameter.
+        return self.call_method(method_name, *args)
 
+    def call_method(self, method_name, *args, **kwargs):
+        """You should always use this function to call the methods,
+        as it checks if you're allowed according to the set ACLs.
+       
+        If you override process_packet() or process_event(), you should
+        definitely want to use this instead of getattr(self, 'my_method')()
+        """
+        if not self.is_method_allowed(method_name):
+            # TODO: implement the Error handling abstraction.
+            #raise SocketIOError("method_not_found", "This method was not found")
+            print "HEY! THIS METHOD IS NOT ALLOWED"
+            #log.debug("hey.. ")
+            return None
+        
+        method = getattr(self, method_name, None)
+        if method is None:
+            print "NO SUCH METHOD", method_name
+            return
+        return method(*args, **kwargs)
+
+
+    def recv_message(self, msg):
+        """This is more of a backwards compatibility hack.  This will be
+        called for messages sent with the original send() call on the JavaScript
+        side.  This is NOT the 'message' event, which you will catch with
+        'on_message()'.  The data arriving here is a simple string, with no other
+        info.
+
+        If you want to use this, you should override this method.
+        """
+        # This message should be decoded already, according to the flags it was
+        # sent with (OR NOT ???)
+        pass
+        
+    def recv_json(self, data):
+        """This is more of a backwards compatibility hack.  This will be
+        called for JSON packets sent with the original json() call on the
+        JavaScript side.  This is NOT the 'json' event, which you will catch with
+        'on_json()'.  The data arriving here is a python dict, with no event
+        name.
+
+        If you want to use this feature, you should override this method.
+        """
+        pass
+
+    def disconnect(self):
+        """This would get called ONLY when the FULL socket gets disconnected,
+        as part of a loop through all namespaces, calling disconnect() on the
+        way.
+
+        Override this method with clean-up instructions and processes.
+        """
+        pass
+
+    def connect(self):
+        """If you return False here, the Namespace will not be active for that
+        Socket.  You *should* return True for anything to succeed in here.
+
+        In this function, you can do things like authorization, making sure
+        someone will have access to these methods.  Otherwise, raise
+        AuthorizationError.
+
+        You can also make this socket join a room, and later on leave it by 
+        calling one of your events (on_leave_this_ns_or_something()), and
+        at some point, check with 'blah' in socket.rooms
+
+        join() and leave() would affect the content of 'rooms'
+        """
+        return True
+
+    def error(self, error_name, error_message, msg_id=None, quiet=False):
+        """Use this to use the configured ``error_handler`` yield an
+        error message to your application.
+
+        ``error_name`` is a short string, to associate messages to recovery
+                       methods
+        ``error_message`` is some human-readable text, describing the error
+        ``msg_id`` is used to associate with a request
+        ``quiet`` specific to error_handlers. The default doesn't send a message
+                  to the user, but shows a debug message on the developer
+                  console.
+        """
+        self.socket.error(error_name, error_message, endpoint=self.ns_name,
+                          msg_id=msg_id, quiet=quiet)
+
+
+    def send(self, message, json=False):
+        """Use send to send a simple string message.
+
+        If ``json`` is True, the message will be encoded as a JSON object
+        on the wire, and decoded on the other side.
+
+        This is mostly for backwards compatibility.  emit() is more fun.
+        """
+        pkt = dict(type="message", data=message, endpoint=self.ns_name)
+        if json:
+            pkt['type'] = "json"
+        self.socket.send_packet(pkt)
+
+    def emit(self, event, data, broadcast=False, room=None,
+             callback=None):
+        """Use this to send a structured event, with a name and arguments, to
+        the client.
+
+        By default, it uses this namespace's endpoint.  You can send messages on
+        other endpoints with ``self.socket['/other_endpoint'].emit()``.  Beware
+        that the other endpoint might not be initialized yet (if no message has
+        been received on that Namespace, or if the Namespace's connect() call
+        failed).
+
+        ``broadcast`` if True, will broadcast event to all those on this Server,
+        that are registered to the current Namespace
+
+        """
+        pkt = dict(type="event", name=event, args=data,
+                   endpoint=self.ns_name)
+
+        self.socket.send_packet(pkt)
+
+    def join(self, room):
+        pass
+
+    def leave(self, room):
+        pass
 
     def spawn(self, fn, *args, **kwargs):
-        """Spawn a new process in the context of this request.
+        """Spawn a new process, attached to this Namespace.
 
-        It will be monitored by the "watcher" method
+        It will be monitored by the "watcher" process in the Socket.  If the
+        socket disconnects, all these greenlets are going to be killed, after
+        calling BaseNamespace.disconnect()
         """
-
-        self.debug("Spawning greenlet: %s" % callable.__name__)
+#        self.log.debug("Spawning sub-Namespace Greenlet: %s" % fn.__name__)
         new = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(new)
-
         return new
 
-    def kill(self, recursive=True):
-        """Kill the current context, call the `on_disconnect` callbacks.
-
-        To pass control to the parent context, you must pass recursive=False
-        *and* return the value returned by this call to kill().
-
-        If recursive is True, then all parent contexts will also be killed,
-        calling in the process all the `on_disconnect` callbacks defined by
-        each contexts.  This is what happens automatically when the SocketIO
-        socket gets disconnected for any reasons.
-
+    def kill_local_jobs(self):
+        """Kills all the jobs spawned with BaseNamespace.spawn() on a namespace
+        object.
+       
+        This will be called automatically if the ``watcher`` process detects
+        that the Socket was closed.
         """
-        self.request = None
-
-        if hasattr(self, 'disconnect'):
-            getattr(self, 'disconnect')()
-
-        self.socket.kill()
-
-    def watcher(self, request):
-        """Watch if any of the greenlets for a request have died. If so, kill the
-        request and the socket.
-        """
-        # TODO: add that if any of the request.jobs die, kill them all and exit
-
-        gevent.sleep(5.0)
-
-        while True:
-            gevent.sleep(1.0)
-
-            if not self.socket.connected:
-                gevent.killall(self.jobs)
-
+        gevent.killall(self.jobs)
+        self.jobs = []
+                    

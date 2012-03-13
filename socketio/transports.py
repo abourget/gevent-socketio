@@ -1,8 +1,8 @@
 import gevent
-import socket
 import urlparse
 
 from gevent.queue import Empty
+from socketio import packet
 
 class BaseTransport(object):
     """Base class for all transports. Mostly wraps handler class functions."""
@@ -17,12 +17,6 @@ class BaseTransport(object):
         ]
         self.headers_list = []
         self.handler = handler
-
-    def encode(self, data):
-        return self.handler.environ['socketio'].encode(data)
-
-    def decode(self, data):
-        return self.handler.environ['socketio'].decode(data)
 
     def write(self, data=""):
         if 'Content-Length' not in self.handler.response_headers_list:
@@ -50,11 +44,10 @@ class XHRPollingTransport(BaseTransport):
         return []
 
     def get(self, socket):
-        socket.clear_disconnect_timeout();
+        socket.heartbeat();
 
         try:
             message = socket.get_client_msg(timeout=5.0)
-            message = self.encode(message)
         except Empty:
             message = "8::" # NOOP
 
@@ -67,7 +60,7 @@ class XHRPollingTransport(BaseTransport):
         return self.handler.wsgi_input.readline()
 
     def post(self, socket):
-        socket.put_server_msg(self.decode(self._request_body()))
+        socket.put_server_msg(self._request_body())
 
         self.start_response("200 OK", [
             ("Connection", "close"),
@@ -83,7 +76,7 @@ class XHRPollingTransport(BaseTransport):
             self.start_response("200 OK", [
                 ("Connection", "close"),
             ])
-            self.write("1::")
+            self.write("1::") # 'connect' packet
 
             return []
         elif request_method in ("GET", "POST", "OPTIONS"):
@@ -116,7 +109,8 @@ class XHRMultipartTransport(XHRPollingTransport):
 
     def connect(self, socket, request_method):
         if request_method == "GET":
-            heartbeat = self.handler.environ['socketio'].start_heartbeat()
+            # TODO: double verify this, because we're not sure. look at git revs.
+            heartbeat = socket._spawn_heartbeat()
             return [heartbeat] + self.get(socket)
         elif request_method == "POST":
             return self.post(socket)
@@ -129,7 +123,7 @@ class XHRMultipartTransport(XHRPollingTransport):
         self.start_response("200 OK", [("Connection", "keep-alive")])
         self.write_multipart("--socketio\r\n")
         self.write_multipart(header)
-        self.write_multipart(self.encode(socket.sessid) + "\r\n")
+        self.write_multipart(str(socket.sessid) + "\r\n")
         self.write_multipart("--socketio\r\n")
 
         def chunk():
@@ -140,8 +134,6 @@ class XHRMultipartTransport(XHRPollingTransport):
                     socket.kill()
                     break
                 else:
-                    message = self.encode(message)
-
                     try:
                         self.write_multipart(header)
                         self.write_multipart(message)
@@ -156,7 +148,7 @@ class XHRMultipartTransport(XHRPollingTransport):
 class WebsocketTransport(BaseTransport):
     def connect(self, socket, request_method):
         websocket = self.handler.environ['wsgi.websocket']
-        websocket.send("1::")
+        websocket.send("1::") # 'connect' packet
 
         def send_into_ws():
             while True:
@@ -166,7 +158,7 @@ class WebsocketTransport(BaseTransport):
                     socket.kill()
                     break
 
-                websocket.send(self.encode(message))
+                websocket.send(message)
 
         def read_from_ws():
             while True:
@@ -176,16 +168,14 @@ class WebsocketTransport(BaseTransport):
                     socket.kill()
                     break
                 else:
-                    decoded_message = self.decode(message)
-                    if decoded_message is not None:
-                        socket.put_server_msg(decoded_message)
+                    if message is not None:
+                        socket.put_server_msg(message)
 
         gr1 = gevent.spawn(send_into_ws)
         gr2 = gevent.spawn(read_from_ws)
+        heartbeat1, heartbeat2 = socket._spawn_heartbeat()
 
-        heartbeat = self.handler.environ['socketio'].start_heartbeat()
-
-        return [gr1, gr2, heartbeat]
+        return [gr1, gr2, heartbeat1, heartbeat2]
 
 
 class FlashSocketTransport(WebsocketTransport):
@@ -212,7 +202,6 @@ class HTMLFileTransport(XHRPollingTransport):
 
         try:
             message = socket.get_client_msg(timeout=5.0)
-            message = self.encode(message)
         except Empty:
             message = ""
 

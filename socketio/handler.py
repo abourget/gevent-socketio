@@ -110,11 +110,15 @@ class SocketIOHandler(WSGIHandler):
             self.handle_one_response()
 
         # Make the socket object available for WSGI apps
-        self.environ['socketio'].socket = socket
+        self.environ['socketio'] = socket
 
         # Create a transport and handle the request likewise
         self.transport = transport(self)
+
         jobs = self.transport.connect(socket, request_method)
+        # Keep track of those jobs (reading, writing and heartbeat jobs) so that
+        # we can kill them later with Socket.kill()
+        socket.jobs.extend(jobs)
 
         try:
             # We'll run the WSGI app if it wasn't already done.
