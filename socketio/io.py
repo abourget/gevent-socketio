@@ -43,10 +43,10 @@ def socketio_manage(environ, namespaces, request=None):
     socket._set_namespaces(namespaces)
     if request:
         socket._set_request(request)
-    reader_loop = socket._spawn_reader_loop()
+    receiver_loop = socket._spawn_receiver_loop()
     watcher = socket._spawn_watcher()
 
-    gevent.joinall([reader_loop, watcher])
+    gevent.joinall([receiver_loop, watcher])
 
     # TODO: double check, what happens to the WSGI request here ? it vanishes ?
 
