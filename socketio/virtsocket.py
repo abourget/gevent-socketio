@@ -44,9 +44,6 @@ class Socket(object):
         self.active_ns = {} # Namespace sessions that were instantiated (/chat)
         self.jobs = []
 
-        # ['None_room1', 'chat_room2']
-        self.rooms = set()
-
     def _set_namespaces(self, namespaces):
         """This is a mapping (dict) of the different '/namespaces' to their
         BaseNamespace object derivative.
@@ -133,28 +130,6 @@ class Socket(object):
         else:
             pass # Fail silently
 
-    def emit(self, ns, event, pkt, broadcast=False, room=None):
-        if room or broadcast:
-            for sock in self.server.sockets:
-                # Don't broadcast to the current socket
-                if not sock == self:
-                    if room:
-                        # use namespace_room to only broadcast to the Namespace
-                        # rooms
-                        if not self._get_room(ns, room) in sock.rooms:
-                            # break out if this socket isn't in the room
-                            continue
-                sock.send_packet(pkt)
-        else:
-            # send to current socket if we aren't broadcasting
-            self.send_packet(pkt)
-
-    def join(self, ns, room):
-        self.rooms.add(self._get_room(ns, room))
-
-    def leave(self, ns, room):
-        self.rooms.remove(self._get_room(ns, room))
-
     def put_server_msg(self, msg):
         """Used by the transports"""
         self.heartbeat()
@@ -203,9 +178,6 @@ class Socket(object):
         job = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(job)
         return job
-
-    def _get_room(self, ns, room):
-        return '%s_%s' % (ns, room)
 
     def _receiver_loop(self):
         """This is the loop that takes messages from the queue for the server

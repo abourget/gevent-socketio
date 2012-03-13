@@ -198,8 +198,6 @@ class BaseNamespace(object):
 
     def emit(self, event, data, broadcast=False, room=None,
              callback=None):
-        """ If room is set, it will broadcast """
-
         pkt = {
             'type': 'event',
             'name': event,
@@ -207,16 +205,14 @@ class BaseNamespace(object):
             'endpoint': self.ns_name
         }
 
-        self.socket.emit(self.ns_name, event, pkt, broadcast=broadcast,
-                room=room)
+        encoded = packet.encode(pkt)
+        self.socket.put_client_msg(encoded)
 
     def join(self, room):
-        """ Joins the namespace to a specific room """
-        self.socket.join(self.ns_name, room)
+        pass
 
     def leave(self, room):
-        """ Removes the namespace from a specific room """
-        self.socket.leave(self.ns_name, room)
+        pass
 
     def spawn(self, fn, *args, **kwargs):
         """Spawn a new process, attached to this Namespace.
@@ -233,9 +229,10 @@ class BaseNamespace(object):
     def kill_local_jobs(self):
         """Kills all the jobs spawned with BaseNamespace.spawn() on a namespace
         object.
-
+       
         This will be called automatically if the ``watcher`` process detects
         that the Socket was closed.
         """
         gevent.killall(self.jobs)
         self.jobs = []
+                    
