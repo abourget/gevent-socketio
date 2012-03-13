@@ -223,7 +223,8 @@ def view(request):
     nmsp_map = {'/chat': ChatNamespace,
                 '/home': HomeNamespace,
                 GLOBAL_NS: GlobalNamespace}
-    pyramid_socketio_manage(request, namespaces=nmsp_map)
+    pyramid_socketio_manage(request.environ, namespaces=nmsp_map,
+                            request=request)
 
 
 
