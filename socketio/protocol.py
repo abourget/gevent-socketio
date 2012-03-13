@@ -2,6 +2,62 @@ import gevent
 import anyjson as json
 
 
+class Packet(object):
+    # Message types
+    DISCONNECT = "0"
+    CONNECT = "1"
+    HEARTBEAT = "2"
+    MESSAGE = "3"
+    JSON = "4"
+    EVENT = "5"
+    ACK = "6"
+    ERROR = "7"
+    NOOP = "8"
+
+    # Error reasons
+    ERROR_TRANSPORT_NOT_SUPPORTED = "0"
+    ERROR_CLIENT_NOT_HANDSHAKEN = "1"
+    ERROR_UNAUTHORIZED = "2"
+
+    # Advices
+    ADVICE_RECONNECT = "0"
+
+    def __init__(self, type, name=None, data=None, endpoint=None, id=None,
+                 ack=None):
+        """Models a packet
+
+        ``type`` - One of the packet types above (MESSAGE, JSON, EVENT, etc..)
+        ``name`` - The name used for the EVENT
+        ``data`` - The actual data, before encoding
+        ``endpoint`` - the Namespace's name to send the packet
+        ``id`` - TODO: TO BE UNDERSTOOD!
+        ``ack`` - TODO: TO BE UNDERSTOOD!
+        """
+        self.type = type
+        self.name = name
+        self.id = id
+        self.endpoint = endpoint
+        self.ack = ack
+        self.data = data
+
+    def encode(self):
+        """Encode this packet into a byte string"""
+        data = None
+        if self.type == Packet.MESSAGE and self.data:
+            data = self.data
+        if self.type == Packet.EVENT:
+            data = {"name": "something"}
+        pass
+
+    @staticmethod
+    def decode(rawstr):
+        """Decode a rawstr arriving from the channel into a valid Packet object
+        """
+        # decode the stuff
+        p = Packet(type, data, endpoint, id, ack)
+        return p
+
+
 class SocketIOProtocol(object):
     """SocketIO protocol specific functions."""
 
@@ -75,7 +131,7 @@ class SocketIOProtocol(object):
         if isinstance(message, basestring):
             encoded_msg = message
         elif isinstance(message, (object, dict)):
-            return self.encode(json.dumps(message))
+            return json.dumps(message)
         else:
             raise ValueError("Can't encode message")
 
