@@ -1,7 +1,7 @@
 # -=- encoding: utf-8 -=-
 import gevent
 import re
-import packet
+import socketio.packet
 
 class BaseNamespace(object):
 
@@ -191,22 +191,54 @@ class BaseNamespace(object):
         """
         return True
 
-    def error(self):
-        """???"""
-        pass
+    def error(self, error_name, error_message, msg_id=None, quiet=False):
+        """Use this to use the configured ``error_handler`` yield an
+        error message to your application.
 
+        ``error_name`` is a short string, to associate messages to recovery
+                       methods
+        ``error_message`` is some human-readable text, describing the error
+        ``msg_id`` is used to associate with a request
+        ``quiet`` specific to error_handlers. The default doesn't send a message
+                  to the user, but shows a debug message on the developer
+                  console.
+        """
+        self.socket.error(error_name, error_message, endpoint=self.ns_name,
+                          msg_id=msg_id, quiet=quiet)
+
+
+    def send(self, message, json=False):
+        """Use send to send a simple string message.
+
+        If ``json`` is True, the message will be encoded as a JSON object
+        on the wire, and decoded on the other side.
+
+        This is mostly for backwards compatibility.  emit() is more fun.
+        """
+        pkt = dict(type="message", data=message, endpoint=self.ns_name)
+        if json:
+            pkt['type'] = "json"
+        self.socket.send_packet(pkt)
 
     def emit(self, event, data, broadcast=False, room=None,
              callback=None):
-        pkt = {
-            'type': 'event',
-            'name': event,
-            'args': data,
-            'endpoint': self.ns_name
-        }
+        """Use this to send a structured event, with a name and arguments, to
+        the client.
 
-        encoded = packet.encode(pkt)
-        self.socket.put_client_msg(encoded)
+        By default, it uses this namespace's endpoint.  You can send messages on
+        other endpoints with ``self.socket['/other_endpoint'].emit()``.  Beware
+        that the other endpoint might not be initialized yet (if no message has
+        been received on that Namespace, or if the Namespace's connect() call
+        failed).
+
+        ``broadcast`` if True, will broadcast event to all those on this Server,
+        that are registered to the current Namespace
+
+        """
+        pkt = dict(type="event", name=event, args=data,
+                   endpoint=self.ns_name)
+
+        self.socket.send_packet(pkt)
 
     def join(self, room):
         pass
