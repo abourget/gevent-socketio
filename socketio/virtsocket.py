@@ -29,6 +29,10 @@ class Socket(object):
         self.state = "NEW"
         self.connection_confirmed = False
         self.ack_callbacks = {}
+        self.request = None
+        self.environ = None
+        self.namespaces = {}
+        self.active_ns = {} # Namespace sessions that were instantiated (/chat)
 
         def disconnect_timeout():
             self.timeout.clear()
@@ -38,9 +42,26 @@ class Socket(object):
                 self.kill()
         gevent.spawn(disconnect_timeout)
 
-    def set_namespaces(self, namespaces):
-        """This is call by socketio_manage()"""
+    def _set_namespaces(self, namespaces):
+        """This is a mapping (dict) of the different '/namespaces' to their
+        BaseNamespace object derivative.
+        
+        This is called by socketio_manage()."""
         self.namespaces = namespaces
+
+    def _set_request(self, request):
+        """Saves the request object for future use by the different Namespaces.
+
+        This is called by socketio_manage().
+        """
+        self.request = request
+    
+    def _set_environ(self, environ):
+        """Save the WSGI environ, for future use - who knows!
+
+        This is called by socketio_manage().
+        """
+        self.environ = environ
 
     def __str__(self):
         result = ['sessid=%r' % self.sessid]
@@ -55,6 +76,22 @@ class Socket(object):
         if self.heartbeats:
             result.append('heartbeats=%s' % self.heartbeats)
         return ' '.join(result)
+
+
+    def __getitem__(self, key):
+        """This will get the nested Namespace using its '/chat' reference.
+
+        Using this, you can go from one Namespace to the other (to emit, add
+        ACLs, etc..) with:
+
+          adminnamespace.socket['/chat'].add_acl_method('kick-ban')
+
+        """
+        return self.active_ns[key]
+
+    def __hasitem__(self, key):
+        """Verifies if the namespace is active (was initialized)"""
+        return key in self.active_ns
 
     @property
     def connected(self):
@@ -77,6 +114,7 @@ class Socket(object):
             self.state = self.STATE_DISCONNECTING
             self.server_queue.put_nowait(None)
             self.client_queue.put_nowait(None)
+            self.disconnect()
             #gevent.kill(self.wsgi_app_greenlet)
         else:
             pass # Fail silently
@@ -99,43 +137,45 @@ class Socket(object):
         """Used by the transports"""
         return self.server_queue.get(**kwargs)
 
-
-    #
     def _reader_loop(self):
         """This is the loop that takes messages from the queue for the server
         to consume, decodes them and dispatches them.
         """
 
         while True:
-            message = self.get_server_msg()
+            raw_msg = self.get_server_msg()
 
-            if message:
-                packet = Packet.decode(message)
+            if raw_msg:
+                #try:
+                packet = Packet.decode(raw_msg)
+                #except DontKnowError, e:
+                #    manage error ? send a message! no valid error processing?!
+
                 # Find out to which endpoint (Namespace obj)
                 # Find the endpoint, instantiate if required
                 # Dispatch the message to the Namespace
                 #   .. see if we need to connect..
-                if packet.endpoint not in self.namespaces:
-                    #log.debug("unknown packet arriving: ", packet.endpoint)
+                endpoint = packet.endpoint
+                if endpoint not in self.namespaces:
+                    #log.debug("unknown packet arriving: ", endpoint)
                     print "WE DON'T HAVE SUCH A NAMESPACE"
-                elif packet.endpoint in self.
-                    
-                if not isinstance(message, dict):
-                    context.error("bad_request",
-                                "Your message needs to be JSON-formatted")
-                elif in_type not in message:
-                    context.error("bad_request",
-                                "You need a 'type' attribute in your message")
+                elif endpoint in self.active_ns:
+                    active_ns = self.active_ns[endpoint]
                 else:
-                    # Call msg in context.
-                    newctx = context(message)
+                    new_ns_class = self.namespaces[endpoint]
+                    new_ns = new_ns_class(self.environ, endpoint,
+                                          request=self.request)
+                    if not new_ns.connect():
+                        continue
+                    self.active_ns[endpoint] = new_ns
 
-                    # Switch context ?
-                    if newctx:
-                        context = newctx
+                active_ns.process_packet(packet)
+                    
+                    
 
-            if not io.session.connected:
-                context.kill()
+            if not self.connected:
+                self.kill() # ?? what,s the best clean-up when its not a
+                            # user-initiated disconnect
                 return
 
     def _spawn_reader_loop(self):
@@ -146,6 +186,7 @@ class Socket(object):
     # User facing low-level function
     def disconnect(self):
         # TODO: force the disconnection.
+        # Loop through all the Namespaces, and call disconnect() there!
         pass
 
     def send_packet(self, packet):
