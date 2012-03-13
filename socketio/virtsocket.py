@@ -180,11 +180,10 @@ class Socket(object):
         """
 
         while True:
-            raw_msg = self.get_server_msg()
+            packet = self.get_server_msg()
 
-            if raw_msg:
+            if packet:
                 #try:
-                packet = Packet.decode(raw_msg)
                 #except DontKnowError, e:
                 #    manage error ? send a message! no valid error processing?!
 
@@ -192,7 +191,8 @@ class Socket(object):
                 # Find the endpoint, instantiate if required
                 # Dispatch the message to the Namespace
                 #   .. see if we need to connect..
-                endpoint = packet.endpoint
+                endpoint = packet['endpoint']
+
                 if endpoint not in self.namespaces:
                     #log.debug("unknown packet arriving: ", endpoint)
                     print "WE DON'T HAVE SUCH A NAMESPACE"
