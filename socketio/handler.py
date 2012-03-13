@@ -75,7 +75,6 @@ class SocketIOHandler(WSGIHandler):
         if not path.lstrip('/').startswith(self.server.namespace):
             return super(SocketIOHandler, self).handle_one_response()
 
-        #import pdb;pdb.set_trace()
         self.status = None
         self.headers_sent = False
         self.result = None
@@ -115,7 +114,11 @@ class SocketIOHandler(WSGIHandler):
 
         # Create a transport and handle the request likewise
         self.transport = transport(self)
+
         jobs = self.transport.connect(socket, request_method)
+        # Keep track of those jobs (reading, writing and heartbeat jobs) so that
+        # we can kill them later with Socket.kill()
+        socket.jobs.extend(jobs)
 
         try:
             # We'll run the WSGI app if it wasn't already done.

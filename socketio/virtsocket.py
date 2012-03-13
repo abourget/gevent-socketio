@@ -5,7 +5,7 @@ import gevent
 from gevent.queue import Queue
 from gevent.event import Event
 
-from socketio.packet import Packet
+from socketio import packet
 
 class Socket(object):
     """
@@ -21,6 +21,10 @@ class Socket(object):
     STATE_CONNECTED = "CONNECTED"
     STATE_DISCONNECTING = "DISCONNECTING"
     STATE_DISCONNECTED = "DISCONNECTED"
+
+    GLOBAL_NS = None
+    """Use this to be explicit when specifying a Global Namespace (an endpoint
+    with no name, not '/chat' or anything."""
 
     def __init__(self, server):
         self.server = weakref.proxy(server)
@@ -39,14 +43,6 @@ class Socket(object):
         self.namespaces = {}
         self.active_ns = {} # Namespace sessions that were instantiated (/chat)
         self.jobs = []
-
-        def disconnect_timeout():
-            self.timeout.clear()
-            if self.timeout.wait(10.0):
-                gevent.spawn(disconnect_timeout)
-            else:
-                self.kill()
-        gevent.spawn(disconnect_timeout)
 
     def _set_namespaces(self, namespaces):
         """This is a mapping (dict) of the different '/namespaces' to their
@@ -109,13 +105,22 @@ class Socket(object):
         if self.hits == 1:
             self.state = self.STATE_CONNECTED
 
-    def clear_disconnect_timeout(self):
+    def heartbeat(self):
+        """This makes the heart beat for another X seconds.  Call this when
+        you get a heartbeat packet in.
+
+        This clear the heartbeat disconnect timeout (resets for X seconds).
+        """
         self.timeout.set()
 
-    def heartbeat(self):
-        self.clear_disconnect_timeout()
-
     def kill(self):
+        """This function must / will be called when a socket is to be completely
+        shut down, closed by connection timeout, connection error or explicit
+        disconnection from the client.
+
+        It will call all of the namespaces' disconnect() methods so that you
+        can shut-down things properly.
+        """
         if self.connected:
             self.state = self.STATE_DISCONNECTING
             self.server_queue.put_nowait(None)
@@ -127,12 +132,12 @@ class Socket(object):
 
     def put_server_msg(self, msg):
         """Used by the transports"""
-        self.clear_disconnect_timeout()
+        self.heartbeat()
         self.server_queue.put_nowait(msg)
 
     def put_client_msg(self, msg):
         """Used by the transports"""
-        self.clear_disconnect_timeout()
+        self.heartbeat()
         self.client_queue.put_nowait(msg)
 
     def get_client_msg(self, **kwargs):
@@ -158,10 +163,10 @@ class Socket(object):
         #       underlying socket ?
         self.active_ns = {}
 
-    def send_packet(self, packet):
+    def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
         protocol"""
-        self.put_client_msg(packet.encode())
+        self.put_client_msg(packet.encode(pkt))
 
     def spawn(self, fn, *args, **kwargs):
         """Spawn a new Greenlet, attached to this Socket instance.
@@ -180,34 +185,40 @@ class Socket(object):
         """
 
         while True:
-            packet = self.get_server_msg()
+            rawdata = self.get_server_msg()
 
-            if packet:
-                #try:
-                #except DontKnowError, e:
-                #    manage error ? send a message! no valid error processing?!
+            if rawdata:
+                try:
+                    pkt = packet.decode(rawdata)
+                except (ValueError, KeyError, Exception), e:
+                    print "Invalid packet", rawdata
+                    continue
+
+                if pkt['type'] == 'heartbeat':
+                    #self.heartbeat()
+                    continue
 
                 # Find out to which endpoint (Namespace obj)
                 # Find the endpoint, instantiate if required
                 # Dispatch the message to the Namespace
                 #   .. see if we need to connect..
-                endpoint = packet['endpoint']
+                endpoint = pkt['endpoint']
 
                 if endpoint not in self.namespaces:
                     #log.debug("unknown packet arriving: ", endpoint)
                     print "WE DON'T HAVE SUCH A NAMESPACE"
                     continue
                 elif endpoint in self.active_ns:
-                    active_ns = self.active_ns[endpoint]
+                    pkt_ns = self.active_ns[endpoint]
                 else:
                     new_ns_class = self.namespaces[endpoint]
-                    new_ns = new_ns_class(self.environ, endpoint,
-                                          request=self.request)
-                    if not new_ns.connect():
+                    pkt_ns = new_ns_class(self.environ, endpoint,
+                                               request=self.request)
+                    if not pkt_ns.connect():
                         continue
-                    self.active_ns[endpoint] = new_ns
+                    self.active_ns[endpoint] = pkt_ns
 
-                active_ns.process_packet(packet)
+                pkt_ns.process_packet(pkt)
 
             if not self.connected:
                 self.kill() # ?? what,s the best clean-up when its not a
@@ -220,6 +231,7 @@ class Socket(object):
         job = gevent.spawn(self._receiver_loop)
         self.jobs.append(job)
         return job
+
     def _watcher(self):
         """Watch if any of the greenlets for a request have died. If so, kill the
         request and the socket.
@@ -241,3 +253,25 @@ class Socket(object):
         job = gevent.spawn(self._watcher)
         return job
     
+    def _heartbeat(self):
+        """Start the heartbeat Greenlet to check connection health."""
+        self.state = self.STATE_CONNECTED
+
+        while self.connected:
+            gevent.sleep(5.0) # FIXME: make this a setting
+            self.put_client_msg("2::") # TODO: make it a heartbeat packet
+
+    def _disconnect_timeout():
+        self.timeout.clear()
+        if self.timeout.wait(10.0):
+            gevent.spawn(disconnect_timeout)
+        else:
+            self.kill()
+
+    def _spawn_heartbeat(self):
+        """This functions returns a list of jobs"""
+        job_sender = gevent.spawn(self._heartbeat)
+        job_waiter = gevent.spawn(self._disconnect_timeout)
+        self.jobs.extend((job_sender, job_waiter))
+        return job_sender, job_waiter
+        

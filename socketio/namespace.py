@@ -95,15 +95,15 @@ class BaseNamespace(object):
         # TODO: take the packet, and dispatch it, execute connect(), message(),
         #       json(), event(), and this event will call the on_functions().
         if packet['type'] == 'event':
-            self.process_event(packet)
+            return self.process_event(packet)
         elif packet['type'] == 'message':
             return self.call_method('recv_message', packet['data'])
         elif packet['type'] == 'json':
             return self.call_method('recv_json', packet['data'])
         # TODO: manage the other packet types
-        pass
 
-    def process_event(self, packet):
+
+    def process_event(self, pkt):
         """This function dispatches ``event`` messages to the correct functions.
 
         Override this function if you want to not dispatch messages 
@@ -112,14 +112,16 @@ class BaseNamespace(object):
         If you override this function, none of the on_functions will get called
         by default.
         """
-        data = packet.data
-        name = packet.name
+        args = pkt['args']
+        name = pkt['name']
         if not self._event_name_regex.match(name):
             print "Message ignored, the bastard", name
             return
 
         method_name = 'on_' + name.replace(' ', '_')
-        return self.call_method(method_name, packet.data)
+        # This means the args, passed as a list, will be expanded to Python args
+        # and if you passed a dict, it will be a dict as the first parameter.
+        return self.call_method(method_name, *args)
 
     def call_method(self, method_name, *args, **kwargs):
         """You should always use this function to call the methods,
@@ -129,13 +131,17 @@ class BaseNamespace(object):
         definitely want to use this instead of getattr(self, 'my_method')()
         """
         if not self.is_method_allowed(method_name):
+            # TODO: implement the Error handling abstraction.
+            #raise SocketIOError("method_not_found", "This method was not found")
             print "HEY! THIS METHOD IS NOT ALLOWED"
             #log.debug("hey.. ")
             return None
         
-        method = getattr(self, method_name)
+        method = getattr(self, method_name, None)
+        if method is None:
+            print "NO SUCH METHOD", method_name
+            return
         return method(*args, **kwargs)
-
 
 
     def recv_message(self, msg):
@@ -173,7 +179,7 @@ class BaseNamespace(object):
 
     def connect(self):
         """If you return False here, the Namespace will not be active for that
-        Socket.
+        Socket.  You *should* return True for anything to succeed in here.
 
         In this function, you can do things like authorization, making sure
         someone will have access to these methods.  Otherwise, raise
@@ -185,7 +191,7 @@ class BaseNamespace(object):
 
         join() and leave() would affect the content of 'rooms'
         """
-        pass
+        return True
 
     def error(self):
         """???"""
