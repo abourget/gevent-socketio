@@ -206,7 +206,7 @@ class Socket(object):
 
                 if endpoint not in self.namespaces:
                     #log.debug("unknown packet arriving: ", endpoint)
-                    print "WE DON'T HAVE SUCH A NAMESPACE"
+                    print "WE DON'T HAVE SUCH A NAMESPACE", endpoint, self.namespaces
                     continue
                 elif endpoint in self.active_ns:
                     pkt_ns = self.active_ns[endpoint]
@@ -261,10 +261,11 @@ class Socket(object):
             gevent.sleep(5.0) # FIXME: make this a setting
             self.put_client_msg("2::") # TODO: make it a heartbeat packet
 
-    def _disconnect_timeout():
+    def _disconnect_timeout(self):
         self.timeout.clear()
+
         if self.timeout.wait(10.0):
-            gevent.spawn(disconnect_timeout)
+            gevent.spawn(self._disconnect_timeout)
         else:
             self.kill()
 
@@ -274,4 +275,3 @@ class Socket(object):
         job_waiter = gevent.spawn(self._disconnect_timeout)
         self.jobs.extend((job_sender, job_waiter))
         return job_sender, job_waiter
-        

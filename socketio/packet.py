@@ -131,8 +131,8 @@ def decode(raw_data):
         #print "EVENT with data", data
         try:
             decoded_msg.update(json.loads(data))
+            decoded_msg['endpoint'] = endpoint
         except ValueError, e:
-            #import pdb; pdb.set_trace()
             print("Invalid JSON message", data)
 
         if "+" in msg_id:
