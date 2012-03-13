@@ -8,6 +8,7 @@ class BaseNamespace(object):
         self.acl_methods = None # be careful, None means OPEN, while an empty
                                 # list means totally closed.
         self.jobs = []
+        self.ack_count = 0
 
     def debug(*args, **kwargs):
         print "Not implemented"
@@ -15,6 +16,10 @@ class BaseNamespace(object):
     @property
     def socket(self):
         return self.environ['socketio']
+
+    def _get_next_ack(self):
+        self.ack_count += 1
+        return self.ack_count
 
     def is_method_allowed(self, acl):
         if self.acl_events is None:
