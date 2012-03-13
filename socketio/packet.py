@@ -29,7 +29,6 @@ ERROR_ADVICES = {
 socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args', 
                               'ackId', 'reason', 'advice', 'qs', 'id']
 
-
 def encode(data):
     """
     Encode an attribute dict into a byte string.
@@ -60,19 +59,21 @@ def encode(data):
         if msg == '3':
             payload = data['data']
         if msg == '4':
-            payload = json.dumps(data['data'])
+            payload = json.dumps(data['data'], separators=(',',':'))
         if msg == '5':
             d = {}
             d['name'] = data['name']
-            if data['args'] != []:
-                d['args'] = data['args'] 
-            payload = json.dumps(d)
+            if 'args' in data and data['args'] != []:
+                d['args'] = data['args']
+            payload = json.dumps(d, separators=(',',':'))
         if 'id' in data:
             msg += ':' + str(data['id'])
             if ack_with_data:
                 msg += '+:'
         else:
             msg += '::'
+        if 'endpoint' not in data:
+            data['endpoint'] = ''
         if payload != '':
             msg += data['endpoint'] + ':' + payload
         else:
@@ -82,7 +83,7 @@ def encode(data):
         # '6:::' [id] '+' [data]
         msg += ':::' + str(data['ackId'])
         if 'args' in data and data['args'] != []:
-            msg += '+' + str(data['args'])
+            msg += '+' + json.dumps(data['args'], separators=(',',':'))
         
     elif type == '7':
         # '7::' [endpoint] ':' [reason] '+' [advice]

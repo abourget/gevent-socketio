@@ -99,7 +99,7 @@ class TestEncodeMessage(TestCase):
                                   'args': [{"a":"b"}, 2,"3"]
                                   })
         self.assertEqual(encoded_message,
-                          '5:::{"name":"edwald","args":[{"a":"b"},2,"3"]}')
+                          '5:::{"args":[{"a":"b"},2,"3"],"name":"edwald"}')
 
     def test_encode_ack(self):
         """encoding ack packet """
