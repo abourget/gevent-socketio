@@ -7,8 +7,8 @@ from gevent.event import Event
 
 from socketio import packet
 
-class default_error_handler(socket, error_name, error_message, endpoint, msg_id,
-                            quiet):
+def default_error_handler(socket, error_name, error_message, endpoint, msg_id,
+                          quiet):
     """This is the default error handler, you can override this by [TODO: INSERT
     HOW HERE].
 
@@ -198,7 +198,7 @@ class Socket(object):
                   The default handler will not send a message to the user, but
                   only log.
         """
-        self.error_handler(socket, error_name, error_message, endpoint, msg_id,
+        self.error_handler(self, error_name, error_message, endpoint, msg_id,
                            quiet)
 
     # User facing low-level function
