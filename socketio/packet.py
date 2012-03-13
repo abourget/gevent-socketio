@@ -5,7 +5,7 @@ import json
 MSG_TYPES = {
     'disconnect': 0,
     'connect': 1,
-    'heartbeat' : 2,
+    'heartbeat': 2,
     'message': 3,
     'json': 4,
     'event': 5,
@@ -14,7 +14,7 @@ MSG_TYPES = {
     'noop': 8,
     }
 
-MSG_VALUES = dict((v,k) for k, v in MSG_TYPES.iteritems())
+MSG_VALUES = dict((v, k) for k, v in MSG_TYPES.iteritems())
 
 ERROR_REASONS = {
     'transport not supported': 0,
@@ -26,46 +26,45 @@ ERROR_ADVICES = {
     'reconnect': 0,
     }
 
-socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args', 
+socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args',
                               'ackId', 'reason', 'advice', 'qs', 'id']
+
 
 def encode(data):
     """
     Encode an attribute dict into a byte string.
     """
-    
     ack_with_data = True
     payload = ''
-#    import pdb; pdb.set_trace()
-    type = str(MSG_TYPES[data['type']])
-    msg = '' + type
-    if type in ['0', '1']:
+    msg = str(MSG_TYPES[data['type']])
+
+    if msg in ['0', '1']:
         # '1::' [path] [query]
         msg += '::' + data['endpoint']
         if 'qs' in data and data['qs'] != '':
             msg += ':' + data['qs']
 
-    elif type == '2':
+    elif msg == '2':
         # heartbeat
         msg += '::'
 
-    elif type in ['3','4','5']:
+    elif msg in ['3', '4', '5']:
         # '3:' [id ('+')] ':' [endpoint] ':' [data]
         # '4:' [id ('+')] ':' [endpoint] ':' [json]
         # '5:' [id ('+')] ':' [endpoint] ':' [json encoded event]
-        # The message id is an incremental integer, required for ACKs. 
-        # If the message id is followed by a +, the ACK is not handled by 
+        # The message id is an incremental integer, required for ACKs.
+        # If the message id is followed by a +, the ACK is not handled by
         # socket.io, but by the user instead.
         if msg == '3':
             payload = data['data']
         if msg == '4':
-            payload = json.dumps(data['data'], separators=(',',':'))
+            payload = json.dumps(data['data'], separators=(',', ':'))
         if msg == '5':
             d = {}
             d['name'] = data['name']
             if 'args' in data and data['args'] != []:
                 d['args'] = data['args']
-            payload = json.dumps(d, separators=(',',':'))
+            payload = json.dumps(d, separators=(',', ':'))
         if 'id' in data:
             msg += ':' + str(data['id'])
             if ack_with_data:
@@ -79,27 +78,27 @@ def encode(data):
         else:
             msg += data['endpoint']
 
-    elif type == '6':
+    elif msg == '6':
         # '6:::' [id] '+' [data]
         msg += ':::' + str(data['ackId'])
         if 'args' in data and data['args'] != []:
-            msg += '+' + json.dumps(data['args'], separators=(',',':'))
-        
-    elif type == '7':
+            msg += '+' + json.dumps(data['args'], separators=(',', ':'))
+
+    elif msg == '7':
         # '7::' [endpoint] ':' [reason] '+' [advice]
         msg += ':::'
-        if 'reason' in data and data['reason'] is not '':
+        if 'reason' in data and data['reason'] != '':
             msg += str(ERROR_REASONS[data['reason']])
-        if 'advice' in data and data['advice'] is not '':
+        if 'advice' in data and data['advice'] != '':
             msg += '+' + str(ERROR_ADVICES[data['advice']])
         msg += data['endpoint']
 
     return msg
 
+
 def decode(raw_data):
     """
-    Decode a rawstr packet arriving from the socket 
-    into a dict.
+    Decode a rawstr packet arriving from the socket into a dict.
     """
     decoded_msg = {}
     split_data = raw_data.split(":", 3)
