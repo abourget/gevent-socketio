@@ -1,7 +1,6 @@
 # -=- encoding: utf-8 -=-
 import gevent
 
-
 class BaseNamespace(object):
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
@@ -9,17 +8,19 @@ class BaseNamespace(object):
         self.ns_name = ns_name
         self.acl_methods = None # be careful, None means OPEN, while an empty
                                 # list means totally closed.
-        self.socket = socket
+        self.jobs = []
         self.ack_count = 0
         self.jobs = []
 
-    def _get_next_ack(self):
-        self.ack_count += 1
-        return self.ack_count
+    def debug(*args, **kwargs):
+        print "Not implemented"
         
     @property
     def socket(self):
         return self.environ['socketio']
+    def _get_next_ack(self):
+        self.ack_count += 1
+        return self.ack_count
 
     def is_method_allowed(self, acl):
         if self.acl_events is None:
