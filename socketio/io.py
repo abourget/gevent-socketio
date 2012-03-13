@@ -38,12 +38,16 @@ def socketio_manage(environ, namespaces, request=None):
     The request object is not required, but will probably be useful to pass
     framework-specific things into your Socket and Namespace functions.
     """
-
     socket = environ['socketio']
     socket._set_environ(environ)
     socket._set_namespaces(namespaces)
     if request:
         socket._set_request(request)
-    socket._spawn_reader_loop()
+    reader_loop = socket._spawn_reader_loop()
+    watcher = socket._spawn_watcher()
 
-    return "done"
+    gevent.joinall([reader_loop, watcher])
+
+    # TODO: double check, what happens to the WSGI request here ? it vanishes ?
+
+    return

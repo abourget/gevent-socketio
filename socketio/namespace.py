@@ -207,49 +207,25 @@ class BaseNamespace(object):
     def leave(self, room):
         pass
 
-
     def spawn(self, fn, *args, **kwargs):
-        """Spawn a new process in the context of this request.
+        """Spawn a new process, attached to this Namespace.
 
-        It will be monitored by the "watcher" method
+        It will be monitored by the "watcher" process in the Socket.  If the
+        socket disconnects, all these greenlets are going to be killed, after
+        calling BaseNamespace.disconnect()
         """
-
-        self.debug("Spawning greenlet: %s" % callable.__name__)
+        self.debug("Spawning sub-Namespace Greenlet: %s" % fn.__name__)
         new = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(new)
-
         return new
 
-    def kill(self, recursive=True):
-        """Kill the current context, call the `on_disconnect` callbacks.
-
-        To pass control to the parent context, you must pass recursive=False
-        *and* return the value returned by this call to kill().
-
-        If recursive is True, then all parent contexts will also be killed,
-        calling in the process all the `on_disconnect` callbacks defined by
-        each contexts.  This is what happens automatically when the SocketIO
-        socket gets disconnected for any reasons.
-
+    def kill_local_jobs(self):
+        """Kills all the jobs spawned with BaseNamespace.spawn() on a namespace
+        object.
+       
+        This will be called automatically if the ``watcher`` process detects
+        that the Socket was closed.
         """
-        self.request = None
-
-        if hasattr(self, 'disconnect'):
-            getattr(self, 'disconnect')()
-
-        self.socket.kill()
-
-    def watcher(self, request):
-        """Watch if any of the greenlets for a request have died. If so, kill the
-        request and the socket.
-        """
-        # TODO: add that if any of the request.jobs die, kill them all and exit
-
-        gevent.sleep(5.0)
-
-        while True:
-            gevent.sleep(1.0)
-
-            if not self.socket.connected:
-                gevent.killall(self.jobs)
-
+        gevent.killall(self.jobs)
+        self.jobs = []
+                    
