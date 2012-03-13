@@ -314,10 +314,11 @@ class Socket(object):
             #       no need to push some heartbeats in there also.
             self.put_client_msg("2::") # TODO: make it a heartbeat packet
 
-    def _disconnect_timeout():
+    def _disconnect_timeout(self):
         self.timeout.clear()
+
         if self.timeout.wait(10.0):
-            gevent.spawn(disconnect_timeout)
+            gevent.spawn(self._disconnect_timeout)
         else:
             self.kill()
 
@@ -327,4 +328,3 @@ class Socket(object):
         job_waiter = gevent.spawn(self._disconnect_timeout)
         self.jobs.extend((job_sender, job_waiter))
         return job_sender, job_waiter
-        
