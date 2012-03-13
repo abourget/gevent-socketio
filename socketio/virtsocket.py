@@ -37,6 +37,7 @@ class Socket(object):
         self.environ = None
         self.namespaces = {}
         self.active_ns = {} # Namespace sessions that were instantiated (/chat)
+        self.jobs = []
 
         def disconnect_timeout():
             self.timeout.clear()
@@ -174,8 +175,6 @@ class Socket(object):
                     self.active_ns[endpoint] = new_ns
 
                 active_ns.process_packet(packet)
-                    
-                    
 
             if not self.connected:
                 self.kill() # ?? what,s the best clean-up when its not a

@@ -1,8 +1,8 @@
 import gevent
-import socket
 import urlparse
 
 from gevent.queue import Empty
+from socketio.packet import Packet
 
 class BaseTransport(object):
     """Base class for all transports. Mostly wraps handler class functions."""
@@ -19,10 +19,10 @@ class BaseTransport(object):
         self.handler = handler
 
     def encode(self, data):
-        return self.handler.environ['socketio'].encode(data)
+        return Packet.encode(data)
 
     def decode(self, data):
-        return self.handler.environ['socketio'].decode(data)
+        return Packet.decode(data)
 
     def write(self, data=""):
         if 'Content-Length' not in self.handler.response_headers_list:
@@ -116,8 +116,9 @@ class XHRMultipartTransport(XHRPollingTransport):
 
     def connect(self, socket, request_method):
         if request_method == "GET":
-            heartbeat = self.handler.environ['socketio'].start_heartbeat()
-            return [heartbeat] + self.get(socket)
+            pass
+            #heartbeat = self.handler.environ['socketio'].start_heartbeat()
+            #return [heartbeat] + self.get(socket)
         elif request_method == "POST":
             return self.post(socket)
         else:
@@ -183,9 +184,10 @@ class WebsocketTransport(BaseTransport):
         gr1 = gevent.spawn(send_into_ws)
         gr2 = gevent.spawn(read_from_ws)
 
-        heartbeat = self.handler.environ['socketio'].start_heartbeat()
+#        heartbeat = self.handler.environ['socketio'].start_heartbeat()
 
-        return [gr1, gr2, heartbeat]
+        #return [gr1, gr2, heartbeat]
+        return [gr1, gr2]
 
 
 class FlashSocketTransport(WebsocketTransport):
