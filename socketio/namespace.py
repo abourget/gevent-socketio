@@ -135,9 +135,10 @@ class BaseNamespace(object):
         method_name = 'on_' + name.replace(' ', '_')
         # This means the args, passed as a list, will be expanded to Python args
         # and if you passed a dict, it will be a dict as the first parameter.
+
         return self.call_method(method_name, *args)
 
-    def call_method(self, method_name, *args, **kwargs):
+    def call_method(self, method_name, *args):
         """You should always use this function to call the methods,
         as it checks if you're allowed according to the set ACLs.
        
@@ -154,7 +155,11 @@ class BaseNamespace(object):
             self.error('no_such_method',
                        'The method "%s" was not found' % method_name)
             return
-        return method(*args, **kwargs)
+
+        # TODO: warning, it is possible that this call doesn't work because of
+        #       the *args, so let's make sure something comes up wen it fails.
+        res = method(*args)
+        return res
 
 
     def recv_message(self, msg):
