@@ -212,7 +212,7 @@ class BaseNamespace(object):
             pkt['type'] = "json"
         self.socket.send_packet(pkt)
 
-    def emit(self, event, *args, callback=None):
+    def emit(self, event, *args, **kwargs):
         """Use this to send a structured event, with a name and arguments, to
         the client.
 
@@ -222,7 +222,13 @@ class BaseNamespace(object):
         been received on that Namespace, or if the Namespace's connect() call
         failed).
 
+        ``callback`` - pass in the callback keyword argument to define a
+                       call-back that will be called when the client acks
+                       (To be implemented)
         """
+        callback = kwargs.pop('callback', None)
+        if kwargs:
+            raise ValueError("emit() only supports positional argument, to stay compatible with the Socket.IO protocol.  You can however pass in a dictionary as the first argument")
         pkt = dict(type="event", name=event, args=args,
                    endpoint=self.ns_name)
 
