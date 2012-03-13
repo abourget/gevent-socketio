@@ -94,12 +94,12 @@ class BaseNamespace(object):
         """
         # TODO: take the packet, and dispatch it, execute connect(), message(),
         #       json(), event(), and this event will call the on_functions().
-        if packet.type == Packet.EVENT:
+        if packet['type'] == 'event':
             self.process_event(packet)
-        elif packet.type == Packet.MESSAGE:
-            return self.call_method('recv_message', packet.data)
-        elif packet.type == Packet.JSON:
-            return self.call_method('recv_json', packet.data)
+        elif packet['type'] == 'message':
+            return self.call_method('recv_message', packet['data'])
+        elif packet['type'] == 'json':
+            return self.call_method('recv_json', packet['data'])
         # TODO: manage the other packet types
         pass
 
