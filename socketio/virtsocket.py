@@ -7,6 +7,34 @@ from gevent.event import Event
 
 from socketio import packet
 
+class default_error_handler(socket, error_name, error_message, endpoint, msg_id,
+                            quiet):
+    """This is the default error handler, you can override this by [TODO: INSERT
+    HOW HERE].
+
+    It basically sends an event through the socket with the 'error' name.
+
+    See documentation for Socket.error().
+
+    ``quiet``, if quiet, this handler will not send a packet to the user, but
+               only log for the server developer.
+    """
+    pkt = dict(type='event', name='error',
+               args=[error_name, error_message])
+    if endpoint:
+        pkt['endpoint'] = endpoint
+    if msg_id:
+        pkt['id'] = msg_id
+    
+    # Send an error event through the Socket
+    if not quiet:
+        socket.send_packet(pkt)
+
+    # Log that error somewhere for debugging...
+    print "default_error_handler: %s, %s (endpoint=%s, msg_id=%s)" % (
+        error_name, error_message, endpoint, msg_id)
+
+
 class Socket(object):
     """
     Virtual Socket implementation, checks heartbeats, writes to local queues for
@@ -15,6 +43,11 @@ class Socket(object):
 
     This is the abstraction on top of the different transports.  It's like
     if you used a WebSocket only...
+    """
+
+    error_handler = default_error_handler
+    """You can attach a different error_handler. Look at default_error_handler
+    for inspiration.
     """
 
     STATE_NEW = "NEW"
@@ -149,6 +182,24 @@ class Socket(object):
         return self.server_queue.get(**kwargs)
 
 
+    def error(self, error_name, error_message, endpoint=None, msg_id=None,
+              quiet=False):
+        """Send an error to the user, using the custom or default
+        ErrorHandler configured on the [TODO: Revise this] Socket/Handler
+        object.
+
+        ``error_name`` is a simple string, for easy association on the client
+                       side
+        ``error_message`` is a human readable message, the user will eventually
+                          see
+        ``endpoint`` set this if you have a message specific to an end point
+        ``msg_id`` set this if your error is relative to a specific message
+        ``quiet`` a way to make the error handler quiet. Specific to the handler.
+                  The default handler will not send a message to the user, but
+                  only log.
+        """
+        self.error_handler(socket, error_name, error_message, endpoint, msg_id,
+                           quiet)
 
     # User facing low-level function
     def disconnect(self):
@@ -191,22 +242,18 @@ class Socket(object):
                 try:
                     pkt = packet.decode(rawdata)
                 except (ValueError, KeyError, Exception), e:
-                    print "Invalid packet", rawdata
+                    self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s" % rawdata[:15])
                     continue
 
                 if pkt['type'] == 'heartbeat':
-                    #self.heartbeat()
+                    # This is already dealth with in put_server_msg() when
+                    # any incoming raw data arrives.
                     continue
 
-                # Find out to which endpoint (Namespace obj)
-                # Find the endpoint, instantiate if required
-                # Dispatch the message to the Namespace
-                #   .. see if we need to connect..
                 endpoint = pkt['endpoint']
 
                 if endpoint not in self.namespaces:
-                    #log.debug("unknown packet arriving: ", endpoint)
-                    print "WE DON'T HAVE SUCH A NAMESPACE"
+                    self.error("no_such_namespace", "The endpoint you tried to connect to doesn't exist: %s" % endpoint, endpoint=endpoint)
                     continue
                 elif endpoint in self.active_ns:
                     pkt_ns = self.active_ns[endpoint]
@@ -215,6 +262,7 @@ class Socket(object):
                     pkt_ns = new_ns_class(self.environ, endpoint,
                                                request=self.request)
                     if not pkt_ns.connect():
+                        self.error("namespace_connect_error", "Connection error to endpoint: %s" % endpoint or 'GLOBAL', endpoint=endpoint or 'GLOBAL')
                         continue
                     self.active_ns[endpoint] = pkt_ns
 
@@ -259,6 +307,11 @@ class Socket(object):
 
         while self.connected:
             gevent.sleep(5.0) # FIXME: make this a setting
+            # TODO: this process could use a timeout object like the disconnect
+            #       timeout thing, and ONLY send packets when none are sent!
+            #       We would do that by calling timeout.set() for a "sending"
+            #       timeout.  If we're sending 100 messages a second, there is
+            #       no need to push some heartbeats in there also.
             self.put_client_msg("2::") # TODO: make it a heartbeat packet
 
     def _disconnect_timeout():
