@@ -50,7 +50,6 @@ class SocketIOServer(WSGIServer):
 
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)
-        self.set_environ({'socketio': Socket(handler)})
         handler.handle()
 
     def get_socket(self, sessid=''):

@@ -10,7 +10,8 @@ from socketio.packet import Packet
 class Socket(object):
     """
     Virtual Socket implementation, checks heartbeats, writes to local queues for
-    message passing, holds the Namespace objects.
+    message passing, holds the Namespace objects, dispatches de packets to the
+    underlying namespaces.
 
     This is the abstraction on top of the different transports.  It's like
     if you used a WebSocket only...
@@ -189,9 +190,16 @@ class Socket(object):
 
     # User facing low-level function
     def disconnect(self):
-        # TODO: force the disconnection.
-        # Loop through all the Namespaces, and call disconnect() there!
-        pass
+        """Calling this method will call the disconnect() method on all the
+        active Namespaces that were open, and remove them from the ``active_ns``
+        map.
+        """
+        for ns_name, ns in self.active_ns.iteritems():
+            ns.disconnect()
+        # TODO: Find a better way to remove the Namespaces from the ``active_ns``
+        #       zone.  Have the Ns.disconnect() call remove itself from the
+        #       underlying socket ?
+        self.active_ns = {}
 
     def send_packet(self, packet):
         """Low-level interface to queue a packet on the wire (encoded as wire

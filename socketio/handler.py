@@ -75,6 +75,7 @@ class SocketIOHandler(WSGIHandler):
         if not path.lstrip('/').startswith(self.server.namespace):
             return super(SocketIOHandler, self).handle_one_response()
 
+        #import pdb;pdb.set_trace()
         self.status = None
         self.headers_sent = False
         self.result = None
@@ -110,7 +111,7 @@ class SocketIOHandler(WSGIHandler):
             self.handle_one_response()
 
         # Make the socket object available for WSGI apps
-        self.environ['socketio'].socket = socket
+        self.environ['socketio'] = socket
 
         # Create a transport and handle the request likewise
         self.transport = transport(self)
