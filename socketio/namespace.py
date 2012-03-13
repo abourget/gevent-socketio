@@ -129,15 +129,14 @@ class BaseNamespace(object):
         definitely want to use this instead of getattr(self, 'my_method')()
         """
         if not self.is_method_allowed(method_name):
-            # TODO: implement the Error handling abstraction.
-            #raise SocketIOError("method_not_found", "This method was not found")
-            print "HEY! THIS METHOD IS NOT ALLOWED"
-            #log.debug("hey.. ")
-            return None
+            self.error('method_access_denied',
+                       'You do not have access to method "%s"' % method_name)
+            return
         
         method = getattr(self, method_name, None)
         if method is None:
-            print "NO SUCH METHOD", method_name
+            self.error('no_such_method',
+                       'The method "%s" was not found' % method_name)
             return
         return method(*args, **kwargs)
 
@@ -149,10 +148,8 @@ class BaseNamespace(object):
         'on_message()'.  The data arriving here is a simple string, with no other
         info.
 
-        If you want to use this, you should override this method.
+        If you want to handle those messages, you should override this method.
         """
-        # This message should be decoded already, according to the flags it was
-        # sent with (OR NOT ???)
         pass
         
     def recv_json(self, data):
@@ -162,7 +159,7 @@ class BaseNamespace(object):
         'on_json()'.  The data arriving here is a python dict, with no event
         name.
 
-        If you want to use this feature, you should override this method.
+        If you want to handle those messages, you should override this method.
         """
         pass
 
@@ -180,14 +177,9 @@ class BaseNamespace(object):
         Socket.  You *should* return True for anything to succeed in here.
 
         In this function, you can do things like authorization, making sure
-        someone will have access to these methods.  Otherwise, raise
-        AuthorizationError.
+        someone will have access to these methods.
 
-        You can also make this socket join a room, and later on leave it by 
-        calling one of your events (on_leave_this_ns_or_something()), and
-        at some point, check with 'blah' in socket.rooms
-
-        join() and leave() would affect the content of 'rooms'
+        If you use the RoomsMixin, you can auto-join rooms, or other things.
         """
         return True
 
@@ -220,8 +212,7 @@ class BaseNamespace(object):
             pkt['type'] = "json"
         self.socket.send_packet(pkt)
 
-    def emit(self, event, data, broadcast=False, room=None,
-             callback=None):
+    def emit(self, event, *args, callback=None):
         """Use this to send a structured event, with a name and arguments, to
         the client.
 
@@ -231,20 +222,14 @@ class BaseNamespace(object):
         been received on that Namespace, or if the Namespace's connect() call
         failed).
 
-        ``broadcast`` if True, will broadcast event to all those on this Server,
-        that are registered to the current Namespace
-
         """
-        pkt = dict(type="event", name=event, args=data,
+        pkt = dict(type="event", name=event, args=args,
                    endpoint=self.ns_name)
+
+        # TODO: implement the callback stuff ??
 
         self.socket.send_packet(pkt)
 
-    def join(self, room):
-        pass
-
-    def leave(self, room):
-        pass
 
     def spawn(self, fn, *args, **kwargs):
         """Spawn a new process, attached to this Namespace.
@@ -253,7 +238,7 @@ class BaseNamespace(object):
         socket disconnects, all these greenlets are going to be killed, after
         calling BaseNamespace.disconnect()
         """
-#        self.log.debug("Spawning sub-Namespace Greenlet: %s" % fn.__name__)
+        # self.log.debug("Spawning sub-Namespace Greenlet: %s" % fn.__name__)
         new = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(new)
         return new

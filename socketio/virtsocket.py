@@ -239,7 +239,7 @@ class Socket(object):
                 try:
                     pkt = packet.decode(rawdata)
                 except (ValueError, KeyError, Exception), e:
-                    self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s" % rawdata[:15])
+                    self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s (%s)" % (rawdata[:15], e))
                     continue
 
                 if pkt['type'] == 'heartbeat':

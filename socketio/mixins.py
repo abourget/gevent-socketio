@@ -36,3 +36,22 @@ class RoomsMixin(object):
             if room_name in socket.rooms:
                 socket.send_packet(pkt)
 
+
+class BroadcastMixin(object):
+    """Mix in this class with your Namespace to have a broadcast event method.
+    
+    Use it like this:
+    class MyNamespace(BaseNamespace, BroadcastMixin):
+        def on_chatmsg(self, event):
+            self.broadcast_event('chatmsg', event)
+
+    """
+    def broadcast_event(self, event, *args):
+        """This is sent to all in the room (in this particular Namespace)"""
+        pkt = dict(type="event",
+                   name=event,
+                   args=args,
+                   endpoint=self.ns_name)
+        for sessid, socket in self.socket.server.sockets.iteritems():
+            socket.send_packet(pkt)
+
