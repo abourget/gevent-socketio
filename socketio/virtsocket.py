@@ -174,7 +174,7 @@ class Socket(object):
         self.jobs.append(job)
         return job
 
-    def _reader_loop(self):
+    def _receiver_loop(self):
         """This is the loop that takes messages from the queue for the server
         to consume, decodes them and dispatches them.
         """
@@ -214,10 +214,10 @@ class Socket(object):
                             # user-initiated disconnect
                 return
 
-    def _spawn_reader_loop(self):
+    def _spawn_receiver_loop(self):
         """Spawns the reader loop.  This is called internall by socketio_manage()
         """
-        job = gevent.spawn(self._reader_loop)
+        job = gevent.spawn(self._receiver_loop)
         self.jobs.append(job)
         return job
     def _watcher(self):
