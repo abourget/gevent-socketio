@@ -44,7 +44,7 @@ class XHRPollingTransport(BaseTransport):
         return []
 
     def get(self, socket):
-        socket.clear_disconnect_timeout();
+        socket.heartbeat();
 
         try:
             message = socket.get_client_msg(timeout=5.0)
