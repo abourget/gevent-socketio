@@ -64,7 +64,7 @@ class TestEncodeMessage(TestCase):
         """encoding JSON packet """
         encoded_message = self.packet.encode({'type': 'json',
                                               'endpoint': '',
-                                              'data': 2
+                                              'data': '2'
                                               })
         self.assertEqual(encoded_message, '4:::"2"')
         
@@ -241,9 +241,9 @@ class TestDecodeMessage(TestCase):
         """decoding a ack packet """
         decoded_message = self.packet.decode('6:::140')
         self.assertEqual(decoded_message, {'type': 'ack',
-                                            'ackId': 140,
-                                            'endpoint': '',
-                                            'args': []})
+                                           'ackId': 140,
+                                           'endpoint': '',
+                                           'args': []})
 
     def test_decode_error(self):
         """decoding error packet """

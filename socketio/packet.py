@@ -123,8 +123,11 @@ class Packet(object):
                     msg += ':'
             else:
                 msg += '::'
-            msg += data['endpoint'] + ':' + payload
-        
+            if payload != '':
+                msg += data['endpoint'] + ':' + payload
+            else:
+                msg += data['endpoint']
+
         elif type == '6':
             # '6:::' [id] '+' [data]
             msg += ':::' + str(data['ackId'])
