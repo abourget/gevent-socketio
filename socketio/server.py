@@ -2,10 +2,11 @@ import sys
 import random
 import traceback
 import gevent
+
 from socket import error
 
 from gevent.pywsgi import WSGIServer
-from socketio.protocol import SocketIOProtocol
+
 from socketio.handler import SocketIOHandler
 from socketio.policyserver import FlashPolicyServer
 from socketio.virtsocket import Socket
@@ -51,7 +52,7 @@ class SocketIOServer(WSGIServer):
 
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)
-        self.set_environ({'socketio': SocketIOProtocol(handler)})
+        self.set_environ({'socketio': Socket(handler)})
         handler.handle()
 
     def get_socket(self, sessid=''):
@@ -66,5 +67,3 @@ class SocketIOServer(WSGIServer):
             socket.incr_hits()
 
         return socket
-
-
