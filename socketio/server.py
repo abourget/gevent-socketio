@@ -18,12 +18,10 @@ class SocketIOServer(WSGIServer):
 
     def __init__(self, *args, **kwargs):
         self.sockets = {}
-        resource = kwargs.pop('resource', None)
-        if resource:
-            print "DEPRECATED: use `namespace` instead of 'resource' as a SocketIOServer parameter"
-            self.namespace = resource
-        else:
-            self.namespace = kwargs.pop('namespace', 'socket.io')
+        if 'resource' in kwargs:
+            print "DEPRECATION WARNING: use `namespace` instead of `resource`"
+        self.namespace = kwargs.pop('resource', kwargs.pop('namespace',
+                                                           'socket.io'))
         self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):

@@ -62,7 +62,7 @@ class Socket(object):
         self.request = request
     
     def _set_environ(self, environ):
-        """Save the WSGI environ, for future use - who knows!
+        """Save the WSGI environ, for future use.
 
         This is called by socketio_manage().
         """
