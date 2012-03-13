@@ -1,6 +1,7 @@
 # -=- encoding: utf-8 -=-
 import gevent
 import re
+import packet
 
 class BaseNamespace(object):
 
@@ -17,9 +18,6 @@ class BaseNamespace(object):
         self.ack_count = 0
         self.jobs = []
 
-    def debug(*args, **kwargs):
-        print "Not implemented"
-        
     @property
     def socket(self):
         return self.environ['socketio']
@@ -198,14 +196,17 @@ class BaseNamespace(object):
         pass
 
 
-    def emit(self, event, data, broadcast=False, json=False, room=None,
+    def emit(self, event, data, broadcast=False, room=None,
              callback=None):
-        pass
+        pkt = {
+            'type': 'event',
+            'name': event,
+            'args': data,
+            'endpoint': self.ns_name
+        }
 
-    def emit_json(self, *args, **kwargs):
-        """This is just a shortcut to self.emit(..., json=True)"""
-        kwargs['json'] = True
-        self.emit(*args, **kwargs)
+        encoded = packet.encode(pkt)
+        self.socket.put_client_msg(encoded)
 
     def join(self, room):
         pass
@@ -220,7 +221,7 @@ class BaseNamespace(object):
         socket disconnects, all these greenlets are going to be killed, after
         calling BaseNamespace.disconnect()
         """
-        self.debug("Spawning sub-Namespace Greenlet: %s" % fn.__name__)
+#        self.log.debug("Spawning sub-Namespace Greenlet: %s" % fn.__name__)
         new = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(new)
         return new
