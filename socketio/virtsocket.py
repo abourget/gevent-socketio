@@ -6,7 +6,6 @@ from gevent.queue import Queue
 from gevent.event import Event
 
 from socketio import packet
-from packet import decode_frames
 
 def default_error_handler(socket, error_name, error_message, endpoint, msg_id,
                           quiet):
@@ -162,23 +161,33 @@ class Socket(object):
             pass # Fail silently
 
     def put_server_msg(self, msg):
-        """Used by the transports"""
+        """Writes to the server's pipe, to end up in in the Namespaces"""
         self.heartbeat()
         self.server_queue.put_nowait(msg)
 
     def put_client_msg(self, msg):
-        """Used by the transports"""
+        """Writes to the client's pipe, to end up in the browser"""
         self.heartbeat()
         self.client_queue.put_nowait(msg)
 
     def get_client_msg(self, **kwargs):
-        """Used by the transports"""
+        """Grab a message to send it to the browser"""
         return self.client_queue.get(**kwargs)
 
     def get_server_msg(self, **kwargs):
-        """Used by the transports"""
+        """Grab a message, to process it by the server and dispatch python calls
+        """
         return self.server_queue.get(**kwargs)
 
+    def get_multiple_client_msgs(self, **kwargs):
+        """Get multiple messages, in case we're going through the various
+        XHR-polling methods, on which we can pack more than one message if the
+        rate is high, and encode the payload for the HTTP channel."""
+        client_queue = self.client_queue
+        msgs = [client_queue.get(**kwargs)]
+        while client_queue.qsize():
+            msgs.append(client_queue.get())
+        return msgs
 
     def error(self, error_name, error_message, endpoint=None, msg_id=None,
               quiet=False):
@@ -216,8 +225,6 @@ class Socket(object):
     def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
         protocol"""
-        #TODO: Might need to encode_frames here to stack multiple messages 
-        # for xhr polling?
         self.put_client_msg(packet.encode(pkt))
 
     def spawn(self, fn, *args, **kwargs):
@@ -238,40 +245,41 @@ class Socket(object):
 
         while True:
             rawdata = self.get_server_msg()
-            if rawdata:
-                frames = decode_frames(rawdata.decode('utf-8'))
 
-                for frame in frames:
-                    try:
-                        pkt = packet.decode(frame)
-                    except (ValueError, KeyError, Exception), e:
-                        self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s (%s)" % (frame[:15], e))
-                        continue
+            if not rawdata:
+                continue # or close the connection ?
+            try:
+                pkt = packet.decode(rawdata)
+            except (ValueError, KeyError, Exception), e:
+                self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s... (%s)" % (rawdata[:20], e))
+                continue
 
-                    if pkt['type'] == 'heartbeat':
-                        # This is already dealth with in put_server_msg() when
-                        # any incoming raw data arrives.
-                        continue
+            if pkt['type'] == 'heartbeat':
+                # This is already dealth with in put_server_msg() when
+                # any incoming raw data arrives.
+                continue
 
-                    endpoint = pkt['endpoint']
+            endpoint = pkt['endpoint']
 
-                    if endpoint not in self.namespaces:
-                        self.error("no_such_namespace", "The endpoint you tried to connect to doesn't exist: %s" % endpoint, endpoint=endpoint)
-                        continue
-                    elif endpoint in self.active_ns:
-                        pkt_ns = self.active_ns[endpoint]
-                    else:
-                        new_ns_class = self.namespaces[endpoint]
-                        pkt_ns = new_ns_class(self.environ, endpoint,
-                                                request=self.request)
-                        self.active_ns[endpoint] = pkt_ns
+            if endpoint not in self.namespaces:
+                self.error("no_such_namespace", "The endpoint you tried to connect to doesn't exist: %s" % endpoint, endpoint=endpoint)
+                continue
+            elif endpoint in self.active_ns:
+                pkt_ns = self.active_ns[endpoint]
+            else:
+                new_ns_class = self.namespaces[endpoint]
+                pkt_ns = new_ns_class(self.environ, endpoint,
+                                        request=self.request)
+                self.active_ns[endpoint] = pkt_ns
 
-                    pkt_ns.process_packet(pkt)
+            pkt_ns.process_packet(pkt)
 
+            # Now, are we still connected ?
             if not self.connected:
                 self.kill() # ?? what,s the best clean-up when its not a
                             # user-initiated disconnect
                 return
+
 
     def _spawn_receiver_loop(self):
         """Spawns the reader loop.  This is called internall by socketio_manage()

@@ -1,5 +1,5 @@
 import gevent
-import urlparse
+import urllib
 
 from gevent.queue import Empty
 from socketio import packet
@@ -34,6 +34,12 @@ class BaseTransport(object):
         self.handler.start_response(status, headers, **kwargs)
 
 
+# TODO: do some optimization on packet transmission.  Normally, node.js
+#       checks if there are many messages to send at once, and if so, fetches
+#       them all, and packs them to be put on the wire as a single message,
+#       encoded with the WebSockets semantics (\ufffd + len. + \ufffd + payload)
+#       -- We do not currently do this optimization.
+
 class XHRPollingTransport(BaseTransport):
     def __init__(self, *args, **kwargs):
         super(XHRPollingTransport, self).__init__(*args, **kwargs)
@@ -46,13 +52,12 @@ class XHRPollingTransport(BaseTransport):
     def get(self, socket):
         socket.heartbeat();
 
-        try:
-            message = socket.get_client_msg(timeout=5.0)
-        except Empty:
-            message = "8::" # NOOP
+        payload = self.get_messages_payload(socket, timeout=5.0)
+        if not payload:
+            payload = "8::" # NOOP
 
         self.start_response("200 OK", [])
-        self.write(message)
+        self.write(payload)
 
         return []
 
@@ -60,7 +65,8 @@ class XHRPollingTransport(BaseTransport):
         return self.handler.wsgi_input.readline()
 
     def post(self, socket):
-        socket.put_server_msg(self._request_body())
+        for message in self.decode_payload(self._request_body()):
+            socket.put_server_msg(message)
 
         self.start_response("200 OK", [
             ("Connection", "close"),
@@ -69,6 +75,35 @@ class XHRPollingTransport(BaseTransport):
         self.write("1")
 
         return []
+
+    def get_messages_payload(self, socket, timeout=None):
+        """This will fetch the messages from the Socket's queue, and if
+        there are many messes, pack multiple messages in one payload and return
+        """
+        try:
+            msgs = socket.get_multiple_client_msgs(timeout=timeout)
+            data = self.encode_payload(msgs)
+        except Empty:
+            data = ""
+        return data
+
+    def encode_payload(self, messages):
+        """Encode list of messages. Expects messages to be unicode.
+
+        ``messages`` - List of raw messages to encode, if necessary
+
+        """
+        if not messages:
+            return ''
+
+        if len(messages) == 1:
+            return messages[0].encode('utf-8')
+
+        payload = u''.join(u'\ufffd%d\ufffd%s' % (len(p), p)
+                          for p in messages)
+
+        return payload.encode('utf-8')
+        
 
     def decode_payload(self, payload):
         """This function can extract multiple messages from one HTTP payload.
@@ -85,15 +120,21 @@ class XHRPollingTransport(BaseTransport):
 
         Inspired by socket.io/lib/transports/http.js
         """
+        payload = payload.decode('utf-8')
         if payload[0] == u"\ufffd":
+            #print "MULTIMSG FULL", payload
             ret = []
             while len(payload) != 0:
-                length = int(payload[1:payload.find(u"\uffd", 1)])
-                end = length + 4
-                ret.append(payload[4:end])
-                payload = payload[end:]
+                len_end = payload.find(u"\ufffd", 1)
+                length = int(payload[1:len_end])
+                msg_start = len_end + 1
+                msg_end = length + msg_start
+                message = payload[msg_start:msg_end]
+                #print "MULTIMSG", length, message
+                ret.append(message)
+                payload = payload[msg_end:]
             return ret
-        return [payload]        
+        return [payload]
 
     def connect(self, socket, request_method):
         if not socket.connection_confirmed:
@@ -118,9 +159,13 @@ class JSONPolling(XHRPollingTransport):
     def _request_body(self):
         data = super(JSONPolling, self)._request_body()
         # resolve %20%3F's, take out wrapping d="...", etc..
-        return urlparse.unquote_plus(data)[3:-1].replace(r'\"', '"')
+        return urllib.unquote_plus(data)[3:-1] \
+                     .replace(r'\"', '"') \
+                     .replace(r"\\", "\\")
 
     def write(self, data):
+        """Just quote out stuff before sending it out"""
+        # TODO: don't we need to quote this data in here ?
         super(JSONPolling, self).write("io.j[0]('%s');" % data)
 
 
@@ -153,15 +198,17 @@ class XHRMultipartTransport(XHRPollingTransport):
 
         def chunk():
             while True:
-                message = socket.get_client_msg()
+                payload = self.get_messages_payload(socket)
 
-                if message is None:
+                if not payload:
+                    # That would mean the call to Queue.get() returned Empty,
+                    # so it was in fact killed, since we pass no timeout=..
                     socket.kill()
                     break
                 else:
                     try:
                         self.write_multipart(header)
-                        self.write_multipart(message)
+                        self.write_multipart(payload)
                         self.write_multipart("--socketio\r\n")
                     except socket.error:
                         socket.kill()
@@ -225,9 +272,6 @@ class HTMLFileTransport(XHRPollingTransport):
         ])
         self.write("<html><body>" + " " * 244)
 
-        try:
-            message = socket.get_client_msg(timeout=5.0)
-        except Empty:
-            message = ""
+        payload = self.get_messages_payload(socket, timeout=5.0)
 
-        self.write_packed(message)
+        self.write_packed(payload)
