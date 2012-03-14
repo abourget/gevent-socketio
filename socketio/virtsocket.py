@@ -239,7 +239,7 @@ class Socket(object):
                 try:
                     pkt = packet.decode(rawdata)
                 except (ValueError, KeyError, Exception), e:
-                    self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s" % rawdata[:15])
+                    self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s (%s)" % (rawdata[:15], e))
                     continue
 
                 if pkt['type'] == 'heartbeat':
@@ -258,9 +258,6 @@ class Socket(object):
                     new_ns_class = self.namespaces[endpoint]
                     pkt_ns = new_ns_class(self.environ, endpoint,
                                                request=self.request)
-                    if not pkt_ns.connect():
-                        self.error("namespace_connect_error", "Connection error to endpoint: %s" % endpoint or 'GLOBAL', endpoint=endpoint or 'GLOBAL')
-                        continue
                     self.active_ns[endpoint] = pkt_ns
 
                 pkt_ns.process_packet(pkt)
