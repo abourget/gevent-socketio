@@ -162,13 +162,6 @@ class BaseNamespace(object):
         res = method(*args)
         return res
 
-    def recv_initialize(self):
-        """ This is fired on the initial creation of a namespace so you may
-        handle any setup required for it
-        """
-        pass
-
-
     def recv_message(self, msg):
         """This is more of a backwards compatibility hack.  This will be
         called for messages sent with the original send() call on the JavaScript

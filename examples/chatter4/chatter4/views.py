@@ -20,6 +20,11 @@ def get_log(request):
     return [c.serialize() for c in DBSession.query(Chat).all()]
 
 class ChatNamespace(BaseNamespace):
+    def __init__(self, *args, **kwargs):
+        super(ChatNamespace, self).__init__(*args, **kwargs)
+
+        self.spawn(self.listener)
+
     def listener(self):
         r = redis.StrictRedis()
         r = r.pubsub()
@@ -30,10 +35,6 @@ class ChatNamespace(BaseNamespace):
             if m['type'] == 'message':
                 data = loads(m['data'])
                 self.emit("chat", data)
-
-    def recv_initialize(self):
-        print "IN CONNECT!!!!!!!!!"
-        self.spawn(self.listener)
 
     def on_chat(self, msg):
         r = redis.Redis()

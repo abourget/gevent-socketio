@@ -271,10 +271,6 @@ class Socket(object):
                 pkt_ns = new_ns_class(self.environ, endpoint,
                                         request=self.request)
 
-                # fire the initialize function for the namespace
-                # TODO: We lose the first message since the fires right before
-                # the execution happens, need to initialize namespaces right away
-                pkt_ns.call_method('recv_initialize')
                 self.active_ns[endpoint] = pkt_ns
 
             pkt_ns.process_packet(pkt)
