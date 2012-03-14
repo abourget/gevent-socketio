@@ -21,7 +21,7 @@ class ChatNamespace(BaseNamespace):
                 data = loads(m['data'])
                 self.emit("chat", data)
 
-    def recv_connect(self):
+    def recv_initialize(self):
         print "IN CONNECT!!!!!!!!!"
         self.spawn(self.listener)
 
