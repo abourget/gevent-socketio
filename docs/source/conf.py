@@ -42,7 +42,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'gevent-socketio'
-copyright = '%s, Jeffrey Gelens, Alexandre Bourget, and John Anderson' % datetime.datetime.now().year
+copyright = '2011-%s, Jeffrey Gelens, Alexandre Bourget, and John Anderson' % datetime.datetime.now().year
 
 
 # The version info for the project you're documenting, acts as replacement for
