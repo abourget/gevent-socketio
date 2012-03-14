@@ -6,6 +6,7 @@ from gevent.queue import Queue
 from gevent.event import Event
 
 from socketio import packet
+from packet import decode_frames
 
 def default_error_handler(socket, error_name, error_message, endpoint, msg_id,
                           quiet):
@@ -205,7 +206,8 @@ class Socket(object):
         map.
         """
         for ns_name, ns in self.active_ns.iteritems():
-            ns.disconnect()
+            if hasattr(ns, 'disconnect'):
+                ns.disconnect()
         # TODO: Find a better way to remove the Namespaces from the ``active_ns``
         #       zone.  Have the Ns.disconnect() call remove itself from the
         #       underlying socket ?
@@ -214,6 +216,8 @@ class Socket(object):
     def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
         protocol"""
+        #TODO: Might need to encode_frames here to stack multiple messages 
+        # for xhr polling?
         self.put_client_msg(packet.encode(pkt))
 
     def spawn(self, fn, *args, **kwargs):
@@ -234,33 +238,35 @@ class Socket(object):
 
         while True:
             rawdata = self.get_server_msg()
+            frames = decode_frames(rawdata.decode('utf-8'))
 
-            if rawdata:
-                try:
-                    pkt = packet.decode(rawdata)
-                except (ValueError, KeyError, Exception), e:
-                    self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s (%s)" % (rawdata[:15], e))
-                    continue
+            for frame in frames:
+                if frame:
+                    try:
+                        pkt = packet.decode(frame)
+                    except (ValueError, KeyError, Exception), e:
+                        self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s (%s)" % (frame[:15], e))
+                        continue
 
-                if pkt['type'] == 'heartbeat':
-                    # This is already dealth with in put_server_msg() when
-                    # any incoming raw data arrives.
-                    continue
+                    if pkt['type'] == 'heartbeat':
+                        # This is already dealth with in put_server_msg() when
+                        # any incoming raw data arrives.
+                        continue
 
-                endpoint = pkt['endpoint']
+                    endpoint = pkt['endpoint']
 
-                if endpoint not in self.namespaces:
-                    self.error("no_such_namespace", "The endpoint you tried to connect to doesn't exist: %s" % endpoint, endpoint=endpoint)
-                    continue
-                elif endpoint in self.active_ns:
-                    pkt_ns = self.active_ns[endpoint]
-                else:
-                    new_ns_class = self.namespaces[endpoint]
-                    pkt_ns = new_ns_class(self.environ, endpoint,
-                                               request=self.request)
-                    self.active_ns[endpoint] = pkt_ns
+                    if endpoint not in self.namespaces:
+                        self.error("no_such_namespace", "The endpoint you tried to connect to doesn't exist: %s" % endpoint, endpoint=endpoint)
+                        continue
+                    elif endpoint in self.active_ns:
+                        pkt_ns = self.active_ns[endpoint]
+                    else:
+                        new_ns_class = self.namespaces[endpoint]
+                        pkt_ns = new_ns_class(self.environ, endpoint,
+                                                request=self.request)
+                        self.active_ns[endpoint] = pkt_ns
 
-                pkt_ns.process_packet(pkt)
+                    pkt_ns.process_packet(pkt)
 
             if not self.connected:
                 self.kill() # ?? what,s the best clean-up when its not a

@@ -33,6 +33,63 @@ ADVICES_VALUES = dict((v, k) for k, v in ERROR_ADVICES.iteritems())
 socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args',
                               'ackId', 'reason', 'advice', 'qs', 'id']
 
+FRAME_SEPARATOR = u'\ufffd'
+
+def decode_frames(data):
+    """Decode socket.io encoded messages. Returns list of packets.
+
+    `data`
+        encoded messages
+
+    """
+    # Single message - nothing to decode here
+    assert isinstance(data, unicode), 'frame is not unicode'
+
+    if not data.startswith(FRAME_SEPARATOR):
+        return [data]
+
+    # Multiple messages
+    idx = 0
+    packets = []
+
+    while data[idx:idx + 1] == FRAME_SEPARATOR:
+        idx += 1
+
+        # Grab message length
+        len_start = idx
+        idx = data.find(FRAME_SEPARATOR, idx)
+        msg_len = int(data[len_start:idx])
+        idx += 1
+
+        # Grab message
+        msg_data = data[idx:idx + msg_len]
+        idx += msg_len
+
+        packets.append(msg_data)
+
+    return packets
+
+def encode_frames(packets):
+    """Encode list of packets. Expects packets in unicode
+
+    `packets`
+        List of packets to encode
+    """
+    # No packets - return empty string
+    if not packets:
+        return ''
+
+    # Exactly one packet - don't do any frame encoding
+    if len(packets) == 1:
+        return packets[0].encode('utf-8')
+
+    # Multiple packets
+    frames = u''.join(u'%s%d%s%s' % (FRAME_SEPARATOR, len(p),
+                                     FRAME_SEPARATOR, p)
+                      for p in packets)
+
+    return frames.encode('utf-8')
+
 
 def encode(data):
     """
@@ -175,7 +232,6 @@ def decode(rawstr):
                 decoded_msg['reason'] = REASONS_VALUES[int(data)]
             else:
                 decoded_msg['reason'] = ''
-
     elif msg_type == "8":  # noop
         return None
     else:
