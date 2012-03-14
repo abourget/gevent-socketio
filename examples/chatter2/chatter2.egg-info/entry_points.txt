@@ -1,0 +1,3 @@
+      [paste.app_factory]
+      main = chatter2:main
+      
