@@ -77,9 +77,8 @@ class BaseNamespace(object):
         self.request is available in here, if you're already ready to do some
         auth. check.
 
-        The ACLs are checked by the `receive_packet` and/or `event` default impl.
-        before calling the class's methods. In ACL checks fail, it then returns
-        [TODO: INSERT THE CORRECT ANSWER TO THIS QUESTION HERE]
+        The ACLs are checked by the `process_packet` and/or `process_event`
+        default implementations, before calling the class's methods.
         """
         return None
 

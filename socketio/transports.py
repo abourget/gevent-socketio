@@ -34,12 +34,6 @@ class BaseTransport(object):
         self.handler.start_response(status, headers, **kwargs)
 
 
-# TODO: do some optimization on packet transmission.  Normally, node.js
-#       checks if there are many messages to send at once, and if so, fetches
-#       them all, and packs them to be put on the wire as a single message,
-#       encoded with the WebSockets semantics (\ufffd + len. + \ufffd + payload)
-#       -- We do not currently do this optimization.
-
 class XHRPollingTransport(BaseTransport):
     def __init__(self, *args, **kwargs):
         super(XHRPollingTransport, self).__init__(*args, **kwargs)
