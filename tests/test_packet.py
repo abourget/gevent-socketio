@@ -203,14 +203,15 @@ class TestDecodeMessage(TestCase):
         decoded_message = decode('4:::"2"')
         self.assertEqual(decoded_message, {'type': 'json',
                                            'endpoint': '',
-                                           'data': 2})
+                                           'data': '2'})
 
         # decoding json packet with message id and ack data
         decoded_message = decode('4:1+::{"a":"b"}')
         self.assertEqual(decoded_message, {'type': 'json',
                                            'id': 1,
                                            'endpoint': '',
-                                           'data': {'a': 'b'}})
+                                           'ack': 'data',
+                                           'data': {u'a': u'b'}})
 
     def test_decode_event(self):
         """decoding an event packet """

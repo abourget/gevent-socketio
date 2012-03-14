@@ -22,9 +22,13 @@ ERROR_REASONS = {
     'unauthorized': 2
     }
 
+REASONS_VALUES = dict((v, k) for k, v in ERROR_REASONS.iteritems())
+
 ERROR_ADVICES = {
     'reconnect': 0,
     }
+
+ADVICES_VALUES = dict((v, k) for k, v in ERROR_ADVICES.iteritems())
 
 socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args',
                               'ackId', 'reason', 'advice', 'qs', 'id']
@@ -96,31 +100,39 @@ def encode(data):
     return msg
 
 
-def decode(raw_data):
+def decode(rawstr):
     """
     Decode a rawstr packet arriving from the socket into a dict.
     """
     decoded_msg = {}
-    split_data = raw_data.split(":", 3)
-
+    split_data = rawstr.split(":", 3)
     msg_type = split_data[0]
     msg_id = split_data[1]
     endpoint = split_data[2]
 
-    data = None
+    data = ''
+
+    if msg_id != '':
+        if "+" in msg_id:
+            msg_id = msg_id.split('+')[0]
+            decoded_msg['id'] = int(msg_id)
+            decoded_msg['ack'] = 'data'
+        else:
+            decoded_msg['id'] = int(msg_id)
+            decoded_msg['ack'] = True
+
+    # common to every message
+    decoded_msg['type'] = MSG_VALUES[int(msg_type)]
+    decoded_msg['endpoint'] = endpoint
 
     if len(split_data) > 3:
         data = split_data[3]
 
-    decoded_msg['type'] = MSG_VALUES[int(msg_type)]
-    decoded_msg['endpoint'] = None
-
     if msg_type == "0": # disconnect
-        decoded_msg['endpoint'] = endpoint
+        pass
 
     elif msg_type == "1": # connect
-        decoded_msg['endpoint'] = endpoint
-        decoded_msg['qs'] = endpoint
+        decoded_msg['qs'] = data
 
     elif msg_type == "2": # heartbeat
         pass
@@ -132,29 +144,38 @@ def decode(raw_data):
         decoded_msg['data'] = json.loads(data)
 
     elif msg_type == "5": # event
-        #print "EVENT with data", data
         try:
-            decoded_msg.update(json.loads(data))
-            decoded_msg['endpoint'] = endpoint
+            data = json.loads(data)
         except ValueError, e:
-            print("Invalid JSON message", data)
+            print("Invalid JSON event message", data)
 
-        if "+" in msg_id:
-            decoded_msg['id'] = msg_id
+        decoded_msg['name'] = data.pop('name')
+        if 'args' in data:
+            decoded_msg['args'] = data['args']
         else:
-            pass # TODO send auto ack
+            decoded_msg['args'] = []
 
     elif msg_type == "6": # ack
-        # TODO: look-out here..
-        tail = data.split('+')[1]
-        decoded_msg['ackId'] = tail
+        if '+' in data:
+            ackId, data = data.split('+')
+            decoded_msg['ackId'] = int(ackId)
+            decoded_msg['args'] = json.loads(data)
+        else:
+            decoded_msg['ackId'] = int(data)
+            decoded_msg['args'] = []
 
     elif msg_type == "7": # error
-        els = data.split('+', 1)
-        decoded_msg['reason'] = els[0]
-        if len(els) == 2:
-            decoded_msg['advice'] = els[1]
-
+        if '+' in data:
+            reason, advice = data.split('+')
+            decoded_msg['reason'] = REASONS_VALUES[int(reason)]
+            decoded_msg['advice'] = ADVICES_VALUES[int(advice)]
+        else:
+            decoded_msg['advice'] = ''
+            if data != '':
+                decoded_msg['reason'] = REASONS_VALUES[int(data)]
+            else:
+                decoded_msg['reason'] = ''
+            
     elif msg_type == "8": # noop
         return None
     else:
