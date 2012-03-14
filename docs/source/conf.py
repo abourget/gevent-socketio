@@ -12,14 +12,13 @@
 # serve to show the default.
 
 import sys, os
-
+import datetime
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 here = os.path.dirname(__file__)
 socketio_path = os.path.abspath(os.path.join(here, '../../socketio'))
 sys.path.insert(0, socketio_path)
-
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -43,7 +42,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'gevent-socketio'
-copyright = u'2012, Jeffrey Gelens,Alex Bourget,John Anderson'
+copyright = '%s, Jeffrey Gelens, Alexandre Bourget, and John Anderson' % datetime.datetime.now().year
+
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
