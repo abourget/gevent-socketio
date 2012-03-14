@@ -38,6 +38,10 @@ Links to examples
 API docs
 --------
 
+The manager is the function you call from your framework, they are in:
+
+  :mod:`socketio`
+
 **Namespaces** are the main interface the developer is going to use.  You mostly 
 define your own BaseNamespace derivatives, and gevent-socketio maps the incoming
 messages to your methods automatically:
@@ -108,8 +112,8 @@ This is the original wow-website:
 Here is a list of the different frameworks integration to date, although not all
 have upgraded to the latest version of gevent-socketio:
 
-  pyramid_socketio: https://github.com/abourget/pyramid_socketio
-  django-socketio: https://github.com/stephenmcd/django-socketio
+  * pyramid_socketio: https://github.com/abourget/pyramid_socketio
+  * django-socketio: https://github.com/stephenmcd/django-socketio
 
 The Flask guys will be working on an integration layer soon.
 
