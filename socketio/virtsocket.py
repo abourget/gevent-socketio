@@ -49,7 +49,7 @@ class Socket(object):
     STATE_DISCONNECTING = "DISCONNECTING"
     STATE_DISCONNECTED = "DISCONNECTED"
 
-    GLOBAL_NS = None
+    GLOBAL_NS = ''
     """Use this to be explicit when specifying a Global Namespace (an endpoint
     with no name, not '/chat' or anything."""
 
