@@ -26,6 +26,10 @@ Getting started
 
 Just copy this and you,re ready
 
+See this doc for different servers integration:
+
+  :ref:`server_integration`
+
 Examples
 --------
 
@@ -38,42 +42,42 @@ API docs
 define your own BaseNamespace derivatives, and gevent-socketio maps the incoming
 messages to your methods automatically:
 
-  :ref:`socketio.namespace`
+  :mod:`socketio.namespace`
 
 **Mixins** are components you can add to your namespaces, to provided added
 functionality.
 
-  :ref:`socketio.mixins`
+  :mod:`socketio.mixins`
 
 **Sockets** are the virtual tunnels that are established and abstracted by the
 different Transports.  They basically expose socket-like send/receive
 functionality to the Namespace objects.  Even when we use long-polling
 transports, only one Socket is created per browser.
 
-  :ref:`socketio.virtsocket`
+  :mod:`socketio.virtsocket`
 
 **Packet** is a library that handle the decoding of the messages encoded in the
 Socket.IO dialect.  They take dictionaries for encoding, and return decoded
 dictionaries also.
 
-  :ref:`socketio.packet`
+  :mod:`socketio.packet`
 
 **Handler** is a lower-level transports handler.  It is responsible for calling
 your WSGI application
 
-  :ref:`socketio.handler`
+  :mod:`socketio.handler`
 
 **Transports** are responsible for translating the different fallback mechanisms
 to one abstracted Socket, dealing with payload encoding, multi-message
 multiplexing and their reverse operation.
 
-  :ref:`socketio.transports`
+  :mod:`socketio.transports`
 
 **Server** is the component used to hook Gevent and its WSGI server to the
 WSGI app to be served, while dispatching any Socket.IO related activities to
 the `handler` and the `transports`.
 
-  :ref:`socketio.server`
+  :mod:`socketio.server`
 
 Auto-generated indexes:
 
@@ -84,15 +88,48 @@ Auto-generated indexes:
 References
 ----------
 
-Links to the node.js implementation
-Links to the Socket.IO specs
-Link to other implementations and the different frameworks that implement it.
+LearnBoost's node.js version is the reference implementation, you can find the
+server component at this address:
+
+  https://github.com/learnboost/socket.io
+
+The client JavaScript library's development branch is here:
+
+  https://github.com/LearnBoost/socket.io-client
+
+The specifications to the protocol are somehow in this repository:
+
+  https://github.com/LearnBoost/socket.io-spec
+
+This is the original wow-website:
+
+  http://socket.io
+
+Here is a list of the different frameworks integration to date, although not all
+have upgraded to the latest version of gevent-socketio:
+
+  pyramid_socketio: https://github.com/abourget/pyramid_socketio
+  django-socketio: https://github.com/stephenmcd/django-socketio
+
+The Flask guys will be working on an integration layer soon.
 
 
 Credits
 -------
 
-PyCon 2012 and the Sprints!
+**Jeffrey Gellens** for starting and polishing this project over the years.
+
+PyCon 2012 and the Sprints, for bringing this project up to version 0.9 of the protocol.
+
+Contributors:
+
+ * Denis Bilenko
+ * Bobby Powers
+ * Lon Ingram
+ * Eugene Baumstein
+ * John Anderson
+ * Sébastien Béal
+ * Alexandre Bourget
 
 
 

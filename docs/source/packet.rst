@@ -1,7 +1,9 @@
+.. _packet_module:
 
+:mod:`socketio.packet`
+======================
 
-:mod:`socketio.packet` Package
-------------------------------
+The day to day user doesn't need to use this module directly.
 
 .. automodule:: socketio.packet
     :members:
