@@ -70,6 +70,31 @@ class XHRPollingTransport(BaseTransport):
 
         return []
 
+    def decode_payload(self, payload):
+        """This function can extract multiple messages from one HTTP payload.
+        Some times, the XHR/JSONP/.. transports can pack more than one message
+        on a single packet.  They are encoding following the WebSocket semantics,
+        which need to be reproduced here to unwrap the messages.
+
+        The semantics are:
+
+          \ufffd + [length as a string] + \ufffd + [payload as a unicode string]
+
+        This function returns a list of messages, even though there is only
+        one.
+
+        Inspired by socket.io/lib/transports/http.js
+        """
+        if payload[0] == u"\ufffd":
+            ret = []
+            while len(payload) != 0:
+                length = int(payload[1:payload.find(u"\uffd", 1)])
+                end = length + 4
+                ret.append(payload[4:end])
+                payload = payload[end:]
+            return ret
+        return [payload]        
+
     def connect(self, socket, request_method):
         if not socket.connection_confirmed:
             socket.connection_confirmed = True
@@ -93,7 +118,7 @@ class JSONPolling(XHRPollingTransport):
     def _request_body(self):
         data = super(JSONPolling, self)._request_body()
         # resolve %20%3F's, take out wrapping d="...", etc..
-        return urlparse.unquote(data)[3:-1].replace(r'\"', '"')
+        return urlparse.unquote_plus(data)[3:-1].replace(r'\"', '"')
 
     def write(self, data):
         super(JSONPolling, self).write("io.j[0]('%s');" % data)
