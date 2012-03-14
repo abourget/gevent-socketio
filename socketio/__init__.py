@@ -18,8 +18,10 @@ def socketio_manage(environ, namespaces, request=None):
     socket = environ['socketio']
     socket._set_environ(environ)
     socket._set_namespaces(namespaces)
+
     if request:
         socket._set_request(request)
+
     receiver_loop = socket._spawn_receiver_loop()
     watcher = socket._spawn_watcher()
 

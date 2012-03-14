@@ -162,6 +162,12 @@ class BaseNamespace(object):
         res = method(*args)
         return res
 
+    def recv_initialize(self):
+        """ This is fired on the initial creation of a namespace so you may
+        handle any setup required for it
+        """
+        pass
+
 
     def recv_message(self, msg):
         """This is more of a backwards compatibility hack.  This will be
@@ -261,6 +267,7 @@ class BaseNamespace(object):
                        (To be implemented)
         """
         callback = kwargs.pop('callback', None)
+
         if kwargs:
             raise ValueError("emit() only supports positional argument, to stay compatible with the Socket.IO protocol.  You can however pass in a dictionary as the first argument")
         pkt = dict(type="event", name=event, args=args,
@@ -269,8 +276,6 @@ class BaseNamespace(object):
         # TODO: implement the callback stuff ??
 
         self.socket.send_packet(pkt)
-
-
 
 
     def spawn(self, fn, *args, **kwargs):
@@ -288,10 +293,9 @@ class BaseNamespace(object):
     def kill_local_jobs(self):
         """Kills all the jobs spawned with BaseNamespace.spawn() on a namespace
         object.
-       
+
         This will be called automatically if the ``watcher`` process detects
         that the Socket was closed.
         """
         gevent.killall(self.jobs)
         self.jobs = []
-                    
