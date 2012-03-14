@@ -11,10 +11,9 @@ Gevent-socketio documentation
 
 Introduction
 ------------
-
-This is what, real-time web, blah blah blah..
-
-What is allows us to do.  Framework agnostic...
+We utilize gevent to allow us to asynchronously handle messages from socket.IO
+a javascript library that makes it possible to do real-time communication across
+well web browsers.
 
 Concepts
 --------
@@ -24,7 +23,7 @@ Namespace, Socket, fallbacks (links to the Socket.IO docs)
 Getting started
 ---------------
 
-Just copy this and you,re ready
+To get started please check out our example applications.
 
 See this doc for different servers integration:
 
@@ -33,7 +32,11 @@ See this doc for different servers integration:
 Examples
 --------
 
-Links to examples
+Pyramid Examples:
+https://github.com/sontek/gevent-socketio/tree/master/examples
+
+Django Example:
+https://github.com/sontek/django-tictactoe
 
 API docs
 --------
