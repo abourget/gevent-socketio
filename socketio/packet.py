@@ -128,22 +128,22 @@ def decode(rawstr):
     if len(split_data) > 3:
         data = split_data[3]
 
-    if msg_type == "0": # disconnect
+    if msg_type == "0":  # disconnect
         pass
 
-    elif msg_type == "1": # connect
+    elif msg_type == "1":  # connect
         decoded_msg['qs'] = data
 
-    elif msg_type == "2": # heartbeat
+    elif msg_type == "2":  # heartbeat
         pass
 
-    elif msg_type == "3": # message
+    elif msg_type == "3":  # message
         decoded_msg['data'] = data
 
-    elif msg_type == "4": # json msg
+    elif msg_type == "4":  # json msg
         decoded_msg['data'] = json.loads(data)
 
-    elif msg_type == "5": # event
+    elif msg_type == "5":  # event
         try:
             data = json.loads(data)
         except ValueError, e:
@@ -155,7 +155,7 @@ def decode(rawstr):
         else:
             decoded_msg['args'] = []
 
-    elif msg_type == "6": # ack
+    elif msg_type == "6":  # ack
         if '+' in data:
             ackId, data = data.split('+')
             decoded_msg['ackId'] = int(ackId)
@@ -164,7 +164,7 @@ def decode(rawstr):
             decoded_msg['ackId'] = int(data)
             decoded_msg['args'] = []
 
-    elif msg_type == "7": # error
+    elif msg_type == "7":  # error
         if '+' in data:
             reason, advice = data.split('+')
             decoded_msg['reason'] = REASONS_VALUES[int(reason)]
@@ -175,8 +175,8 @@ def decode(rawstr):
                 decoded_msg['reason'] = REASONS_VALUES[int(data)]
             else:
                 decoded_msg['reason'] = ''
-            
-    elif msg_type == "8": # noop
+
+    elif msg_type == "8":  # noop
         return None
     else:
         raise Exception("Unknown message type: %s" % msg_type)
