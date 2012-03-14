@@ -3,3 +3,6 @@ gevent_socketio.egg-info
 *~
 *.pyc
 versiontools-*/
+
+# Ignore built docs..
+docs/build
