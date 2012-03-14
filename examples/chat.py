@@ -7,16 +7,16 @@ from socketio.mixins import RoomsMixin, BroadcastMixin
 class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
     
     def on_nickname(self, nickname):
-        self.environ['nicknames'].add(nikname)  
+        self.environ['nicknames'].append(nickname)
         self.socket.session = nickname
         self.broadcast_event('anouncement', '%s has connected' % nickname)
         self.broadcast_event('nicknames', self.environ['nicknames'])
 
-    def on_join_room(self, room_name):
-        self.join(room_name)
-
-    def on_msg_to_room(self, room_name, msg):
+    def on_user_message(self, room_name, msg):
         self.emit_to_room('msg_to_room', room_name, msg)
+
+    def recv_message(self, message):
+        print "PING!!!", message
 
 
 class Application(object):
@@ -25,7 +25,7 @@ class Application(object):
 
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
-        environ['nicknames'] = set()
+        environ['nicknames'] = [] 
 
         if not path:
             start_response('200 OK', [('Content-Type', 'text/html')])
