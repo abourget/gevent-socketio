@@ -238,10 +238,10 @@ class Socket(object):
 
         while True:
             rawdata = self.get_server_msg()
-            frames = decode_frames(rawdata.decode('utf-8'))
+            if rawdata:
+                frames = decode_frames(rawdata.decode('utf-8'))
 
-            for frame in frames:
-                if frame:
+                for frame in frames:
                     try:
                         pkt = packet.decode(frame)
                     except (ValueError, KeyError, Exception), e:
