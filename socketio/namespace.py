@@ -1,7 +1,9 @@
 # -=- encoding: utf-8 -=-
 import gevent
 import re
-import socketio.packet
+import logging
+
+log = logging.getLogger(__name__)
 
 class BaseNamespace(object):
 
