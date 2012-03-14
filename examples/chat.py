@@ -1,16 +1,31 @@
 from gevent import monkey; monkey.patch_all()
-from socketio import SocketIOServer
+from socketio import SocketIOServer, socketio_manage
+from socketio.namespace import BaseNamespace
+from socketio.mixins import RoomsMixin, BroadcastMixin
+
+
+class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
+    
+    def on_nickname(self, nickname):
+        self.environ['nicknames'].add(nikname)  
+        self.socket.session = nickname
+        self.broadcast_event('anouncement', '%s has connected' % nickname)
+        self.broadcast_event('nicknames', self.environ['nicknames'])
+
+    def on_join_room(self, room_name):
+        self.join(room_name)
+
+    def on_msg_to_room(self, room_name, msg):
+        self.emit_to_room('msg_to_room', room_name, msg)
 
 
 class Application(object):
     def __init__(self):
         self.buffer = []
-        self.cache = {
-            'nicknames': set()
-        }
 
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
+        environ['nicknames'] = set()
 
         if not path:
             start_response('200 OK', [('Content-Type', 'text/html')])
@@ -33,34 +48,9 @@ class Application(object):
             return [data]
 
         if path.startswith("socket.io"):
-            socketio = environ['socketio']
-
-            while True:
-                message = socketio.receive()
-
-                print message
-
-                if message and message['type'] == "event":
-                    self.handle_event(message, socketio)
+            socketio_manage(environ, {'': ChatNamespace})
         else:
             return not_found(start_response)
-
-    def handle_event(self, message, socketio):
-        if message['name'] == "nickname":
-            nickname = message['args'][0]
-            nickdict = {}
-            nickdict[nickname] = nickname
-            socketio.session.nickname = nickname
-
-            self.cache['nicknames'].add(nickname)
-
-            socketio.ack(message['id'], [0])
-            socketio.broadcast_event("announcement", "%s connected" % nickname)
-            socketio.broadcast_event("nicknames", list(self.cache['nicknames']), include_self=True)
-
-        elif message['name'] == "user message":
-            socketio.broadcast_event("user message", socketio.session.nickname, message['args'][0])
-
 
 def not_found(start_response):
     start_response('404 Not Found', [])

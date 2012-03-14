@@ -1,0 +1,5 @@
+A sample pyramid application using the minimum required for a real-time chat up without persistance
+
+To get the app running:
+python setup.py develop
+python run.py
