@@ -1,0 +1,26 @@
+body {
+  background-color: #888;
+}
+#container {
+  margin: 0 auto;
+  width: 550px;
+  padding: 20px;
+  background-color: #FFF;
+}
+
+h1 {
+  margin: 0;
+  padding: 0;
+  border-bottom: solid 1px #000;
+  width: 80%;
+}
+
+#chatlog {
+  height: 200px;
+  overflow-y: scroll;
+}
+
+#chatbox {
+  width: 300px;
+  border: solid 1px #888;
+}
