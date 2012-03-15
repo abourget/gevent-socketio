@@ -1,6 +1,7 @@
 $(document).ready(function() {
     // connect to the websocket
     var socket = io.connect();
+    socket.emit('subscribe')
 
     var ChatModel = Backbone.Model.extend({
     });

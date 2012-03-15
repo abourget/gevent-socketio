@@ -271,14 +271,10 @@ class Socket(object):
                 pkt_ns = new_ns_class(self.environ, endpoint,
                                         request=self.request)
 
-                # TODO: this seems wrong.. what's the protocol supposed to do ?
                 # Fire the initialize function for the namespace
                 # This call ISN'T protected by ACLs! Beware!
                 pkt_ns.call_method('initialize', pkt, pkt)
 
-                # TODO: We lose the first message since the fires right before
-                # the execution happens, need to initialize namespaces right
-                # away
                 self.active_ns[endpoint] = pkt_ns
 
             pkt_ns.process_packet(pkt)
