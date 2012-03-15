@@ -8,6 +8,7 @@ log = logging.getLogger(__name__)
 # regex to check the event name contains only alpha numerical characters
 allowed_event_name_regex = re.compile(r'^[A-Za-z][A-Za-z0-9_ ]*$')
 
+
 class BaseNamespace(object):
 
     def __init__(self, environ, ns_name, request=None):
@@ -129,7 +130,7 @@ class BaseNamespace(object):
         name = pkt['name']
         if not allowed_event_name_regex.match(name):
             self.error("unallowed_event_name",
-                       "name must only contains alpha numerical characters" )
+                       "name must only contains alpha numerical characters")
             return
 
         method_name = 'on_' + name.replace(' ', '_')
@@ -230,7 +231,7 @@ class BaseNamespace(object):
         """
         self.socket.error(error_name, error_message, endpoint=self.ns_name,
                           msg_id=msg_id, quiet=quiet)
-    
+
     def send(self, message, json=False):
         """Use send to send a simple string message.
 
