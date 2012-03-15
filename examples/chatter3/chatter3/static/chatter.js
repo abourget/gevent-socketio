@@ -1,6 +1,7 @@
 $(document).ready(function() {
     // connect to the websocket
     var socket = io.connect();
+    socket.emit('subscribe')
 
     // Backbone.js model that will represent our chat log coming in
     var ChatModel = Backbone.Model.extend({
