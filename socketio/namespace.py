@@ -5,7 +5,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-# Check the event name contains only alpha numerical characters
+# regex to check the event name contains only alpha numerical characters
 allowed_event_name_regex = re.compile(r'^[A-Za-z][A-Za-z0-9_ ]*$')
 
 class BaseNamespace(object):
@@ -128,7 +128,8 @@ class BaseNamespace(object):
         args = pkt['args']
         name = pkt['name']
         if not allowed_event_name_regex.match(name):
-            print "Message ignored, the bastard", name
+            self.error("unallowed_event_name",
+                       "name must only contains alpha numerical characters" )
             return
 
         method_name = 'on_' + name.replace(' ', '_')
@@ -252,7 +253,6 @@ class BaseNamespace(object):
         that the other endpoint might not be initialized yet (if no message has
         been received on that Namespace, or if the Namespace's connect() call
         failed).
-
         ``callback`` - pass in the callback keyword argument to define a
                        call-back that will be called when the client acks
                        (To be implemented)
