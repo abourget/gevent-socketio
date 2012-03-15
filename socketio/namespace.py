@@ -5,25 +5,26 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class BaseNamespace(object):
 
     _event_name_regex = re.compile(r'^[A-Za-z][A-Za-z0-9_ ]*$')
     """Used to match the event names, so they don't leak bizarre characters"""
-
 
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
         self.socket = environ['socketio']
         self.request = request
         self.ns_name = ns_name
-        self.allowed_methods = None # be careful, None means OPEN, while an empty
-                                    # list means totally closed.
+        self.allowed_methods = None  # be careful, None means all methods
+                                     # are allowed while an empty list
+                                     # means totally closed.
         self.ack_count = 0
         self.jobs = []
 
     def _get_next_ack(self):
-        # TODO: this is currently unused, but we'll probably need it to implement
-        #       the ACK methods.
+        # TODO: this is currently unused, but we'll probably need it
+        # to implement the ACK methods.
         self.ack_count += 1
         return self.ack_count
 
@@ -44,9 +45,9 @@ class BaseNamespace(object):
             self.allowed_methods = set([method_name])
 
     def del_acl_method(self, method_name):
-        """ACL system: ensure the user will not have access to that method. """
+        """ACL system: ensure the user will not have access to that method."""
         if self.allowed_methods is None:
-            raise ValueError("""Trying to delete an ACL method, but none were 
+            raise ValueError("""Trying to delete an ACL method, but none were
             defined yet! Or: No ACL restrictions yet, why would you delete
             one?""")
 
@@ -82,7 +83,6 @@ class BaseNamespace(object):
         """
         return None
 
-
     def process_packet(self, packet):
         """If you override this, NONE of the functions in this class will
         be called.  It is responsible for dispatching to event() (which in turn
@@ -90,7 +90,7 @@ class BaseNamespace(object):
 
         If the packet arrived here, it is because it belongs to this endpoint.
 
-        For every packet arriving, the only possible path of execution, that is,
+        For each packet arriving, the only possible path of execution, that is,
         the only methods that *can* be called are the following:
 
           recv_connect()
@@ -114,14 +114,13 @@ class BaseNamespace(object):
         elif packet['type'] == 'error':
             return self.call_method('recv_error', packet)
         else:
-            print "UNprocessed packet", packet
+            print "Unprocessed packet", packet
         # TODO: manage the other packet types
 
-
     def process_event(self, pkt):
-        """This function dispatches ``event`` messages to the correct functions.
+        """This function dispatches ``events`` to the correct callback.
 
-        Override this function if you want to not dispatch messages 
+        Override this function if you want to not dispatch messages
         automatically to "on_event_name" methods.
 
         If you override this function, none of the on_functions will get called
@@ -134,15 +133,16 @@ class BaseNamespace(object):
             return
 
         method_name = 'on_' + name.replace(' ', '_')
-        # This means the args, passed as a list, will be expanded to Python args
-        # and if you passed a dict, it will be a dict as the first parameter.
+        # This means the args, passed as a list, will be expanded to
+        # the method arg and if you passed a dict, it will be a dict
+        # as the first parameter.
 
         return self.call_method(method_name, *args)
 
     def call_method(self, method_name, *args):
         """You should always use this function to call the methods,
         as it checks if you're allowed according to the set ACLs.
-       
+
         If you override process_packet() or process_event(), you should
         definitely want to use this instead of getattr(self, 'my_method')()
         """
@@ -150,7 +150,7 @@ class BaseNamespace(object):
             self.error('method_access_denied',
                        'You do not have access to method "%s"' % method_name)
             return
-        
+
         method = getattr(self, method_name, None)
         if method is None:
             self.error('no_such_method',
@@ -162,23 +162,23 @@ class BaseNamespace(object):
         res = method(*args)
         return res
 
-    def recv_message(self, msg):
-        """This is more of a backwards compatibility hack.  This will be
-        called for messages sent with the original send() call on the JavaScript
-        side.  This is NOT the 'message' event, which you will catch with
-        'on_message()'.  The data arriving here is a simple string, with no other
-        info.
+    def recv_message(self, data):
+        """This is more of a backwards compatibility hack. This will be
+        called for messages sent with the original send() call on the client
+        side. This is NOT the 'message' event, which you will catch with
+        'on_message()'. The data arriving here is a simple string, with no
+        other info.
 
         If you want to handle those messages, you should override this method.
         """
         pass
-        
+
     def recv_json(self, data):
-        """This is more of a backwards compatibility hack.  This will be
+        """This is more of a backwards compatibility hack. This will be
         called for JSON packets sent with the original json() call on the
-        JavaScript side.  This is NOT the 'json' event, which you will catch with
-        'on_json()'.  The data arriving here is a python dict, with no event
-        name.
+        JavaScript side. This is NOT the 'json' event, which you will catch
+        with 'on_json()'. The data arriving here is a python dict, with no
+        event name.
 
         If you want to handle those messages, you should override this method.
         """
@@ -210,7 +210,7 @@ class BaseNamespace(object):
 
     def recv_error(self, packet):
         """Override this function to handle the errors we get from the client.
-        
+
         You get the full packet in here, since it is not clear what you should
         get otherwise [TODO: change this sentence, this doesn't help :P]
         """
@@ -224,14 +224,13 @@ class BaseNamespace(object):
                        methods
         ``error_message`` is some human-readable text, describing the error
         ``msg_id`` is used to associate with a request
-        ``quiet`` specific to error_handlers. The default doesn't send a message
-                  to the user, but shows a debug message on the developer
-                  console.
+        ``quiet`` specific to error_handlers. The default doesn't send a
+                  message to the user, but shows a debug message on the
+                  developer console.
         """
         self.socket.error(error_name, error_message, endpoint=self.ns_name,
                           msg_id=msg_id, quiet=quiet)
-
-
+    
     def send(self, message, json=False):
         """Use send to send a simple string message.
 
@@ -249,7 +248,7 @@ class BaseNamespace(object):
         """Use this to send a structured event, with a name and arguments, to
         the client.
 
-        By default, it uses this namespace's endpoint.  You can send messages on
+        By default, it uses this namespace's endpoint. You can send messages on
         other endpoints with ``self.socket['/other_endpoint'].emit()``.  Beware
         that the other endpoint might not be initialized yet (if no message has
         been received on that Namespace, or if the Namespace's connect() call
@@ -262,7 +261,7 @@ class BaseNamespace(object):
         callback = kwargs.pop('callback', None)
 
         if kwargs:
-            raise ValueError("emit() only supports positional argument, to stay compatible with the Socket.IO protocol.  You can however pass in a dictionary as the first argument")
+            raise ValueError("emit() only supports positional argument, to stay compatible with the Socket.IO protocol. You can however pass in a dictionary as the first argument")
         pkt = dict(type="event", name=event, args=args,
                    endpoint=self.ns_name)
 
@@ -270,11 +269,10 @@ class BaseNamespace(object):
 
         self.socket.send_packet(pkt)
 
-
     def spawn(self, fn, *args, **kwargs):
         """Spawn a new process, attached to this Namespace.
 
-        It will be monitored by the "watcher" process in the Socket.  If the
+        It will be monitored by the "watcher" process in the Socket. If the
         socket disconnects, all these greenlets are going to be killed, after
         calling BaseNamespace.disconnect()
         """
