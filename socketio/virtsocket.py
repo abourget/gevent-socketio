@@ -7,10 +7,11 @@ from gevent.event import Event
 
 from socketio import packet
 
-def default_error_handler(socket, error_name, error_message, endpoint, msg_id,
-                          quiet):
-    """This is the default error handler, you can override this by [TODO: INSERT
-    HOW HERE].
+
+def default_error_handler(socket, error_name, error_message, endpoint,
+                          msg_id, quiet):
+    """This is the default error handler, you can override this by
+    [TODO: INSERT HOW HERE].
 
     It basically sends an event through the socket with the 'error' name.
 
@@ -24,7 +25,7 @@ def default_error_handler(socket, error_name, error_message, endpoint, msg_id,
                endpoint=endpoint)
     if msg_id:
         pkt['id'] = msg_id
-    
+
     # Send an error event through the Socket
     if not quiet:
         socket.send_packet(pkt)
@@ -36,15 +37,15 @@ def default_error_handler(socket, error_name, error_message, endpoint, msg_id,
 
 class Socket(object):
     """
-    Virtual Socket implementation, checks heartbeats, writes to local queues for
-    message passing, holds the Namespace objects, dispatches de packets to the
-    underlying namespaces.
+    Virtual Socket implementation, checks heartbeats, writes to local queues
+    for message passing, holds the Namespace objects, dispatches de packets
+    to the underlying namespaces.
 
-    This is the abstraction on top of the different transports.  It's like
+    This is the abstraction on top of the different transports. It's like
     if you used a WebSocket only...
     """
 
-    STATE_NEW = "NEW"
+    STATE_CONNECTING = "CONNECTING"
     STATE_CONNECTED = "CONNECTED"
     STATE_DISCONNECTING = "DISCONNECTING"
     STATE_DISCONNECTED = "DISCONNECTED"
@@ -56,8 +57,8 @@ class Socket(object):
     def __init__(self, server, error_handler=None):
         self.server = weakref.proxy(server)
         self.sessid = str(random.random())[2:]
-        self.client_queue = Queue() # queue for messages to client
-        self.server_queue = Queue() # queue for messages to server
+        self.client_queue = Queue()  # queue for messages to client
+        self.server_queue = Queue()  # queue for messages to server
         self.hits = 0
         self.heartbeats = 0
         self.timeout = Event()
@@ -68,7 +69,7 @@ class Socket(object):
         self.request = None
         self.environ = None
         self.namespaces = {}
-        self.active_ns = {} # Namespace sessions that were instantiated (/chat)
+        self.active_ns = {}  # Namespace sessions that were instantiated
         self.jobs = []
         self.error_handler = default_error_handler
         if error_handler is not None:
@@ -87,7 +88,7 @@ class Socket(object):
         This is called by socketio_manage().
         """
         self.request = request
-    
+
     def _set_environ(self, environ):
         """Save the WSGI environ, for future use.
 
@@ -107,8 +108,8 @@ class Socket(object):
             result.append('hits=%s' % self.hits)
         if self.heartbeats:
             result.append('heartbeats=%s' % self.heartbeats)
-        return ' '.join(result)
 
+        return ' '.join(result)
 
     def __getitem__(self, key):
         """This will get the nested Namespace using its '/chat' reference.
@@ -144,7 +145,7 @@ class Socket(object):
         self.timeout.set()
 
     def kill(self):
-        """This function must / will be called when a socket is to be completely
+        """This function must/will be called when a socket is to be completely
         shut down, closed by connection timeout, connection error or explicit
         disconnection from the client.
 
@@ -156,9 +157,9 @@ class Socket(object):
             self.server_queue.put_nowait(None)
             self.client_queue.put_nowait(None)
             self.disconnect()
-            #gevent.kill(self.wsgi_app_greenlet)
+            # gevent.kill(self.wsgi_app_greenlet)
         else:
-            pass # Fail silently
+            pass  # Fail silently
 
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
@@ -175,7 +176,7 @@ class Socket(object):
         return self.client_queue.get(**kwargs)
 
     def get_server_msg(self, **kwargs):
-        """Grab a message, to process it by the server and dispatch python calls
+        """Grab a message, to process it by the server and dispatch calls
         """
         return self.server_queue.get(**kwargs)
 
@@ -201,9 +202,8 @@ class Socket(object):
                           see
         ``endpoint`` set this if you have a message specific to an end point
         ``msg_id`` set this if your error is relative to a specific message
-        ``quiet`` a way to make the error handler quiet. Specific to the handler.
-                  The default handler will not send a message to the user, but
-                  only log.
+        ``quiet`` way to make the error handler quiet. Specific to the handler.
+                  The default handler is only a logger.
         """
         handler = self.error_handler
         return handler(self, error_name, error_message, endpoint, msg_id, quiet)
@@ -247,7 +247,7 @@ class Socket(object):
             rawdata = self.get_server_msg()
 
             if not rawdata:
-                continue # or close the connection ?
+                continue  # or close the connection ?
             try:
                 pkt = packet.decode(rawdata)
             except (ValueError, KeyError, Exception), e:
@@ -281,10 +281,9 @@ class Socket(object):
 
             # Now, are we still connected ?
             if not self.connected:
-                self.kill() # ?? what,s the best clean-up when its not a
-                            # user-initiated disconnect
+                self.kill()  # ?? what,s the best clean-up when its not a
+                             # user-initiated disconnect
                 return
-
 
     def _spawn_receiver_loop(self):
         """Spawns the reader loop.  This is called internall by socketio_manage()
@@ -313,19 +312,19 @@ class Socket(object):
     def _spawn_watcher(self):
         job = gevent.spawn(self._watcher)
         return job
-    
+
     def _heartbeat(self):
         """Start the heartbeat Greenlet to check connection health."""
         self.state = self.STATE_CONNECTED
 
         while self.connected:
-            gevent.sleep(5.0) # FIXME: make this a setting
+            gevent.sleep(5.0)  # FIXME: make this a setting
             # TODO: this process could use a timeout object like the disconnect
             #       timeout thing, and ONLY send packets when none are sent!
             #       We would do that by calling timeout.set() for a "sending"
             #       timeout.  If we're sending 100 messages a second, there is
             #       no need to push some heartbeats in there also.
-            self.put_client_msg("2::") # TODO: make it a heartbeat packet
+            self.put_client_msg("2::")  # TODO: make it a heartbeat packet
 
     def _disconnect_timeout(self):
         self.timeout.clear()
