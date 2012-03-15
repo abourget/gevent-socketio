@@ -5,11 +5,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
+# Check the event name contains only alpha numerical characters
+allowed_event_name_regex = re.compile(r'^[A-Za-z][A-Za-z0-9_ ]*$')
 
 class BaseNamespace(object):
-
-    _event_name_regex = re.compile(r'^[A-Za-z][A-Za-z0-9_ ]*$')
-    """Used to match the event names, so they don't leak bizarre characters"""
 
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
@@ -128,7 +127,7 @@ class BaseNamespace(object):
         """
         args = pkt['args']
         name = pkt['name']
-        if not self._event_name_regex.match(name):
+        if not allowed_event_name_regex.match(name):
             print "Message ignored, the bastard", name
             return
 
