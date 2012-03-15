@@ -10,11 +10,6 @@ def index(request):
     return {}
 
 class ChatNamespace(BaseNamespace):
-    def __init__(self, *args, **kwargs):
-        super(ChatNamespace, self).__init__(*args, **kwargs)
-
-        self.spawn(self.listener)
-
     def listener(self):
         r = redis.StrictRedis()
         r = r.pubsub()
@@ -25,6 +20,9 @@ class ChatNamespace(BaseNamespace):
             if m['type'] == 'message':
                 data = loads(m['data'])
                 self.emit("chat", data)
+
+    def on_subscribe(self, *args, **kwargs):
+        self.spawn(self.listener)
 
     def on_chat(self, msg):
         r = redis.Redis()
