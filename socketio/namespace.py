@@ -171,7 +171,7 @@ class BaseNamespace(object):
 
         If you want to handle those messages, you should override this method.
         """
-        pass
+        return data
 
     def recv_json(self, data):
         """This is more of a backwards compatibility hack. This will be
@@ -182,7 +182,7 @@ class BaseNamespace(object):
 
         If you want to handle those messages, you should override this method.
         """
-        pass
+        return data
 
     def recv_disconnect(self):
         """Override this function if you want to do something when you get a
@@ -249,7 +249,7 @@ class BaseNamespace(object):
         the client.
 
         By default, it uses this namespace's endpoint. You can send messages on
-        other endpoints with ``self.socket['/other_endpoint'].emit()``.  Beware
+        other endpoints with ``self.socket['/other_endpoint'].emit()``. Beware
         that the other endpoint might not be initialized yet (if no message has
         been received on that Namespace, or if the Namespace's connect() call
         failed).
