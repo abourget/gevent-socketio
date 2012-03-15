@@ -45,7 +45,7 @@ class Socket(object):
     if you used a WebSocket only...
     """
 
-    STATE_NEW = "NEW"
+    STATE_CONNECTING = "CONNECTING"
     STATE_CONNECTED = "CONNECTED"
     STATE_DISCONNECTING = "DISCONNECTING"
     STATE_DISCONNECTED = "DISCONNECTED"
