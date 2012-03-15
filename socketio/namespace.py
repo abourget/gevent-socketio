@@ -2,6 +2,7 @@
 import gevent
 import re
 import logging
+import inspect
 
 log = logging.getLogger(__name__)
 
@@ -10,6 +11,28 @@ allowed_event_name_regex = re.compile(r'^[A-Za-z][A-Za-z0-9_ ]*$')
 
 
 class BaseNamespace(object):
+    """The **Namespace** is the primary interface a developer will use
+    to create a gevent-socketio-based application.
+
+    You should create your own subclass of this class, optionally using one
+    of the :mod:`socketio.mixins` provided (or your own), and define methods
+    such as:
+
+    .. code-block:: python
+      :linenos:
+
+      def on_my_event(self, my_first_arg, my_second_arg):
+          print "This is a packet object", packet
+          print "This is a list of the arguments", args
+
+      def on_my_second_event(self, whatever):
+          print "This holds the first arg that was passed", data
+
+      def on_third_event(self, packet):
+          print "This is the *full* packet", packet
+          print "See the BaseNamespace::inspect_and_call() method"
+
+    """
 
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
@@ -21,6 +44,8 @@ class BaseNamespace(object):
                                      # means totally closed.
         self.ack_count = 0
         self.jobs = []
+
+        self.reset_acl()
 
     def _get_next_ack(self):
         # TODO: this is currently unused, but we'll probably need it
@@ -73,6 +98,8 @@ class BaseNamespace(object):
         You can later modify this list dynamically (inside on_connect() for
         example) using:
 
+        .. code-block:: python
+
            self.add_acl_method('on_secure_method')
 
         self.request is available in here, if you're already ready to do some
@@ -80,13 +107,21 @@ class BaseNamespace(object):
 
         The ACLs are checked by the `process_packet` and/or `process_event`
         default implementations, before calling the class's methods.
+
+        **Beware**, return None leaves the namespace completely accessible.
         """
         return None
 
+    def reset_acl(self):
+        """Resets ACL to its initial value (calling ``get_initial_acl`` and
+        applying that again).
+        """
+        self.allowed_methods = self.get_initial_acl()
+
     def process_packet(self, packet):
         """If you override this, NONE of the functions in this class will
-        be called.  It is responsible for dispatching to event() (which in turn
-        calls on_evname() functions), connect, disconnect, etc..
+        be called.  It is responsible for dispatching to process_event() (which
+        in turn calls on_*() and recv_*() methods).
 
         If the packet arrived here, it is because it belongs to this endpoint.
 
@@ -101,30 +136,40 @@ class BaseNamespace(object):
           on_*()
 
         """
-        # TODO: take the packet, and dispatch it, execute connect(), message(),
-        #       json(), event(), and this event will call the on_functions().
         if packet['type'] == 'event':
             return self.process_event(packet)
         elif packet['type'] == 'message':
-            return self.call_method('recv_message', packet['data'])
+            return self.call_method_with_acl('recv_message', packet, packet['data'])
         elif packet['type'] == 'json':
-            return self.call_method('recv_json', packet['data'])
+            return self.call_method_with_acl('recv_json', packet, packet['data'])
         elif packet['type'] == 'connect':
-            return self.call_method('recv_connect')
+            return self.call_method_with_acl('recv_connect', packet)
         elif packet['type'] == 'error':
-            return self.call_method('recv_error', packet)
+            return self.call_method_with_acl('recv_error', packet)
         else:
             print "Unprocessed packet", packet
         # TODO: manage the other packet types
 
-    def process_event(self, pkt):
-        """This function dispatches ``events`` to the correct callback.
-
+    def process_event(self, packet):
+        """This function dispatches ``event`` messages to the correct functions.
         Override this function if you want to not dispatch messages
         automatically to "on_event_name" methods.
 
         If you override this function, none of the on_functions will get called
         by default.
+
+        [MOVE TO DOCUMENTATION' around: recv_message, recv_json and
+         process_event]
+        To process events that have callbacks on the client side, you must
+        define your event with a single parameter: ``packet``.  In this case,
+        it will be the full ``packet`` object and you can inspect its ``ack``
+        and ``id`` keys to define if and how you reply.  A correct reply to an
+        event with a callback would look like this:
+
+        def on_my_callback(self, packet):
+            if 'ack' in packet':
+                self.emit('go_back', 'param1', id=packet['id'])
+
         """
         args = pkt['args']
         name = pkt['name']
@@ -138,12 +183,12 @@ class BaseNamespace(object):
         # the method arg and if you passed a dict, it will be a dict
         # as the first parameter.
 
-        return self.call_method(method_name, *args)
+        return self.call_method(method_name, packet, *args)
 
-    def call_method(self, method_name, *args):
+    def call_method_with_acl(self, method_name, packet, *args):
         """You should always use this function to call the methods,
-        as it checks if you're allowed according to the set ACLs.
-
+        as it checks if the user is allowed according to the ACLs.
+      
         If you override process_packet() or process_event(), you should
         definitely want to use this instead of getattr(self, 'my_method')()
         """
@@ -151,17 +196,57 @@ class BaseNamespace(object):
             self.error('method_access_denied',
                        'You do not have access to method "%s"' % method_name)
             return
+        
+        return self.inspect_and_call(method_name, packet, *args)
 
+    def call_method(self, method_name, packet, *args):
+        """This function is used to implement the two behaviors on dispatched
+        on_*() and recv_*() method calls.
+
+        The first behavior is:
+
+          If there is only one parameter on the dispatched method and it is
+          equal to ``packet``, then pass in the packet as the sole parameter.
+
+        The second is:
+
+          Pass in the arguments as specified by the different ``recv_*()``
+          methods args specs, or the ``process_event()`` documentation.
+
+        """
         method = getattr(self, method_name, None)
         if method is None:
             self.error('no_such_method',
                        'The method "%s" was not found' % method_name)
             return
 
-        # TODO: warning, it is possible that this call doesn't work because of
-        #       the *args, so let's make sure something comes up wen it fails.
-        res = method(*args)
-        return res
+        specs = inspect.getargspec(method)
+        func_args = specs.args
+        if not len(func_args) or func_args[0] != 'self':
+            self.error("invalid_method_args", "The server-side method is invalid, as it doesn't have 'self' as its first argument")
+            return
+        if len(func_args) == 2 and func_args[1] == 'packet':
+            return method(packet)
+        else:
+            return method(*args)
+
+    def initialize(self, packet):
+        """This is fired on the initial creation of a namespace so you may
+        handle any setup required for it.
+       
+        You are also passed the packet that triggered that initialization.
+        
+        BEWARE, this method is NOT protected by ACLs, so you might want to
+        wait for the ``connect`` packet to arrive, or to define your own 
+        event. 
+
+        If you override this method, you would probably only initialize the
+        variables you're going to use in the rest of the methods with default
+        values, but not perform any operation that assumes
+        authentication/authorization.
+        """
+        pass
+
 
     def recv_message(self, data):
         """This is more of a backwards compatibility hack. This will be

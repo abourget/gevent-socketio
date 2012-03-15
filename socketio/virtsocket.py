@@ -50,7 +50,7 @@ class Socket(object):
     STATE_DISCONNECTING = "DISCONNECTING"
     STATE_DISCONNECTED = "DISCONNECTED"
 
-    GLOBAL_NS = None
+    GLOBAL_NS = ''
     """Use this to be explicit when specifying a Global Namespace (an endpoint
     with no name, not '/chat' or anything."""
 
@@ -270,6 +270,10 @@ class Socket(object):
                 new_ns_class = self.namespaces[endpoint]
                 pkt_ns = new_ns_class(self.environ, endpoint,
                                         request=self.request)
+
+                # Fire the initialize function for the namespace
+                # This call ISN'T protected by ACLs! Beware!
+                pkt_ns.call_method('initialize', pkt, pkt)
 
                 self.active_ns[endpoint] = pkt_ns
 
