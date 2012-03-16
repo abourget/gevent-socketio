@@ -19,6 +19,16 @@ django runserver
 ----------------
 
 
+Databases
+=========
+
+You will need `green`_ databases APIs to gevent to work correctly. See:
+
+ * pymsysql
+ * psycopg2 http://initd.org/psycopg/docs/advanced.html#index-8
+
+
+
 Web server front-ends
 =====================
 
