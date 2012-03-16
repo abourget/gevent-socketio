@@ -13,7 +13,7 @@ Introduction
 ------------
 We utilize gevent to allow us to asynchronously handle messages from socket.IO
 a javascript library that makes it possible to do real-time communication across
-well web browsers.
+all web browsers.
 
 Concepts
 --------
