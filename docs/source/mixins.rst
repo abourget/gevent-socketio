@@ -6,4 +6,3 @@
 .. automodule:: socketio.mixins
     :members:
     :undoc-members:
-    :show-inheritance:
