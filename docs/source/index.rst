@@ -17,8 +17,31 @@ well web browsers.
 
 Concepts
 --------
+The primary concept behind gevent-socketio is that you will create a class
+context that for each Namespace that you will be using with socket.io, so for 
+instance if you are doing this client side:
 
-Namespace, Socket, fallbacks (links to the Socket.IO docs)
+.. code-block:: javascript
+
+    var socket = io.connect("/chat");
+
+You will need to provide a context for the /chat Namespace. You can do so by
+registering the class the inherits from :class:`socketio.namespace.BaseNamespace`
+with :func:`socketio.socketio_manage`
+
+.. code-block:: python
+
+    class ChatNamespace(BaseNamespace):
+        def on_chat(self, msg):
+            self.emit('chat', msg)
+
+    def socketio_service(request):
+        retval = socketio_manage(request.environ,
+            {
+                '/chat': ChatNamespace,
+            })
+
+        return retval
 
 Getting started
 ---------------
@@ -33,9 +56,13 @@ Examples
 --------
 
 Pyramid Examples:
+
 https://github.com/sontek/gevent-socketio/tree/master/examples
 
+https://github.com/sontek/pyvore
+
 Django Example:
+
 https://github.com/sontek/django-tictactoe
 
 API docs
