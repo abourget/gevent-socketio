@@ -270,10 +270,8 @@ class Socket(object):
                 new_ns_class = self.namespaces[endpoint]
                 pkt_ns = new_ns_class(self.environ, endpoint,
                                         request=self.request)
-
-                # Fire the initialize function for the namespace
-                # This call ISN'T protected by ACLs! Beware!
-                pkt_ns.call_method('initialize', pkt, pkt)
+                pkt_ns.initialize()  # use this instead of __init__,
+                                     # for less confusion
 
                 self.active_ns[endpoint] = pkt_ns
 

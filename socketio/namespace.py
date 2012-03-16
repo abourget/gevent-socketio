@@ -230,16 +230,16 @@ class BaseNamespace(object):
         else:
             return method(*args)
 
-    def initialize(self, packet):
-        """This is fired on the initial creation of a namespace so you may
-        handle any setup required for it.
-       
-        You are also passed the packet that triggered that initialization.
-        
-        BEWARE, this method is NOT protected by ACLs, so you might want to
-        wait for the ``connect`` packet to arrive, or to define your own 
-        event. 
+    def initialize(self):
+        """This is called right after __init__, on the initial creation
+        of a namespace so you may handle any setup job you need.
 
+        Namespaces are created only when some packets arrive that ask
+        for the namespace.  They are not created altogether when a new
+        Socket connection is established, so you can have many many
+        namespaces assigned (when calling ``socketio_manage()``) without
+        clogging the memory.
+       
         If you override this method, you would probably only initialize the
         variables you're going to use in the rest of the methods with default
         values, but not perform any operation that assumes
