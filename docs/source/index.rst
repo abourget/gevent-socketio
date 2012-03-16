@@ -56,10 +56,13 @@ Examples
 --------
 
 Pyramid Examples:
+
 https://github.com/sontek/gevent-socketio/tree/master/examples
+
 https://github.com/sontek/pyvore
 
 Django Example:
+
 https://github.com/sontek/django-tictactoe
 
 API docs
