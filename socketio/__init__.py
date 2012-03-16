@@ -1,7 +1,4 @@
-__version__ = (0, 2, 4)
-__all__ = ['SocketIOServer']
-
-from socketio.server import SocketIOServer
+__version__ = (0, 3, 1)
 
 import logging
 import gevent
