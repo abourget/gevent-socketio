@@ -3,6 +3,7 @@ jst.js
 prod.ini
 data/
 *.swo
+*~
 # web assets generated directory
 gen/
 .webassets-cache/
