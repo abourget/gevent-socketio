@@ -238,13 +238,17 @@ class Socket(object):
         active Namespaces that were open, and remove them from the ``active_ns``
         map.
         """
-        for ns_name, ns in self.active_ns.iteritems():
+        for ns_name, ns in list(self.active_ns.iteritems()):
             if hasattr(ns, 'disconnect'):
                 ns.disconnect()
-        # TODO: Find a better way to remove the Namespace from the ``active_ns``
-        #       zone.  Have the Ns.disconnect() call remove itself from the
-        #       underlying socket ?
-        self.active_ns = {}
+
+    def remove_namespace(self, namespace):
+        """This removes a Namespace object from the socket.
+
+        This is usually called by ``BaseNamespace::disconnect()``.
+        """
+        if namespace in self.active_ns:
+            del self.active_ns[namespace]
 
     def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
@@ -283,6 +287,11 @@ class Socket(object):
                 # any incoming raw data arrives.
                 continue
 
+            if pkt['type'] == 'disconnect' and pkt['endpoint'] == '':
+                # On global namespace, we kill everything.
+                self.kill()
+                continue
+
             endpoint = pkt['endpoint']
 
             if endpoint not in self.namespaces:
@@ -303,7 +312,7 @@ class Socket(object):
 
             # Has the client requested an 'ack' with the reply parameters ?
             if pkt.get('ack') == "data" and pkt.get('id'):
-                returning_ack = dict(type='ack', ackId=str(pkt['id']),
+                returning_ack = dict(type='ack', ackId=pkt['id'],
                                      args=retval,
                                      endpoint=pkt.get('endpoint', ''))
                 self.send_packet(returning_ack)

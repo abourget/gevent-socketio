@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from socketio import SocketIOServer
+from socketio.server import SocketIOServer
 from socketio.virtsocket import Socket
 
 

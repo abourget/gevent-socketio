@@ -149,6 +149,9 @@ class BaseNamespace(object):
                 return callback(*(packet['args']))
             except TypeError, e:
                 print "ERROR: Call to callback function failed", packet
+        elif packet_type == 'disconnect':
+            # Force a disconnect on the namespace.
+            self.disconnect(silent=True)
         else:
             print "Unprocessed packet", packet
         # TODO: manage the other packet types: disconnect
@@ -339,6 +342,10 @@ class BaseNamespace(object):
             pkt['type'] = "json"
 
         if callback:
+            # By passing ack=True, we use the old behavior of being returned
+            # an 'ack' packet, automatically triggered by the client-side
+            # with no user-code being run.  The emit() version of the
+            # callback is more useful I think :)  So migrate your code.
             pkt['ack'] = True
             pkt['id'] = msgid = self.socket._get_next_msgid()
             self.socket._save_ack_callback(msgid, callback)
@@ -378,6 +385,8 @@ class BaseNamespace(object):
                    endpoint=self.ns_name)
 
         if callback:
+            # By passing 'data', we indicate that we *want* an explicit ack
+            # by the client code, not an automatic as with send().
             pkt['ack'] = 'data'
             pkt['id'] = msgid = self.socket._get_next_msgid()
             self.socket._save_ack_callback(msgid, callback)
@@ -395,6 +404,21 @@ class BaseNamespace(object):
         new = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(new)
         return new
+
+    def disconnect(self, silent=False):
+        """Send a 'disconnect' packet, so that the user knows it has been
+        disconnected (booted actually).  This will trigger an onDisconnect()
+        call on the client side.
+
+        Over here, we will kill all ``spawn``ed processes and remove the
+        namespace from the Socket object.
+        """
+        if not silent:
+            packet = {"type": "disconnect",
+                      "endpoint": self.ns_name}
+            self.socket.send_packet(packet)
+        self.socket.remove_namespace(self.ns_name)
+        self.kill_local_jobs()
 
     def kill_local_jobs(self):
         """Kills all the jobs spawned with BaseNamespace.spawn() on a namespace
