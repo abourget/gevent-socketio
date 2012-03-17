@@ -54,7 +54,7 @@ class TestEncodeMessage(TestCase):
                                   'ack': True,
                                   'data': ''
                                   })
-        self.assertEqual(encoded_message, '3:5+:/tobi')
+        self.assertEqual(encoded_message, '3:5:/tobi')
 
     def test_encode_json(self):
         """encoding JSON packet """
@@ -89,6 +89,15 @@ class TestEncodeMessage(TestCase):
                                   'ack': True,
                                   'data': ''
                                   })
+        self.assertEqual(encoded_message, '5:1::{"name":"tobi"}')
+
+        # encoding an event packet with message id and ack = 'data'
+        encoded_message = encode({'type': 'event',
+                                  'name': 'tobi',
+                                  'id': 1,
+                                  'ack': 'data',
+                                  'data': ''
+                                  })
         self.assertEqual(encoded_message, '5:1+::{"name":"tobi"}')
 
         # encoding an event packet with data
@@ -117,6 +126,14 @@ class TestEncodeMessage(TestCase):
                                   'args': ["woot","wa"]
                                   })
         self.assertEqual(encoded_message, '6:::12+["woot","wa"]')
+
+        # encoding ack packet with args and endpoint
+        encoded_message = encode({'type': 'ack',
+                                  'ackId': 12,
+                                  'endpoint': '/chat',
+                                  'args': ["woot","wa"]
+                                  })
+        self.assertEqual(encoded_message, '6::/chat:12+["woot","wa"]')
 
     def test_encode_error(self):
         """encoding error packet """
@@ -237,6 +254,20 @@ class TestDecodeMessage(TestCase):
                                            'ackId': 140,
                                            'endpoint': '',
                                            'args': []})
+        
+        # Decode with endpoint
+        decoded_message = decode('6::/chat:140')
+        self.assertEqual(decoded_message, {'type': 'ack',
+                                           'ackId': 140,
+                                           'endpoint': '/chat',
+                                           'args': []})
+
+        # With args
+        decoded_message = decode('6::/chat:140+["bob", "bob2"]')
+        self.assertEqual(decoded_message, {'type': 'ack',
+                                           'ackId': 140,
+                                           'endpoint': '/chat',
+                                           'args': [u"bob", u"bob2"]})
 
     def test_decode_error(self):
         """decoding error packet """

@@ -39,7 +39,6 @@ def encode(data):
     """
     Encode an attribute dict into a byte string.
     """
-    ack_with_data = True
     payload = ''
     msg = str(MSG_TYPES[data['type']])
 
@@ -72,8 +71,9 @@ def encode(data):
             payload = json.dumps(d, separators=(',', ':'))
         if 'id' in data:
             msg += ':' + str(data['id'])
-            if ack_with_data:
-                msg += '+:'
+            if data['ack'] == 'data':
+                msg += '+'
+            msg += ':'
         else:
             msg += '::'
         if 'endpoint' not in data:
@@ -85,7 +85,7 @@ def encode(data):
 
     elif msg == '6':
         # '6:::' [id] '+' [data]
-        msg += ':::' + str(data['ackId'])
+        msg += '::' + data.get('endpoint', '') + ':' + str(data['ackId'])
         if 'args' in data and data['args'] != []:
             msg += '+' + json.dumps(data['args'], separators=(',', ':'))
 
