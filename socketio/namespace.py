@@ -42,16 +42,9 @@ class BaseNamespace(object):
         self.allowed_methods = None  # be careful, None means all methods
                                      # are allowed while an empty list
                                      # means totally closed.
-        self.ack_count = 0
         self.jobs = []
 
         self.reset_acl()
-
-    def _get_next_ack(self):
-        # TODO: this is currently unused, but we'll probably need it
-        # to implement the ACK methods.
-        self.ack_count += 1
-        return self.ack_count
 
     def is_method_allowed(self, method_name):
         """ACL system: this checks if you have access to that method_name,
@@ -136,19 +129,29 @@ class BaseNamespace(object):
           on_*()
 
         """
-        if packet['type'] == 'event':
+        packet_type = packet['type']
+        if packet_type == 'event':
             return self.process_event(packet)
-        elif packet['type'] == 'message':
+        elif packet_type == 'message':
             return self.call_method_with_acl('recv_message', packet, packet['data'])
-        elif packet['type'] == 'json':
+        elif packet_type == 'json':
             return self.call_method_with_acl('recv_json', packet, packet['data'])
-        elif packet['type'] == 'connect':
+        elif packet_type == 'connect':
             return self.call_method_with_acl('recv_connect', packet)
-        elif packet['type'] == 'error':
+        elif packet_type == 'error':
             return self.call_method_with_acl('recv_error', packet)
+        elif packet_type == 'ack':
+            callback = self.socket._pop_ack_callback(packet['ackId'])
+            if not callback:
+                print "ERROR: No such callback for ackId %s" % packet['ackId']
+                return
+            try:
+                return callback(*(packet['args']))
+            except TypeError, e:
+                print "ERROR: Call to callback function failed", packet
         else:
             print "Unprocessed packet", packet
-        # TODO: manage the other packet types
+        # TODO: manage the other packet types: disconnect
 
     def process_event(self, packet):
         """This function dispatches ``event`` messages to the correct functions.
@@ -339,9 +342,25 @@ class BaseNamespace(object):
         that the other endpoint might not be initialized yet (if no message has
         been received on that Namespace, or if the Namespace's connect() call
         failed).
+
         ``callback`` - pass in the callback keyword argument to define a
-                       call-back that will be called when the client acks
-                       (To be implemented)
+                       call-back that will be called when the client acks.
+
+                       If your callback method takes *no* parameter, the ack
+                       will be sent by the client without first going through
+                       the 'event'. That means it is automatically sent by the
+                       browser the moment it receives the packet. You can not
+                       be sure that the event was successfully processed by
+                       the listening function.
+
+                       Otherwise (if your callback function takes at least
+                       one parameter), the remote listener will need to 
+                       explicitly ack (by calling its last argument, which is
+                       an 'ack' function) with some parameters indicating
+                       success or error.  The 'ack' packet coming back here
+                       will then trigger the callback function with the
+                       returned values.
+                       
         """
         callback = kwargs.pop('callback', None)
 
@@ -350,7 +369,15 @@ class BaseNamespace(object):
         pkt = dict(type="event", name=event, args=args,
                    endpoint=self.ns_name)
 
-        # TODO: implement the callback stuff ??
+        if callback:
+            # Inspect to see if parameters are needed
+            argspec = inspect.getargspec(callback)
+            if argspec.args or argspec.varargs:
+                pkt['ack'] = 'data'
+            else:
+                pkt['ack'] = True
+            pkt['id'] = msgid = self.socket._get_next_msgid()
+            self.socket._save_ack_callback(msgid, callback)
 
         self.socket.send_packet(pkt)
 

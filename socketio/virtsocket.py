@@ -66,6 +66,7 @@ class Socket(object):
         self.state = "NEW"
         self.connection_confirmed = False
         self.ack_callbacks = {}
+        self.ack_counter = 0
         self.request = None
         self.environ = None
         self.namespaces = {}
@@ -95,6 +96,27 @@ class Socket(object):
         This is called by socketio_manage().
         """
         self.environ = environ
+
+    def _get_next_msgid(self):
+        """This retrieves the next value for the 'id' field when sending
+        an 'event' or 'message' or 'json' that asks the remote client
+        to 'ack' back, so that we trigger the local callback.
+        """
+        self.ack_counter += 1
+        return self.ack_counter
+
+    def _save_ack_callback(self, msgid, callback):
+        """Keep a reference of the callback on this socket."""
+        if msgid in self.ack_callbacks:
+            return False
+        self.ack_callbacks[msgid] = callback
+
+    def _pop_ack_callback(self, msgid):
+        """Fetch the callback for a given msgid, if it exists, otherwise,
+        return None"""
+        if msgid not in self.ack_callbacks:
+            return None
+        return self.ack_callbacks.pop(msgid)
 
     def __str__(self):
         result = ['sessid=%r' % self.sessid]
@@ -152,6 +174,8 @@ class Socket(object):
         It will call all of the namespaces' disconnect() methods so that you
         can shut-down things properly.
         """
+        # Clear out the callbacks
+        self.ack_callbacks = {}
         if self.connected:
             self.state = self.STATE_DISCONNECTING
             self.server_queue.put_nowait(None)
@@ -217,7 +241,7 @@ class Socket(object):
         for ns_name, ns in self.active_ns.iteritems():
             if hasattr(ns, 'disconnect'):
                 ns.disconnect()
-        # TODO: Find a better way to remove the Namespaces from the ``active_ns``
+        # TODO: Find a better way to remove the Namespace from the ``active_ns``
         #       zone.  Have the Ns.disconnect() call remove itself from the
         #       underlying socket ?
         self.active_ns = {}
@@ -275,7 +299,14 @@ class Socket(object):
 
                 self.active_ns[endpoint] = pkt_ns
 
-            pkt_ns.process_packet(pkt)
+            retval = pkt_ns.process_packet(pkt)
+
+            # Has the client requested an 'ack' with the reply parameters ?
+            if pkt.get('ack') == "data" and pkt.get('id'):
+                returning_ack = dict(type='ack', ackId=str(pkt['id']),
+                                     args=retval,
+                                     endpoint=pkt.get('endpoint', ''))
+                self.send_packet(returning_ack)
 
             # Now, are we still connected ?
             if not self.connected:
