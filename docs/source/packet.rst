@@ -80,6 +80,75 @@ of time.
 
 This packet is for the global namespace (or empty namespace).
 
+Ack mechanics
+-------------
+
+The client sends a message of the sort:
+
+.. code-block:: python
+
+  {"type": "message",
+   "id": 140,
+   "ack": True,
+   "endpoint": "/tobi",
+   "data": ''}
+
+The 'ack' value is 'true', marking that we want an automatic 'ack' when it
+receives the packet.  The Node.js version sends the ack itself, without any
+server-side code interaction.  It dispatches the packet only after sending back
+an ack, so the ack isn't really a reply.  It's just marking the server received
+it, but not if the event/message/json was properly processed.
+
+The automated reply from such a request is:
+
+.. code-block:: python
+
+  {"type": "ack",
+   "ackId": 140,
+   "endpoint": '',
+   "args": []}
+
+Where 'ackId' corresponds to the 'id' of the originating message.  Upon
+reception of this 'ack' message, the client then looks in an object if there
+is a callback function to call associated with this message id (140).  If so,
+runs it, otherwise, drops the packet.
+
+There is a second way to ask for an ack, sending a packet like this:
+
+.. code-block:: python
+
+  {"type": "event",
+   "id": 1,
+   "ack": "data",
+   "endpoint": '',
+   "name": 'tobi',
+   "args": []}
+
+  {"type": "json",
+   "id": 1,
+   "ack": "data",
+   "endpoint": '',
+   "data": {"a": "b"}}
+
+and the same goes for a 'message' packet, which has the 'ack' equal to 'data'.
+When the server receives such a packet, it dispatches the corresponding event
+(either the named event specified in an 'event' type packet, or 'message' or
+'json, if the type is so), and *adds* as a parameter, in addition to the
+'args' passed by the event (or 'data' for 'message'/'json'), the ack() function
+to call (it encloses the packet 'id' already).  Any number of arguments passed
+to that 'ack()' function will be passed on to the client-side, and given as
+parameter on the client-side function.
+
+That is the returning 'ack' message, with the data ready to be passed as
+arguments to the saved callback on the client side:
+
+  {"type": "ack",
+   "ackId": 12,
+   "endpoint": '',
+   "args": ['woot', 'wa']}
+
+Also see the ``test_packet.py`` file in the source code repository for more
+details.
 
 .. automodule:: socketio.packet
     :members:
