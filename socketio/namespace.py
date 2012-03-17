@@ -320,17 +320,29 @@ class BaseNamespace(object):
         self.socket.error(error_name, error_message, endpoint=self.ns_name,
                           msg_id=msg_id, quiet=quiet)
 
-    def send(self, message, json=False):
+    def send(self, message, json=False, callback=None):
         """Use send to send a simple string message.
 
         If ``json`` is True, the message will be encoded as a JSON object
         on the wire, and decoded on the other side.
 
         This is mostly for backwards compatibility.  emit() is more fun.
+
+        ``callback`` This is a callback function that will be called
+                     automatically by the client upon reception.  It does not
+                     verify that the listener over there was completed with
+                     success.  It just tells you that the browser got a hold
+                     of the packet.
         """
         pkt = dict(type="message", data=message, endpoint=self.ns_name)
         if json:
             pkt['type'] = "json"
+
+        if callback:
+            pkt['ack'] = True
+            pkt['id'] = msgid = self.socket._get_next_msgid()
+            self.socket._save_ack_callback(msgid, callback)
+
         self.socket.send_packet(pkt)
 
     def emit(self, event, *args, **kwargs):
@@ -346,21 +358,17 @@ class BaseNamespace(object):
         ``callback`` - pass in the callback keyword argument to define a
                        call-back that will be called when the client acks.
 
-                       If your callback method takes *no* parameter, the ack
-                       will be sent by the client without first going through
-                       the 'event'. That means it is automatically sent by the
-                       browser the moment it receives the packet. You can not
-                       be sure that the event was successfully processed by
-                       the listening function.
-
-                       Otherwise (if your callback function takes at least
-                       one parameter), the remote listener will need to 
-                       explicitly ack (by calling its last argument, which is
-                       an 'ack' function) with some parameters indicating
+                       This callback is slightly different from the one from
+                       ``send()``, as this callback will receive parameters
+                       from the explicit call of the ``ack()`` function passed
+                       to the listener on the client side.
+                       
+                       The remote listener will need to explicitly ack (by
+                       calling its last argument, a function which is
+                       usually called 'ack') with some parameters indicating
                        success or error.  The 'ack' packet coming back here
                        will then trigger the callback function with the
                        returned values.
-                       
         """
         callback = kwargs.pop('callback', None)
 
@@ -370,12 +378,7 @@ class BaseNamespace(object):
                    endpoint=self.ns_name)
 
         if callback:
-            # Inspect to see if parameters are needed
-            argspec = inspect.getargspec(callback)
-            if argspec.args or argspec.varargs:
-                pkt['ack'] = 'data'
-            else:
-                pkt['ack'] = True
+            pkt['ack'] = 'data'
             pkt['id'] = msgid = self.socket._get_next_msgid()
             self.socket._save_ack_callback(msgid, callback)
 
