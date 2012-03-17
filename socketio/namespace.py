@@ -171,8 +171,8 @@ class BaseNamespace(object):
                 self.emit('go_back', 'param1', id=packet['id'])
 
         """
-        args = pkt['args']
-        name = pkt['name']
+        args = packet['args']
+        name = packet['name']
         if not allowed_event_name_regex.match(name):
             self.error("unallowed_event_name",
                        "name must only contains alpha numerical characters")
