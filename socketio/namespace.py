@@ -286,7 +286,7 @@ class BaseNamespace(object):
         gets called automatically upon disconnection.  This function is a
         pre-handle for when you get the `disconnect packet`.
         """
-        self.disconnect()
+        self.disconnect(silent=True)
 
     def recv_connect(self):
         """The first time a client connection is open on a Namespace, this gets
@@ -412,6 +412,10 @@ class BaseNamespace(object):
 
         Over here, we will kill all ``spawn``ed processes and remove the
         namespace from the Socket object.
+
+        ``silent`` - do not actually send the packet (if they asked for a
+                     disconnect for example), but just kill all jobs spawned
+                     by this Namespace, and remove it from the Socket.
         """
         if not silent:
             packet = {"type": "disconnect",

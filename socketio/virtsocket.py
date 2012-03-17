@@ -233,14 +233,19 @@ class Socket(object):
         return handler(self, error_name, error_message, endpoint, msg_id, quiet)
 
     # User facing low-level function
-    def disconnect(self):
+    def disconnect(self, silent=False):
         """Calling this method will call the disconnect() method on all the
-        active Namespaces that were open, and remove them from the ``active_ns``
-        map.
+        active Namespaces that were open, killing all their jobs and sending
+        'disconnect' packets for each of them.
+
+        Normally, the Global namespace (endpoint = '') has special meaning,
+        as it represents the whole connection, 
+
+        ``silent`` when True, pass on the ``silent`` flag to the Namespace
+                   disconnect() calls.
         """
         for ns_name, ns in list(self.active_ns.iteritems()):
-            if hasattr(ns, 'disconnect'):
-                ns.disconnect()
+            ns.disconnect(silent=silent)
 
     def remove_namespace(self, namespace):
         """This removes a Namespace object from the socket.
@@ -343,9 +348,8 @@ class Socket(object):
             if not self.connected:
                 # Killing Socket-level jobs
                 gevent.killall(self.jobs)
-                for ns_name, ns in self.active_ns:
-                    ns.disconnect()
-                    ns.kill_local_jobs()
+                for ns_name, ns in list(self.active_ns.iteritems()):
+                    ns.disconnect(silent=True)
 
     def _spawn_watcher(self):
         job = gevent.spawn(self._watcher)
