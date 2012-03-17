@@ -30,7 +30,7 @@ class BaseNamespace(object):
 
       def on_third_event(self, packet):
           print "This is the *full* packet", packet
-          print "See the BaseNamespace::inspect_and_call() method"
+          print "See the BaseNamespace::call_method() method for details"
 
     """
 
@@ -197,7 +197,7 @@ class BaseNamespace(object):
                        'You do not have access to method "%s"' % method_name)
             return
         
-        return self.inspect_and_call(method_name, packet, *args)
+        return self.call_method(method_name, packet, *args)
 
     def call_method(self, method_name, packet, *args):
         """This function is used to implement the two behaviors on dispatched
