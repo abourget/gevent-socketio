@@ -54,6 +54,8 @@
 
      .. automethod:: error
 
+     .. automethod:: disconnect
+
 
      **Dealing with incoming data**
 

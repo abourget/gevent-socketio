@@ -3,8 +3,8 @@
 Server integration layers
 =========================
 
-As gevent-socketio runs on top of Gevent, you need a Gevent-based server, to
-yield the control cooperatively to the Greenlets in there.
+As gevent-socketio runs on top of Gevent, you need a Gevent-based
+server, to yield the control cooperatively to the Greenlets in there.
 
 gunicorn
 --------
@@ -91,15 +91,36 @@ or you can use gevent directly:
 Databases
 =========
 
+Since gevent is a cooperative concurrency library, no process or
+routine or library must block on I/O without yielding control to the
+``gevent`` hub, if you want your application to be fast and efficient.
+Making these libraries compatible with such a concurrency model is
+often called `greening`, in reference to `Green threads
+<http://en.wikipedia.org/wiki/Green_threads>`_.
+
+
+
 You will need `green`_ databases APIs to gevent to work correctly. See:
 
- * pymsysql
- * psycopg2 http://initd.org/psycopg/docs/advanced.html#index-8
+ * MySQL:
+   * PyMySQL https://github.com/petehunt/PyMySQL/
+ * PostgreSQL:
+   * psycopg2 http://initd.org/psycopg/docs/advanced.html#index-8
+   * psycogreen https://bitbucket.org/dvarrazzo/psycogreen/src
 
 
 
 Web server front-ends
 =====================
+
+If your web server does not support websockets, you will not be able
+to use this transport, although the other transports may
+work. However, this would diminish the value of using real-time
+communications.
+
+The websocket implementation in the different web servers is getting
+better every day, but before investing too much too quickly, you might
+want to have a look at your web server's status on the subject.
 
 [INSERT THE STATE OF THE DIFFERENT SERVER IMPLEMENTATIONS SUPPORTING WEBSOCKET
 FORWARDING]
@@ -110,5 +131,5 @@ nginx status
 
 Apache
 
-using HAProxy to load-balance
+Using HAProxy to load-balance
 
