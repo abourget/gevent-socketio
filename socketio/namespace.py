@@ -121,12 +121,12 @@ class BaseNamespace(object):
         For each packet arriving, the only possible path of execution, that is,
         the only methods that *can* be called are the following:
 
-          recv_connect()
-          recv_message()
-          recv_json()
-          recv_error()
-          recv_disconnect()
-          on_*()
+        * recv_connect()
+        * recv_message()
+        * recv_json()
+        * recv_error()
+        * recv_disconnect()
+        * on_*()
 
         """
         packet_type = packet['type']
@@ -166,15 +166,19 @@ class BaseNamespace(object):
 
         [MOVE TO DOCUMENTATION' around: recv_message, recv_json and
          process_event]
-        To process events that have callbacks on the client side, you must
-        define your event with a single parameter: ``packet``.  In this case,
-        it will be the full ``packet`` object and you can inspect its ``ack``
-        and ``id`` keys to define if and how you reply.  A correct reply to an
-        event with a callback would look like this:
 
-        def on_my_callback(self, packet):
-            if 'ack' in packet':
-                self.emit('go_back', 'param1', id=packet['id'])
+        To process events that have callbacks on the client side, you
+        must define your event with a single parameter: ``packet``.
+        In this case, it will be the full ``packet`` object and you
+        can inspect its ``ack`` and ``id`` keys to define if and how
+        you reply.  A correct reply to an event with a callback would
+        look like this:
+
+        .. code-block:: python
+
+          def on_my_callback(self, packet):
+              if 'ack' in packet':
+                  self.emit('go_back', 'param1', id=packet['id'])
 
         """
         args = packet['args']
@@ -196,7 +200,7 @@ class BaseNamespace(object):
         as it checks if the user is allowed according to the ACLs.
       
         If you override process_packet() or process_event(), you should
-        definitely want to use this instead of getattr(self, 'my_method')()
+        definitely want to use this instead of ``getattr(self, 'my_method')()``
         """
         if not self.is_method_allowed(method_name):
             self.error('method_access_denied',
@@ -207,17 +211,17 @@ class BaseNamespace(object):
 
     def call_method(self, method_name, packet, *args):
         """This function is used to implement the two behaviors on dispatched
-        on_*() and recv_*() method calls.
+        ``on_*()`` and ``recv_*()`` method calls.
 
-        The first behavior is:
+        Those are the two behaviors:
 
-          If there is only one parameter on the dispatched method and it is
-          equal to ``packet``, then pass in the packet as the sole parameter.
+        * If there is only one parameter on the dispatched method and
+          it is equal to ``packet``, then pass in the packet as the
+          sole parameter.
 
-        The second is:
-
-          Pass in the arguments as specified by the different ``recv_*()``
-          methods args specs, or the ``process_event()`` documentation.
+        * Otherwise, pass in the arguments as specified by the
+          different ``recv_*()`` methods args specs, or the
+          ``process_event()`` documentation.
 
         """
         method = getattr(self, method_name, None)
@@ -243,13 +247,13 @@ class BaseNamespace(object):
         Namespaces are created only when some packets arrive that ask
         for the namespace.  They are not created altogether when a new
         Socket connection is established, so you can have many many
-        namespaces assigned (when calling ``socketio_manage()``) without
-        clogging the memory.
+        namespaces assigned (when calling ``socketio_manage()``)
+        without clogging the memory.
        
-        If you override this method, you would probably only initialize the
-        variables you're going to use in the rest of the methods with default
-        values, but not perform any operation that assumes
-        authentication/authorization.
+        If you override this method, you probably want to only
+        initialize the variables you're going to use in the events of
+        this namespace, say, with some default values, but not perform
+        any operation that assumes authentication/authorization.
         """
         pass
 
@@ -280,10 +284,11 @@ class BaseNamespace(object):
         """Override this function if you want to do something when you get a
         *force disconnect* packet.
 
-        By default, this function calls the ``disconnect()`` clean-up function.
-        You probably want to call it yourself also, and put your clean-up
-        routines in ``disconnect()`` rather than here, because that function
-        gets called automatically upon disconnection.  This function is a
+        By default, this function calls the ``disconnect()`` clean-up
+        function.  You probably want to call it yourself also, and put
+        your clean-up routines in ``disconnect()`` rather than here,
+        because that ``disconnect()`` function gets called
+        automatically upon disconnection.  This function is a
         pre-handle for when you get the `disconnect packet`.
         """
         self.disconnect(silent=True)
@@ -296,7 +301,8 @@ class BaseNamespace(object):
         was closed at the beginning by having get_initial_acl() return only
         ['recv_connect'])
 
-        Also see the different mixins (RoomsMixin, BroadcastMixin).
+        Also see the different mixins (:class:`socketio.mixins.RoomsMixin`,
+        :class:`socketio.mixins.BroadcastMixin`).
         """
         pass
 
@@ -312,13 +318,13 @@ class BaseNamespace(object):
         """Use this to use the configured ``error_handler`` yield an
         error message to your application.
 
-        ``error_name`` is a short string, to associate messages to recovery
-                       methods
-        ``error_message`` is some human-readable text, describing the error
-        ``msg_id`` is used to associate with a request
-        ``quiet`` specific to error_handlers. The default doesn't send a
-                  message to the user, but shows a debug message on the
-                  developer console.
+        :param error_name: is a short string, to associate messages to recovery
+                           methods
+        :param error_message: is some human-readable text, describing the error
+        :param msg_id: is used to associate with a request
+        :param quiet: specific to error_handlers. The default doesn't send a
+                      message to the user, but shows a debug message on the
+                      developer console.
         """
         self.socket.error(error_name, error_message, endpoint=self.ns_name,
                           msg_id=msg_id, quiet=quiet)
@@ -329,13 +335,15 @@ class BaseNamespace(object):
         If ``json`` is True, the message will be encoded as a JSON object
         on the wire, and decoded on the other side.
 
-        This is mostly for backwards compatibility.  emit() is more fun.
+        This is mostly for backwards compatibility.  ``emit()`` is more fun.
 
-        ``callback`` This is a callback function that will be called
-                     automatically by the client upon reception.  It does not
-                     verify that the listener over there was completed with
-                     success.  It just tells you that the browser got a hold
-                     of the packet.
+        :param callback: This is a callback function that will be
+                         called automatically by the client upon
+                         reception.  It does not verify that the
+                         listener over there was completed with
+                         success.  It just tells you that the browser
+                         got a hold of the packet.
+        :type callback: callable
         """
         pkt = dict(type="message", data=message, endpoint=self.ns_name)
         if json:
@@ -362,20 +370,25 @@ class BaseNamespace(object):
         been received on that Namespace, or if the Namespace's connect() call
         failed).
 
-        ``callback`` - pass in the callback keyword argument to define a
-                       call-back that will be called when the client acks.
+        The only supported ``kwargs`` is ``callback``.  All other parameters
+        must be passed positionally.
 
-                       This callback is slightly different from the one from
-                       ``send()``, as this callback will receive parameters
-                       from the explicit call of the ``ack()`` function passed
-                       to the listener on the client side.
+        :param event: The name of the event to trigger on the other end.
+        :param callback: Pass in the callback keyword argument to define a
+                         call-back that will be called when the client acks.
+
+                         This callback is slightly different from the one from
+                         ``send()``, as this callback will receive parameters
+                         from the explicit call of the ``ack()`` function passed
+                         to the listener on the client side.
                        
-                       The remote listener will need to explicitly ack (by
-                       calling its last argument, a function which is
-                       usually called 'ack') with some parameters indicating
-                       success or error.  The 'ack' packet coming back here
-                       will then trigger the callback function with the
-                       returned values.
+                         The remote listener will need to explicitly ack (by
+                         calling its last argument, a function which is
+                         usually called 'ack') with some parameters indicating
+                         success or error.  The 'ack' packet coming back here
+                         will then trigger the callback function with the
+                         returned values.
+        :type callback: callable
         """
         callback = kwargs.pop('callback', None)
 
@@ -413,9 +426,9 @@ class BaseNamespace(object):
         Over here, we will kill all ``spawn``ed processes and remove the
         namespace from the Socket object.
 
-        ``silent`` - do not actually send the packet (if they asked for a
-                     disconnect for example), but just kill all jobs spawned
-                     by this Namespace, and remove it from the Socket.
+        :param silent: do not actually send the packet (if they asked for a
+                       disconnect for example), but just kill all jobs spawned
+                       by this Namespace, and remove it from the Socket.
         """
         if not silent:
             packet = {"type": "disconnect",
