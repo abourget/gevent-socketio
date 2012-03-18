@@ -27,12 +27,12 @@ Socket.IO adds a thin layer of logic on top of normal WebSocket:
 namespaces, event names, abstractions of transports.
 
 **Namespaces**: since you mostly have **one** websocket/socket.io
-**endpoint per website**, it is important to be able to namespace
-**(just like you need routes to map URLs to different parts of your
-**code) the different real-time activities of the different pages or
-**parts of your site.  The Socket.IO 0.7+ namespaces are a welcome
-**addition, and if you don't use Socket.IO, you'll probably end-up
-**writing your own namespacing mechanism at some point.
+endpoint per website, it is important to be able to namespace the
+different real-time activities of the different pages or parts of
+your site, just like you need routes to map URLs to different parts
+of your code.  The Socket.IO 0.7+ namespaces are a welcome addition,
+and if you don't use Socket.IO, you'll probably end-up writing your
+own namespacing mechanism at some point.
 
 **Named events**: To distinguish the messages that are coming and
 going, you most probably want to give them some name. Here again, not
