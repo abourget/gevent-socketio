@@ -98,6 +98,9 @@ def encode(data):
             msg += '+' + str(ERROR_ADVICES[data['advice']])
         msg += data['endpoint']
 
+    elif msg == '8':
+        msg += '::'
+
     return msg
 
 
@@ -177,7 +180,7 @@ def decode(rawstr):
             else:
                 decoded_msg['reason'] = ''
     elif msg_type == "8":  # noop
-        return None
+        pass
     else:
         raise Exception("Unknown message type: %s" % msg_type)
 
