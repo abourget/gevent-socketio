@@ -1,6 +1,19 @@
 # -=- encoding: utf-8 -=-
 
-import json
+try:
+    import simplejson as json
+    json_decimal_args = {"use_decimal": True}
+except ImportError:
+    import json
+    import decimal
+
+    class DecimalEncoder(json.JSONEncoder):
+        def default(self, o):
+            if isinstance(o, decimal.Decimal):
+                return float(o)
+            return super(DecimalEncoder, self).default(o)
+    json_decimal_args = {"cls": DecimalEncoder}
+
 
 MSG_TYPES = {
     'disconnect': 0,
