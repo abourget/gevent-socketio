@@ -73,48 +73,51 @@ class BaseNamespace(object):
 
     def lift_acl_restrictions(self):
         """ACL system: This removes restrictions on the Namespace's methods, so
-        that all the on_function(), event(), message() and other automatically
-        dispatched methods can be accessed.
+        that all the ``on_*()`` and ``recv_*()`` can be accessed.
         """
         self.allowed_methods = None
 
     def get_initial_acl(self):
-        """ACL system: If you define this function, you must return all the
-        'event' names that you want your User (the established virtual Socket)
-        to have access to.
+        """ACL system: If you define this function, you must return
+        all the 'event' names that you want your User (the established
+        virtual Socket) to have access to.
 
-        If you do not define this function, the user will have free access
-        to all of the on_*() and recv_*() functions, etc.. methods.
+        If you do not define this function, the user will have free
+        access to all of the ``on_*()`` and ``recv_*()`` functions,
+        etc.. methods.
 
-        Return something like: ['on_connect', 'on_public_method']
+        Return something like: ``['on_connect', 'on_public_method']``
 
-        You can later modify this list dynamically (inside on_connect() for
-        example) using:
+        You can later modify this list dynamically (inside
+        ``on_connect()`` for example) using:
 
         .. code-block:: python
 
            self.add_acl_method('on_secure_method')
 
-        self.request is available in here, if you're already ready to do some
-        auth. check.
+        ``self.request`` is available in here, if you're already ready to
+        do some auth. check.
 
-        The ACLs are checked by the `process_packet` and/or `process_event`
-        default implementations, before calling the class's methods.
+        The ACLs are checked by the :meth:`process_packet` and/or
+        :meth:`process_event` default implementations, before calling
+        the class's methods.
 
-        **Beware**, return None leaves the namespace completely accessible.
+        **Beware**, returning ``None`` leaves the namespace completely
+        accessible.
         """
         return None
 
     def reset_acl(self):
-        """Resets ACL to its initial value (calling ``get_initial_acl`` and
-        applying that again).
+        """Resets ACL to its initial value (calling
+        :meth:`get_initial_acl`` and applying that again).
         """
         self.allowed_methods = self.get_initial_acl()
 
     def process_packet(self, packet):
-        """If you override this, NONE of the functions in this class will
-        be called.  It is responsible for dispatching to process_event() (which
-        in turn calls on_*() and recv_*() methods).
+        """If you override this, NONE of the functions in this class
+        will be called.  It is responsible for dispatching to
+        :meth:`process_event` (which in turn calls ``on_*()`` and
+        ``recv_*()`` methods).
 
         If the packet arrived here, it is because it belongs to this endpoint.
 
@@ -133,9 +136,11 @@ class BaseNamespace(object):
         if packet_type == 'event':
             return self.process_event(packet)
         elif packet_type == 'message':
-            return self.call_method_with_acl('recv_message', packet, packet['data'])
+            return self.call_method_with_acl('recv_message', packet,
+                                             packet['data'])
         elif packet_type == 'json':
-            return self.call_method_with_acl('recv_json', packet, packet['data'])
+            return self.call_method_with_acl('recv_json', packet,
+                                             packet['data'])
         elif packet_type == 'connect':
             return self.call_method_with_acl('recv_connect', packet)
         elif packet_type == 'error':
@@ -199,8 +204,9 @@ class BaseNamespace(object):
         """You should always use this function to call the methods,
         as it checks if the user is allowed according to the ACLs.
       
-        If you override process_packet() or process_event(), you should
-        definitely want to use this instead of ``getattr(self, 'my_method')()``
+        If you override :meth:`process_packet` or
+        :meth:`process_event`, you should definitely want to use this
+        instead of ``getattr(self, 'my_method')()``
         """
         if not self.is_method_allowed(method_name):
             self.error('method_access_denied',
@@ -221,7 +227,7 @@ class BaseNamespace(object):
 
         * Otherwise, pass in the arguments as specified by the
           different ``recv_*()`` methods args specs, or the
-          ``process_event()`` documentation.
+          :meth:`process_event` documentation.
 
         """
         method = getattr(self, method_name, None)
@@ -241,14 +247,16 @@ class BaseNamespace(object):
             return method(*args)
 
     def initialize(self):
-        """This is called right after __init__, on the initial creation
-        of a namespace so you may handle any setup job you need.
+        """This is called right after ``__init__``, on the initial
+        creation of a namespace so you may handle any setup job you
+        need.
 
         Namespaces are created only when some packets arrive that ask
         for the namespace.  They are not created altogether when a new
-        Socket connection is established, so you can have many many
-        namespaces assigned (when calling ``socketio_manage()``)
-        without clogging the memory.
+        :class:`~socketio.virtsocket.Socket` connection is established,
+        so you can have many many namespaces assigned (when calling
+        :func:`~socketio.socketio_manage`) without clogging the
+        memory.
        
         If you override this method, you probably want to only
         initialize the variables you're going to use in the events of
@@ -284,25 +292,26 @@ class BaseNamespace(object):
         """Override this function if you want to do something when you get a
         *force disconnect* packet.
 
-        By default, this function calls the ``disconnect()`` clean-up
+        By default, this function calls the :meth:`disconnect` clean-up
         function.  You probably want to call it yourself also, and put
-        your clean-up routines in ``disconnect()`` rather than here,
-        because that ``disconnect()`` function gets called
+        your clean-up routines in :meth:`disconnect` rather than here,
+        because that :meth:`disconnect` function gets called
         automatically upon disconnection.  This function is a
         pre-handle for when you get the `disconnect packet`.
         """
         self.disconnect(silent=True)
 
     def recv_connect(self):
-        """The first time a client connection is open on a Namespace, this gets
-        called, and allows you to do boilerplate stuff for the namespace, like
-        connecting to rooms, broadcasting events to others, doing authorization
-        work, tweaking the ACLs to open up the rest of the namespace (if it
-        was closed at the beginning by having get_initial_acl() return only
+        """The first time a client connection is open on a Namespace,
+        this gets called, and allows you to do boilerplate stuff for
+        the namespace, like connecting to rooms, broadcasting events
+        to others, doing authorization work, tweaking the ACLs to open
+        up the rest of the namespace (if it was closed at the
+        beginning by having :meth:`get_initial_acl` return only
         ['recv_connect'])
 
-        Also see the different mixins (:class:`socketio.mixins.RoomsMixin`,
-        :class:`socketio.mixins.BroadcastMixin`).
+        Also see the different :ref:`mixins <mixins_module>` (like
+        `RoomsMixin`, `BroadcastMixin`).
         """
         pass
 
@@ -365,10 +374,8 @@ class BaseNamespace(object):
         the client.
 
         By default, it uses this namespace's endpoint. You can send messages on
-        other endpoints with ``self.socket['/other_endpoint'].emit()``. Beware
-        that the other endpoint might not be initialized yet (if no message has
-        been received on that Namespace, or if the Namespace's connect() call
-        failed).
+        other endpoints with something like: ``self.socket['/other_endpoint'].emit()``. However, it is possible that the ``'/other_endpoint'`` was not
+        initialized yet, and that would yield a ``KeyError``.
 
         The only supported ``kwargs`` is ``callback``.  All other parameters
         must be passed positionally.

@@ -6,11 +6,14 @@
 The day to day user doesn't need to use this module directly.
 
 The packets used internally (that might be exposed if you override the
-``process_packet`` method of your Namespace) are dictionaries, and are different
-from a message type to the other.  Here is a list of message types available
-in the Socket.IO protocol:
+:meth:`~socketio.namespace.BaseNamespace.process_packet` method of
+your Namespace) are dictionaries, and are different from a message
+type to the other.  Here is a list of message types available in the
+Socket.IO protocol:
 
 The **connect** packet:
+
+.. code-block:: python
 
   {"type": "connect",
    "qs": "",
@@ -19,6 +22,8 @@ The **connect** packet:
 The ``qs`` parameter is a query string you can add to the io.connect('/chat?a=b'); calls on the client side.
 
 The **message** packet, equivalent to Socket.IO version 0.6's string message:
+
+.. code-block:: python
 
   {"type": "message",
    "data": "this is the sent string",
@@ -37,6 +42,8 @@ reception.
 The **json** packet is like a message, with no name (unlike events) but with
 structure JSON data attached.  It is automatically decoded by gevent-socketio.
 
+.. code-block:: python
+
   {"type": "json",
    "data": {"this": "is a json object"},
    "endpoint": "/chat"}
@@ -53,6 +60,8 @@ The same ``ack`` mechanics also apply for the ``json`` packet.
 The **event** packet holds a ``name`` and some ``args`` as a list.  They are
 taken as a list on the browser side (you can ``socket.emit("event", many,
 parameters``) in the browser) and passed in as is.
+
+.. code-block:: python
 
   {"type": "event",
    "endpoint": "/chat",
@@ -74,6 +83,8 @@ you receive it, and what you must do with it according to different ack values]
 
 The **heartbeat** packet just marks the connection as alive for another amount
 of time.
+
+.. code-block:: python
 
   {"type": "heartbeat",
    "endpoint": ""}
@@ -142,13 +153,14 @@ parameter on the client-side function.
 That is the returning 'ack' message, with the data ready to be passed as
 arguments to the saved callback on the client side:
 
+.. code-block:: python
+
   {"type": "ack",
    "ackId": 12,
    "endpoint": '',
    "args": ['woot', 'wa']}
 
-Also see the ``test_packet.py`` file in the source code repository for more
-details.
+To learn more, see the `test_packet.py <https://github.com/abourget/gevent-socketio/blob/master/tests/test_packet.py>`_ test cases.  It also shows the serialization that happens on the wire.
 
 .. automodule:: socketio.packet
     :members:

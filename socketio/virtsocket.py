@@ -1,3 +1,19 @@
+# -=- encoding: utf-8 -=-
+#
+#
+#
+#
+"""Virtual Socket implementation, unifies all the Transports into one
+single interface, and abstracts the work of the long-polling methods.
+
+This module also has the ``default_error_handler`` implementation.
+You can define your own so that the error messages are logged or sent
+in a different way
+
+:copyright: 2012, Alexandre Bourget <alexandre.bourget@savoirfairelinux.com>
+:moduleauthor: Alexandre Bourget <alexandre.bourget@savoirfairelinux.com>
+
+"""
 import random
 import weakref
 
@@ -15,10 +31,10 @@ def default_error_handler(socket, error_name, error_message, endpoint,
 
     It basically sends an event through the socket with the 'error' name.
 
-    See documentation for Socket.error().
+    See documentation for :meth:`Socket.error`.
 
-    ``quiet``, if quiet, this handler will not send a packet to the user, but
-               only log for the server developer.
+    :param quiet: if quiet, this handler will not send a packet to the
+                  user, but only log for the server developer.
     """
     pkt = dict(type='event', name='error',
                args=[error_name, error_message],
@@ -220,23 +236,31 @@ class Socket(object):
         ErrorHandler configured on the [TODO: Revise this] Socket/Handler
         object.
 
-        ``error_name`` is a simple string, for easy association on the client
-                       side
-        ``error_message`` is a human readable message, the user will eventually
-                          see
-        ``endpoint`` set this if you have a message specific to an end point
-        ``msg_id`` set this if your error is relative to a specific message
-        ``quiet`` way to make the error handler quiet. Specific to the handler.
-                  The default handler is only a logger.
+        :param error_name: is a simple string, for easy association on
+                           the client side
+
+        :param error_message: is a human readable message, the user
+                              will eventually see
+
+        :param endpoint: set this if you have a message specific to an
+                         end point
+
+        :param msg_id: set this if your error is relative to a
+                       specific message
+
+        :param quiet: way to make the error handler quiet. Specific to
+                      the handler.  The default handler will only log,
+                      with quiet.
         """
         handler = self.error_handler
         return handler(self, error_name, error_message, endpoint, msg_id, quiet)
 
     # User facing low-level function
     def disconnect(self, silent=False):
-        """Calling this method will call the disconnect() method on all the
-        active Namespaces that were open, killing all their jobs and sending
-        'disconnect' packets for each of them.
+        """Calling this method will call the
+        :meth:`~socketio.namespace.BaseNamespace.disconnect` method on
+        all the active Namespaces that were open, killing all their
+        jobs and sending 'disconnect' packets for each of them.
 
         Normally, the Global namespace (endpoint = '') has special meaning,
         as it represents the whole connection, 

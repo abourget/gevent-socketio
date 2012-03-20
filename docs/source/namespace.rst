@@ -58,15 +58,31 @@
 
      **ACL system**
 
-     The ACL system grants access to the different ``on_*()`` and ``recv_*()``
-     methods of your subclass.
+     The ACL system grants access to the different ``on_*()`` and
+     ``recv_*()`` methods of your subclass.
 
-     Developers will normally override ``get_initial_acl()`` to return a list
-     of the functions they want to initially open.  Usually, it will be a 
-     ``connect`` method, that will perform authentication and/or authorization,
-     set some variables on the Namespace, and then open up the rest of the
-     Namespace using ``lift_acl_restrictions()`` or more granularly with
-     ``add_acl_method`` and ``del_acl_method``.
+     Developers will normally override :meth:`get_initial_acl` to
+     return a list of the functions they want to initially open.
+     Usually, it will be an ``on_connect`` event handler, that will
+     perform authentication and/or authorization, set some variables
+     on the Namespace, and then open up the rest of the Namespace
+     using :meth:`lift_acl_restrictions` or more granularly with
+     :meth:`add_acl_method` and :meth:`del_acl_method`.  It is also
+     possible to check these things inside :meth:`initialize` when,
+     for example, you have authenticated a Global Namespace object,
+     and you want to re-use those credentials or authentication infos
+     in a new Namespace:
+
+     .. code-block:: python
+
+         # GLOBAL_NS = ''
+
+         class MyNamespace(BaseNamespace):
+             ...
+             def initialize(self):
+                 self.my_auth = MyAuthObjet()
+                 if self.socket[GLOBAL_NS].my_auth.logged_in == True:
+                     self.my_auth.logged_in = True
 
      The content of the ACL is a list of strings corresponding to the full name
      of the methods defined on your subclass, like: ``"on_my_event"`` or
