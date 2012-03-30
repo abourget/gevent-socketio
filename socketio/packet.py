@@ -1,6 +1,19 @@
 # -=- encoding: utf-8 -=-
 
-import json
+try:
+    import simplejson as json
+    json_decimal_args = {"use_decimal": True}
+except ImportError:
+    import json
+    import decimal
+
+    class DecimalEncoder(json.JSONEncoder):
+        def default(self, o):
+            if isinstance(o, decimal.Decimal):
+                return float(o)
+            return super(DecimalEncoder, self).default(o)
+    json_decimal_args = {"cls": DecimalEncoder}
+
 
 MSG_TYPES = {
     'disconnect': 0,
@@ -98,6 +111,9 @@ def encode(data):
             msg += '+' + str(ERROR_ADVICES[data['advice']])
         msg += data['endpoint']
 
+    elif msg == '8':
+        msg += '::'
+
     return msg
 
 
@@ -177,7 +193,7 @@ def decode(rawstr):
             else:
                 decoded_msg['reason'] = ''
     elif msg_type == "8":  # noop
-        return None
+        pass
     else:
         raise Exception("Unknown message type: %s" % msg_type)
 
