@@ -13,6 +13,39 @@
 
      .. automethod:: initialize
 
+     **Properties**
+
+     .. attribute:: session
+
+       The :term:`session` is a simple ``dict`` that is created with
+       each :class:`socketio.virtsocket.Socket` instance, and is
+       copied to each Namespace created under it.  It is a general
+       purpose store for any data you want to associated with an open
+       :class:`socketio.virtsocket.Socket`.
+
+     .. attribute:: request
+
+       This is the ``request`` object (or really, any object) that you
+       have passed as the ``request`` parameter to the
+       :func:`socketio.socketio_manage` function.
+
+     .. attribute:: ns_name
+
+       The name of the namespace, like ``/chat`` or the empty string,
+       for the "global" namespace.
+
+     .. attribute:: environ
+
+       The ``environ`` WSGI dictionary, as it was received upon
+       reception of the **first** request that established the virtual
+       Socket.  This will never contain the subsequent ``environ`` for
+       the next polling, so beware when using cookie-based sessions
+       (like Beaker).
+
+     .. attribute:: socket
+
+       A reference to the :class:`socketio.virtsocket.Socket` instance
+       this namespace is attached to.
 
      **Sending data**
 

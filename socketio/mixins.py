@@ -9,16 +9,16 @@ You can also implement your own.. take a look, it's pretty simple.
 class RoomsMixin(object):
     def __init__(self, *args, **kwargs):
         super(RoomsMixin).__init__(self, *args, **kwargs)
-        if not hasattr(self.socket, 'rooms'):
-            self.socket.rooms = set() # a set of simple strings
+        if 'rooms' not in self.session:
+            self.session['rooms'] = set()  # a set of simple strings
 
     def join(self, room):
         """Lets a user join a room on a specific Namespace."""
-        self.socket.rooms.add(self._get_room_name(room))
+        self.session['rooms'].add(self._get_room_name(room))
 
     def leave(self, room):
         """Lets a user leave a room on a specific Namespace."""
-        self.socket.rooms.remove(self._get_room_name(room))
+        self.session['rooms'].remove(self._get_room_name(room))
 
     def _get_room_name(self, room):
         return self.ns_name + '_' + room
@@ -31,9 +31,9 @@ class RoomsMixin(object):
                    endpoint=self.ns_name)
         room_name = self._get_room_name(room)
         for sessid, socket in self.socket.server.sockets.iteritems():
-            if not hasattr(socket, 'rooms'):
+            if 'rooms' not in socket.session:
                 continue
-            if room_name in socket.rooms:
+            if room_name in socket.session['rooms']:
                 socket.send_packet(pkt)
 
 
@@ -58,3 +58,17 @@ class BroadcastMixin(object):
 
         for sessid, socket in self.socket.server.sockets.iteritems():
             socket.send_packet(pkt)
+
+    def broadcast_event_not_me(self, event, *args):
+        """
+        This is sent to all in the sockets (in this particular Namespace),
+        except itself.
+        """
+        pkt = dict(type="event",
+                   name=event,
+                   args=args,
+                   endpoint=self.ns_name)
+
+        for sessid, socket in self.socket.server.sockets.iteritems():
+            if socket is not self.socket:
+                socket.send_packet(pkt)

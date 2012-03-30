@@ -37,6 +37,7 @@ class BaseNamespace(object):
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
         self.socket = environ['socketio']
+        self.session = self.socket.session  # easily accessible session
         self.request = request
         self.ns_name = ns_name
         self.allowed_methods = None  # be careful, None means all methods

@@ -1,8 +1,6 @@
 # -=- encoding: utf-8 -=-
 #
 #
-#
-#
 """Virtual Socket implementation, unifies all the Transports into one
 single interface, and abstracts the work of the long-polling methods.
 
@@ -26,8 +24,8 @@ from socketio import packet
 
 def default_error_handler(socket, error_name, error_message, endpoint,
                           msg_id, quiet):
-    """This is the default error handler, you can override this by
-    [TODO: INSERT HOW HERE].
+    """This is the default error handler, you can override this when
+    calling :func:`socketio.socketio_manage`.
 
     It basically sends an event through the socket with the 'error' name.
 
@@ -73,6 +71,7 @@ class Socket(object):
     def __init__(self, server, error_handler=None):
         self.server = weakref.proxy(server)
         self.sessid = str(random.random())[2:]
+        self.session = {}  # the session dict, for general developer usage
         self.client_queue = Queue()  # queue for messages to client
         self.server_queue = Queue()  # queue for messages to server
         self.hits = 0
@@ -113,6 +112,13 @@ class Socket(object):
         """
         self.environ = environ
 
+    def _set_error_handler(self, error_handler):
+        """Changes the default error_handler function to the one specified
+
+        This is called by socketio_manage().
+        """
+        self.error_handler = error_handler
+        
     def _get_next_msgid(self):
         """This retrieves the next value for the 'id' field when sending
         an 'event' or 'message' or 'json' that asks the remote client
@@ -166,6 +172,7 @@ class Socket(object):
 
     @property
     def connected(self):
+        """Returns whether the state is CONNECTED or not."""
         return self.state == self.STATE_CONNECTED
 
     def incr_hits(self):
@@ -187,8 +194,10 @@ class Socket(object):
         shut down, closed by connection timeout, connection error or explicit
         disconnection from the client.
 
-        It will call all of the namespaces' disconnect() methods so that you
-        can shut-down things properly.
+        It will call all of the Namespace's
+        :meth:`~socketio.namespace.BaseNamespace.disconnect` methods
+        so that you can shut-down things properly.
+
         """
         # Clear out the callbacks
         self.ack_callbacks = {}
@@ -265,8 +274,8 @@ class Socket(object):
         Normally, the Global namespace (endpoint = '') has special meaning,
         as it represents the whole connection, 
 
-        ``silent`` when True, pass on the ``silent`` flag to the Namespace
-                   disconnect() calls.
+        :param silent: when True, pass on the ``silent`` flag to the Namespace
+                       :meth:`~socketio.namespace.BaseNamespace.disconnect` calls.
         """
         for ns_name, ns in list(self.active_ns.iteritems()):
             ns.disconnect(silent=silent)
@@ -274,7 +283,9 @@ class Socket(object):
     def remove_namespace(self, namespace):
         """This removes a Namespace object from the socket.
 
-        This is usually called by ``BaseNamespace::disconnect()``.
+        This is usually called by
+        :meth:`~socketio.namespace.BaseNamespace.disconnect`.
+
         """
         if namespace in self.active_ns:
             del self.active_ns[namespace]

@@ -1,4 +1,4 @@
-from socketio import SocketIOServer
+from socketio.server import SocketIOServer
 from pyramid.paster import get_app
 from gevent import monkey; monkey.patch_all()
 
