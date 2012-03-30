@@ -13,7 +13,7 @@ Introduction
 ------------
 
 ``gevent-socketio`` is a Python implementation of the Socket.IO
-protocol, developed primarily for Node.js by LearnBoost and then
+protocol, developed originally for Node.js by LearnBoost and then
 ported to other languages.  Socket.IO enables real-time web
 communications between a browser and a server, using a WebSocket-like
 API.  One aim of this project is to provide a single ``gevent``-based
