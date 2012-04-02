@@ -8,7 +8,7 @@ You can also implement your own.. take a look, it's pretty simple.
 
 class RoomsMixin(object):
     def __init__(self, *args, **kwargs):
-        super(RoomsMixin).__init__(self, *args, **kwargs)
+        super(RoomsMixin, self).__init__(*args, **kwargs)
         if 'rooms' not in self.session:
             self.session['rooms'] = set()  # a set of simple strings
 

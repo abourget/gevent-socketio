@@ -47,6 +47,9 @@ class BaseNamespace(object):
 
         self.reset_acl()
 
+        # Init the mixins if specified after.
+        super(BaseNamespace, self).__init__()
+
     def is_method_allowed(self, method_name):
         """ACL system: this checks if you have access to that method_name,
         according to the set ACLs"""

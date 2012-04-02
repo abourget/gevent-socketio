@@ -82,6 +82,8 @@ arguments to the saved callback on the client side:
 class GlobalIONamespace(BaseNamespace, BroadcastMixin):
     def on_chat(self, *args):
         self.emit("bob", {'hello': 'world'})
+        print "Received chat message", args
+        self.broadcast_event_not_me('chat', *args)
     
     def recv_connect(self):
         print "CONNNNNNNN"
@@ -122,8 +124,13 @@ class ChatIONamespace(BaseNamespace, RoomsMixin):
         self.emit('callmeback', 'this is a first param',
                   'this is the last param', callback=cb2)
 
+    def recv_connect(self):
+        self.session['nickname'] = 'guest123'
+        self.join('room1')
+
     def recv_message(self, data):
         print "Received a 'message' with data:", data
+        
         
     def on_disconnect_me(self, data):
         print "Disconnecting you buddy", data
