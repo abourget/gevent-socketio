@@ -1,5 +1,7 @@
 from gevent import monkey; monkey.patch_all()
-from socketio import SocketIOServer, socketio_manage
+
+from socketio import socketio_manage
+from socketio.server import SocketIOServer
 from socketio.namespace import BaseNamespace
 from socketio.mixins import RoomsMixin, BroadcastMixin
 
@@ -8,12 +10,14 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
     
     def on_nickname(self, nickname):
         self.environ['nicknames'].append(nickname)
-        self.socket.session = nickname
+        #self.socket.session = nickname
         self.broadcast_event('anouncement', '%s has connected' % nickname)
         self.broadcast_event('nicknames', self.environ['nicknames'])
+        # Just have them join a default-named room
+        self.join('main_room')
 
-    def on_user_message(self, room_name, msg):
-        self.emit_to_room('msg_to_room', room_name, msg)
+    def on_user_message(self, msg):
+        self.emit_to_room('msg_to_room', msg, 'main_room')
 
     def recv_message(self, message):
         print "PING!!!", message
