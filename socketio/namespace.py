@@ -22,16 +22,21 @@ class BaseNamespace(object):
       :linenos:
 
       def on_my_event(self, my_first_arg, my_second_arg):
-          print "This is a packet object", packet
-          print "This is a list of the arguments", args
+          print "This is the my_first_arg object", my_first_arg
+          print "This is the my_second_arg object", my_second_arg
 
       def on_my_second_event(self, whatever):
-          print "This holds the first arg that was passed", data
+          print "This holds the first arg that was passed", whatever
+
+    We can also access the full packet directly by making an event handler
+    that accepts a single argument named 'packet':
+
+    .. code-block:: python
+      :linenos:
 
       def on_third_event(self, packet):
-          print "This is the *full* packet", packet
+          print "The full packet", packet
           print "See the BaseNamespace::call_method() method for details"
-
     """
 
     def __init__(self, environ, ns_name, request=None):
