@@ -5,10 +5,12 @@ from chatter3.views import socketio_service
 from chatter3.views import index
 from chatter3.models import DBSession
 
+
 def simple_route(config, name, url, fn):
     config.add_route(name, url)
     config.add_view(fn, route_name=name,
             renderer="chatter3:templates/%s.mako" % name)
+
 
 def main(global_config, **settings):
     config = Configurator()

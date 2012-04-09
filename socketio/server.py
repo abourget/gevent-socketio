@@ -1,7 +1,5 @@
 import sys
-import random
 import traceback
-import gevent
 
 from socket import error
 
@@ -12,6 +10,7 @@ from socketio.policyserver import FlashPolicyServer
 from socketio.virtsocket import Socket
 
 __all__ = ['SocketIOServer']
+
 
 class SocketIOServer(WSGIServer):
     """A WSGI Server with a resource that acts like an SocketIO."""
@@ -37,7 +36,8 @@ class SocketIOServer(WSGIServer):
             try:
                 self.policy_server.start()
             except error, ex:
-                sys.stderr.write('FAILED to start flash policy server: %s\n' % (ex, ))
+                sys.stderr.write(
+                    'FAILED to start flash policy server: %s\n' % (ex, ))
             except Exception:
                 traceback.print_exc()
                 sys.stderr.write('FAILED to start flash policy server.\n\n')

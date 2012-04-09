@@ -2,7 +2,7 @@ import gevent
 import urllib
 
 from gevent.queue import Empty
-from socketio import packet
+
 
 class BaseTransport(object):
     """Base class for all transports. Mostly wraps handler class functions."""
@@ -44,11 +44,11 @@ class XHRPollingTransport(BaseTransport):
         return []
 
     def get(self, socket):
-        socket.heartbeat();
+        socket.heartbeat()
 
         payload = self.get_messages_payload(socket, timeout=5.0)
         if not payload:
-            payload = "8::" # NOOP
+            payload = "8::"  # NOOP
 
         self.start_response("200 OK", [])
         self.write(payload)
@@ -97,13 +97,12 @@ class XHRPollingTransport(BaseTransport):
                           for p in messages)
 
         return payload.encode('utf-8')
-        
 
     def decode_payload(self, payload):
         """This function can extract multiple messages from one HTTP payload.
         Some times, the XHR/JSONP/.. transports can pack more than one message
-        on a single packet.  They are encoding following the WebSocket semantics,
-        which need to be reproduced here to unwrap the messages.
+        on a single packet.  They are encoding following the WebSocket
+        semantics, which need to be reproduced here to unwrap the messages.
 
         The semantics are:
 
@@ -136,7 +135,7 @@ class XHRPollingTransport(BaseTransport):
             self.start_response("200 OK", [
                 ("Connection", "close"),
             ])
-            self.write("1::") # 'connect' packet
+            self.write("1::")  # 'connect' packet
 
             return []
         elif request_method in ("GET", "POST", "OPTIONS"):
@@ -214,7 +213,7 @@ class XHRMultipartTransport(XHRPollingTransport):
 class WebsocketTransport(BaseTransport):
     def connect(self, socket, request_method):
         websocket = self.handler.environ['wsgi.websocket']
-        websocket.send("1::") # 'connect' packet
+        websocket.send("1::")  # 'connect' packet
 
         def send_into_ws():
             while True:

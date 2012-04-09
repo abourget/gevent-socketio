@@ -1,6 +1,3 @@
-# -=- encoding: utf-8 -=-
-#
-#
 """Virtual Socket implementation, unifies all the Transports into one
 single interface, and abstracts the work of the long-polling methods.
 
@@ -94,7 +91,7 @@ class Socket(object):
     def _set_namespaces(self, namespaces):
         """This is a mapping (dict) of the different '/namespaces' to their
         BaseNamespace object derivative.
-        
+
         This is called by socketio_manage()."""
         self.namespaces = namespaces
 
@@ -118,7 +115,7 @@ class Socket(object):
         This is called by socketio_manage().
         """
         self.error_handler = error_handler
-        
+
     def _get_next_msgid(self):
         """This retrieves the next value for the 'id' field when sending
         an 'event' or 'message' or 'json' that asks the remote client
@@ -262,7 +259,8 @@ class Socket(object):
                       with quiet.
         """
         handler = self.error_handler
-        return handler(self, error_name, error_message, endpoint, msg_id, quiet)
+        return handler(
+            self, error_name, error_message, endpoint, msg_id, quiet)
 
     # User facing low-level function
     def disconnect(self, silent=False):
@@ -272,10 +270,11 @@ class Socket(object):
         jobs and sending 'disconnect' packets for each of them.
 
         Normally, the Global namespace (endpoint = '') has special meaning,
-        as it represents the whole connection, 
+        as it represents the whole connection,
 
         :param silent: when True, pass on the ``silent`` flag to the Namespace
-                       :meth:`~socketio.namespace.BaseNamespace.disconnect` calls.
+                       :meth:`~socketio.namespace.BaseNamespace.disconnect`
+                       calls.
         """
         for ns_name, ns in list(self.active_ns.iteritems()):
             ns.disconnect(silent=silent)
@@ -319,7 +318,9 @@ class Socket(object):
             try:
                 pkt = packet.decode(rawdata)
             except (ValueError, KeyError, Exception), e:
-                self.error('invalid_packet', "There was a decoding error when dealing with packet with event: %s... (%s)" % (rawdata[:20], e))
+                self.error('invalid_packet',
+                    "There was a decoding error when dealing with packet "
+                    "with event: %s... (%s)" % (rawdata[:20], e))
                 continue
 
             if pkt['type'] == 'heartbeat':
@@ -335,7 +336,9 @@ class Socket(object):
             endpoint = pkt['endpoint']
 
             if endpoint not in self.namespaces:
-                self.error("no_such_namespace", "The endpoint you tried to connect to doesn't exist: %s" % endpoint, endpoint=endpoint)
+                self.error("no_such_namespace",
+                    "The endpoint you tried to connect to "
+                    "doesn't exist: %s" % endpoint, endpoint=endpoint)
                 continue
             elif endpoint in self.active_ns:
                 pkt_ns = self.active_ns[endpoint]
@@ -364,15 +367,16 @@ class Socket(object):
                 return
 
     def _spawn_receiver_loop(self):
-        """Spawns the reader loop.  This is called internall by socketio_manage()
+        """Spawns the reader loop.  This is called internall by
+        socketio_manage().
         """
         job = gevent.spawn(self._receiver_loop)
         self.jobs.append(job)
         return job
 
     def _watcher(self):
-        """Watch if any of the greenlets for a request have died. If so, kill the
-        request and the socket.
+        """Watch if any of the greenlets for a request have died. If so, kill
+        the request and the socket.
         """
         # TODO: add that if any of the request.jobs die, kill them all and exit
         gevent.sleep(5.0)

@@ -5,13 +5,14 @@ import gevent
 
 log = logging.getLogger(__name__)
 
+
 def socketio_manage(environ, namespaces, request=None, error_handler=None):
     """Main SocketIO management function, call from within your Framework of
     choice's view.
 
-    The ``environ`` variable is the WSGI ``environ``.  It is used to extract the
-    Socket object from the underlying server (as the 'socketio' key), and is
-    otherwise attached to both the Socket and Namespace objects.
+    The ``environ`` variable is the WSGI ``environ``.  It is used to extract
+    the Socket object from the underlying server (as the 'socketio' key), and
+    is otherwise attached to both the Socket and Namespace objects.
 
     The ``namespaces`` parameter is a dictionary of the namespace string
     representation as key, and the BaseNamespace namespace class descendant as
@@ -39,10 +40,9 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None):
     This is a simple example using Pyramid:
 
     .. code-block:: python
-    
+
       def my_view(request):
           socketio_manage(request.environ, {'': GlobalNamespace}, request)
-
     """
     socket = environ['socketio']
     socket._set_environ(environ)
