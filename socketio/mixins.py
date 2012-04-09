@@ -1,10 +1,10 @@
-# -=- encoding: utf-8 -=-
-
-"""You will find all sorts of Mixins in here, like implementation of Rooms, or
+"""
+You will find all sorts of Mixins in here, like implementation of Rooms, or
 Broadcast systems.
 
 You can also implement your own.. take a look, it's pretty simple.
 """
+
 
 class RoomsMixin(object):
     def __init__(self, *args, **kwargs):
@@ -44,7 +44,6 @@ class BroadcastMixin(object):
     class MyNamespace(BaseNamespace, BroadcastMixin):
         def on_chatmsg(self, event):
             self.broadcast_event('chatmsg', event)
-
     """
     def broadcast_event(self, event, *args):
         """

@@ -1,5 +1,3 @@
-# -=- encoding: utf-8 -=-
-
 try:
     import simplejson as json
     json_decimal_args = {"use_decimal": True}
@@ -45,7 +43,6 @@ ADVICES_VALUES = dict((v, k) for k, v in ERROR_ADVICES.iteritems())
 
 socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args',
                               'ackId', 'reason', 'advice', 'qs', 'id']
-
 
 
 def encode(data):

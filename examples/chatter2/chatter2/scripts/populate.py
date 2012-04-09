@@ -18,13 +18,15 @@ DBSession = scoped_session(sessionmaker())
 
 here = os.path.dirname(__file__)
 
-def usage(argv):# pragma: no cover 
+
+def usage(argv):  # pragma: no cover
     cmd = os.path.basename(argv[0])
     print('usage: %s <config_uri>\n'
-          '(example: "%s development.ini")' % (cmd, cmd)) 
+          '(example: "%s development.ini")' % (cmd, cmd))
     sys.exit(1)
 
-def main(argv=sys.argv): # pragma: no cover
+
+def main(argv=sys.argv):  # pragma: no cover
     if len(argv) != 2:
         usage(argv)
 
@@ -45,5 +47,5 @@ def main(argv=sys.argv): # pragma: no cover
 
     Base.metadata.create_all(engine)
 
-if __name__ == "__main__": # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     main()

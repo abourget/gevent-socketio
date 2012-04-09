@@ -5,10 +5,10 @@ from setuptools import setup, find_packages, Command
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+
 def _read(path):
     with open(path) as f:
-        data= f.read()
-
+        data = f.read()
     f.close()
 
     return data
@@ -18,15 +18,19 @@ CHANGES = ''
 
 requires = []
 
-if sys.version_info[:3] < (2,5,0):
+if sys.version_info[:3] < (2, 5, 0):
     requires.append('pysqlite')
+
 
 class PyTest(Command):
     user_options = []
+
     def initialize_options(self):
         pass
+
     def finalize_options(self):
         pass
+
     def run(self):
         import subprocess
         errno = subprocess.call('py.test')
@@ -35,7 +39,7 @@ class PyTest(Command):
 setup(name='chatter2',
       version='0.0',
       description='chatter2',
-      long_description=README + '\n\n' +  CHANGES,
+      long_description=README + '\n\n' + CHANGES,
       classifiers=[
         "Programming Language :: Python",
         "Framework :: Pylons",
@@ -50,12 +54,10 @@ setup(name='chatter2',
       include_package_data=True,
       zip_safe=False,
       test_suite='chatter2',
-      install_requires = requires,
-      #cmdclass = {'test': PyTest},
-      entry_points = """\
+      install_requires=requires,
+      entry_points="""\
       [paste.app_factory]
       main = chatter2:main
       """,
       paster_plugins=['pyramid'],
       )
-

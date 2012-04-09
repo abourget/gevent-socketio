@@ -1,4 +1,3 @@
-# -=- encoding: utf-8 -=-
 import gevent
 import re
 import logging
@@ -31,9 +30,7 @@ class BaseNamespace(object):
       def on_third_event(self, packet):
           print "This is the *full* packet", packet
           print "See the BaseNamespace::call_method() method for details"
-
     """
-
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
         self.socket = environ['socketio']
@@ -134,7 +131,6 @@ class BaseNamespace(object):
         * recv_error()
         * recv_disconnect()
         * on_*()
-
         """
         packet_type = packet['type']
         if packet_type == 'event':
@@ -166,8 +162,8 @@ class BaseNamespace(object):
         # TODO: manage the other packet types: disconnect
 
     def process_event(self, packet):
-        """This function dispatches ``event`` messages to the correct functions.
-        Override this function if you want to not dispatch messages
+        """This function dispatches ``event`` messages to the correct
+        functions. Override this function if you want to not dispatch messages
         automatically to "on_event_name" methods.
 
         If you override this function, none of the on_functions will get called
@@ -207,7 +203,7 @@ class BaseNamespace(object):
     def call_method_with_acl(self, method_name, packet, *args):
         """You should always use this function to call the methods,
         as it checks if the user is allowed according to the ACLs.
-      
+
         If you override :meth:`process_packet` or
         :meth:`process_event`, you should definitely want to use this
         instead of ``getattr(self, 'my_method')()``
@@ -216,7 +212,7 @@ class BaseNamespace(object):
             self.error('method_access_denied',
                        'You do not have access to method "%s"' % method_name)
             return
-        
+
         return self.call_method(method_name, packet, *args)
 
     def call_method(self, method_name, packet, *args):
@@ -232,7 +228,6 @@ class BaseNamespace(object):
         * Otherwise, pass in the arguments as specified by the
           different ``recv_*()`` methods args specs, or the
           :meth:`process_event` documentation.
-
         """
         method = getattr(self, method_name, None)
         if method is None:
@@ -243,7 +238,9 @@ class BaseNamespace(object):
         specs = inspect.getargspec(method)
         func_args = specs.args
         if not len(func_args) or func_args[0] != 'self':
-            self.error("invalid_method_args", "The server-side method is invalid, as it doesn't have 'self' as its first argument")
+            self.error("invalid_method_args",
+                "The server-side method is invalid, as it doesn't "
+                "have 'self' as its first argument")
             return
         if len(func_args) == 2 and func_args[1] == 'packet':
             return method(packet)
@@ -261,14 +258,13 @@ class BaseNamespace(object):
         so you can have many many namespaces assigned (when calling
         :func:`~socketio.socketio_manage`) without clogging the
         memory.
-       
+
         If you override this method, you probably want to only
         initialize the variables you're going to use in the events of
         this namespace, say, with some default values, but not perform
         any operation that assumes authentication/authorization.
         """
         pass
-
 
     def recv_message(self, data):
         """This is more of a backwards compatibility hack. This will be
@@ -378,7 +374,11 @@ class BaseNamespace(object):
         the client.
 
         By default, it uses this namespace's endpoint. You can send messages on
-        other endpoints with something like: ``self.socket['/other_endpoint'].emit()``. However, it is possible that the ``'/other_endpoint'`` was not
+        other endpoints with something like:
+
+            ``self.socket['/other_endpoint'].emit()``.
+
+        However, it is possible that the ``'/other_endpoint'`` was not
         initialized yet, and that would yield a ``KeyError``.
 
         The only supported ``kwargs`` is ``callback``.  All other parameters
@@ -390,9 +390,9 @@ class BaseNamespace(object):
 
                          This callback is slightly different from the one from
                          ``send()``, as this callback will receive parameters
-                         from the explicit call of the ``ack()`` function passed
-                         to the listener on the client side.
-                       
+                         from the explicit call of the ``ack()`` function
+                         passed to the listener on the client side.
+
                          The remote listener will need to explicitly ack (by
                          calling its last argument, a function which is
                          usually called 'ack') with some parameters indicating
@@ -404,7 +404,10 @@ class BaseNamespace(object):
         callback = kwargs.pop('callback', None)
 
         if kwargs:
-            raise ValueError("emit() only supports positional argument, to stay compatible with the Socket.IO protocol. You can however pass in a dictionary as the first argument")
+            raise ValueError(
+                "emit() only supports positional argument, to stay "
+                "compatible with the Socket.IO protocol. You can "
+                "however pass in a dictionary as the first argument")
         pkt = dict(type="event", name=event, args=args,
                    endpoint=self.ns_name)
 

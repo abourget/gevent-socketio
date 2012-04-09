@@ -8,13 +8,14 @@ from chatter4.views import socketio_service
 from chatter4.views import index
 from chatter4.views import get_log
 
-def simple_route(config, name, url, fn, renderer=None):
 
+def simple_route(config, name, url, fn, renderer=None):
     if not renderer:
-        renderer="chatter4:templates/%s.mako" % name
+        renderer = "chatter4:templates/%s.mako" % name
 
     config.add_route(name, url)
     config.add_view(fn, route_name=name, renderer=renderer)
+
 
 def main(global_config, **settings):
     config = Configurator()
