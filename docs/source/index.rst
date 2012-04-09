@@ -12,19 +12,20 @@ Gevent-socketio documentation
 Introduction
 ------------
 
-``gevent-socketio`` is a Python implementation of the Socket.IO
-protocol, developed originally for Node.js by LearnBoost and then
-ported to other languages.  Socket.IO enables real-time web
-communications between a browser and a server, using a WebSocket-like
-API.  One aim of this project is to provide a single ``gevent``-based
+Socket.IO is a WebSocket-like abstraction that enables real-time
+communication between a browser and a server.  ``gevent-socketio`` is a
+Python implementation of the protocol.
+
+The reference server implementation of Socket.IO runs on Node.js and was
+developed by LearnBoost.  There are now server implementations in a
+variety of languages.
+
+One aim of this project is to provide a single ``gevent``-based
 API that works across the different WSGI-based web frameworks out
 there (Pyramid, Pylons, Flask, web2py, Django, etc...).  Only ~3 lines
 of code are required to tie-in ``gevent-socketio`` in your framework.
 Note: you need to use the ``gevent`` python WSGI server to use
 ``gevent-socketio``.
-
-Socket.IO adds a thin layer of logic on top of normal WebSocket:
-namespaces, event names, abstractions of transports.
 
 **Namespaces**: since you mostly have **one** websocket/socket.io
 endpoint per website, it is important to be able to namespace the
