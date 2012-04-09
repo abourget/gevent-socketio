@@ -306,10 +306,10 @@ class BaseNamespace(object):
         self.disconnect(silent=True)
 
     def recv_connect(self):
-        """The first time a client connection is open on a Namespace,
-        this gets called, and allows you to do boilerplate stuff for
-        the namespace, like connecting to rooms, broadcasting events
-        to others, doing authorization work, tweaking the ACLs to open
+        """Called the first time a client connection is open on a
+        Namespace. This allows you to do boilerplate stuff for
+        the namespace like connecting to rooms, broadcasting events
+        to others, doing authorization work, and tweaking the ACLs to open
         up the rest of the namespace (if it was closed at the
         beginning by having :meth:`get_initial_acl` return only
         ['recv_connect'])
@@ -322,8 +322,7 @@ class BaseNamespace(object):
     def recv_error(self, packet):
         """Override this function to handle the errors we get from the client.
 
-        You get the full packet in here, since it is not clear what you should
-        get otherwise [TODO: change this sentence, this doesn't help :P]
+        :param packet: the full packet.
         """
         pass
 
