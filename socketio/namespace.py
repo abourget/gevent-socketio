@@ -171,15 +171,11 @@ class BaseNamespace(object):
         # TODO: manage the other packet types: disconnect
 
     def process_event(self, packet):
-        """This function dispatches ``event`` messages to the correct functions.
-        Override this function if you want to not dispatch messages
-        automatically to "on_event_name" methods.
-
-        If you override this function, none of the on_functions will get called
-        by default.
-
-        [MOVE TO DOCUMENTATION' around: recv_message, recv_json and
-         process_event]
+        """This function dispatches ``event`` messages to the correct
+        functions. You should override this method only if you are not
+        satisfied with the automatic dispatching to
+        ``on_``-prefixed methods.  You could then implement your own dispatch.
+        See the source code for inspiration.
 
         To process events that have callbacks on the client side, you
         must define your event with a single parameter: ``packet``.
@@ -193,7 +189,6 @@ class BaseNamespace(object):
           def on_my_callback(self, packet):
               if 'ack' in packet':
                   self.emit('go_back', 'param1', id=packet['id'])
-
         """
         args = packet['args']
         name = packet['name']
