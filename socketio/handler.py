@@ -54,7 +54,11 @@ class SocketIOHandler(WSGIHandler):
 
     def write_plain_result(self, data):
         self.start_response("200 OK", [
-            ("Content-Type", "text/plain")
+            ("Access-Control-Allow-Origin", self.environ.get('HTTP_ORIGIN', '*')),
+            ("Access-Control-Allow-Credentials", "true"),
+            ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
+            ("Access-Control-Max-Age", 3600),
+            ("Content-Type", "text/plain"),
         ])
         self.result = [data]
 
