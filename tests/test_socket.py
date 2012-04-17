@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from socketio.server import SocketIOServer
+from socketio.namespace import BaseNamespace
 from socketio.virtsocket import Socket
 
 
@@ -19,15 +19,10 @@ class MockSocketIOhandler(object):
         self.server = MockSocketIOServer()
 
 
-class MockNamespace(object):
+class MockNamespace(BaseNamespace):
     """Mock a Namespace from the namespace module"""
-    def __init__(self, environ, name, request=None):
-        self.environ = environ
-        self.ns_name = name
-        self.socket = 'socketio'
+    pass
 
-    def disconnect(self):
-        pass
 
 class TestSocketAPI(TestCase):
     """Test the virtual Socket object"""
@@ -67,8 +62,7 @@ class TestSocketAPI(TestCase):
     def test_disconnect(self):
         # kill connected socket
         self.virtsocket.state = "CONNECTED"
-        self.virtsocket.active_ns = {'test' : MockNamespace(environ=[], 
-                                                            name="m")}
+        self.virtsocket.active_ns = {'test' : MockNamespace({'socketio': self.virtsocket}, 'test')}
         self.virtsocket.disconnect()
         self.assertEqual(self.virtsocket.state, "CONNECTED")
         self.assertEqual(self.virtsocket.active_ns, {})
@@ -76,8 +70,7 @@ class TestSocketAPI(TestCase):
     def test_kill(self):
         # kill connected socket
         self.virtsocket.state = "CONNECTED"
-        self.virtsocket.active_ns = {'test' : MockNamespace(environ=[],
-                                                            name="m")}
+        self.virtsocket.active_ns = {'test' : MockNamespace({'socketio': self.virtsocket}, 'test')}
         self.virtsocket.kill()
         self.assertEqual(self.virtsocket.state, "DISCONNECTING")
 

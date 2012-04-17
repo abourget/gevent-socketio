@@ -1,21 +1,28 @@
 from unittest import TestCase, main
 
 from socketio.namespace import BaseNamespace
+from socketio.virtsocket import Socket
 
 
-class MockSocket(object):
+class MockSocketIOServer(object):
+    """Mock a SocketIO server"""
+    def __init__(self, *args, **kwargs):
+        self.sockets = {}
 
-    def __init__(self, environ={}):
-        self.environ = environ
+    def get_socket(self, socket_id=''):
+        return self.sockets.get(socket_id)
 
-    def error(self, error_name, error_msg, endpoint, msg_id, quiet=False):
-        return (error_name, error_msg, endpoint, msg_id)
+
+class MockSocket(Socket):
+    pass
+
 
 class TestBaseNamespace(TestCase):
 
     def setUp(self):
+        server = MockSocketIOServer()
         self.environ = {}
-        self.environ['socketio'] = MockSocket()
+        self.environ['socketio'] = MockSocket(server)
         self.ns = BaseNamespace(self.environ, '/woot')
 
     def test_process_packet_disconnect(self):
@@ -84,7 +91,6 @@ class TestBaseNamespace(TestCase):
 
     def test_process_packet_event(self):
         """processing an event packet """
-
         pkt = {'type': 'event',
                'name': 'woot',
                'endpoint': '',
