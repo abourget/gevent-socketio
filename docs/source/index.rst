@@ -297,6 +297,7 @@ Contributors:
  * Alexandre Bourget
  * John Anderson
  * Sébastien Béal
+ * jpellerin (JP)
  * Philip Neustrom
 
 
