@@ -48,13 +48,13 @@ Installation
 
 You can install with standard Python methods:
 
-.. code-block:: bash
+.. code:: bash
 
    pip install gevent-socketio
 
 or from source:
 
-.. code-block:: bash
+.. code:: bash
 
    git clone git://github.com/abourget/gevent-socketio.git
    cd gevent-socketio
@@ -62,13 +62,13 @@ or from source:
 
 For development, run instead of ``install``:
 
-.. code-block:: bash
+.. code:: bash
 
    python setup.py develop
 
 If you want to do all of that in a virtualenv, run:
 
-.. code-block:: bash
+.. code:: bash
 
    virtualenv env
    . env/bin/activate
