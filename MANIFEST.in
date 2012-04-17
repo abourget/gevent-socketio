@@ -1,5 +1,7 @@
-recursive-include socketio *
 include LICENSE
 include AUTHORS
 include MANIFEST.in
 include README.rst
+recursive-include socketio *py
+exclude socketio/.ropeproject/*
+exclude socketio/sample_protocol_for_doc.py

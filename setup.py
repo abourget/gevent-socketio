@@ -2,12 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name="gevent-socketio",
-    version="0.3.1",
+    version="0.3.5-beta",
     description=(
         "SocketIO server based on the Gevent pywsgi server, "
         "a Python network library"),
     author="Jeffrey Gelens",
     author_email="jeffrey@noppo.pro",
+    maintainer="Alexandre Bourget",
+    maintainer_email="alex@bourget.cc",
     license="BSD",
     url="https://github.com/abourget/gevent-socketio",
     download_url="https://github.com/abourget/gevent-socketio",
