@@ -257,6 +257,24 @@ gevent-socketio:
 The Flask guys will be working on an integration layer soon.
 
 
+Contacts
+--------
+
+For any questions, you can use the Issue tracking at Github:
+
+  https://github.com/abourget/gevent-socketio
+  https://github.com/abourget/gevent-socketio/issues
+
+The mailing list:
+
+  https://groups.google.com/forum/#!forum/gevent-socketio
+
+The maintainer:
+
+  https://twitter.com/#!/bourgetalexndre
+  https://plus.google.com/109333785244622657612
+
+
 Credits
 -------
 
@@ -265,24 +283,24 @@ Credits
 PyCon 2012 and the Sprints, for bringing this project up to version
 0.9 of the protocol.
 
+Current maintainer:
+
+ * Alexandre Bourget
+
 Contributors:
 
  * Denis Bilenko
  * Bobby Powers
  * Lon Ingram
  * Eugene Baumstein
+ * Alexandre Bourget
  * John Anderson
  * Sébastien Béal
- * Alexandre Bourget
+ * Philip Neustrom
 
 
 
-Todo
+TODO
 ----
 
-Document the on_methods() and their parameters, how you use them on the
-client-side and how they are mapped to the server-side.
-
-How would we attach some informatio to the "socket", where to attach persistent information, when to attach to a namespace, when on the socket.
-
-How to integrate your framework's "session" object (Beaker, memcached, or file-based).  Beware: monsters behind your back.
+How to integrate your framework's "session" object (Beaker, memcached, or file-based).  Beware: this can be tricky. You need to manage that yourself.
