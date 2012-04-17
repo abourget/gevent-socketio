@@ -10,14 +10,16 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None):
     choice's view.
 
     The ``environ`` variable is the WSGI ``environ``.  It is used to extract the
-    Socket object from the underlying server (as the 'socketio' key), and is
-    otherwise attached to both the Socket and Namespace objects.
+    Socket object from the underlying server (as the 'socketio' key), and will
+    be attached to both the ``Socket`` and ``Namespace`` objects.
 
     The ``namespaces`` parameter is a dictionary of the namespace string
     representation as key, and the BaseNamespace namespace class descendant as
     a value.  The empty string ('') namespace is the global namespace.  You can
     use Socket.GLOBAL_NS to be more explicit. So it would look like:
 
+    .. code-block:: python
+    
       namespaces={'': GlobalNamespace,
                   '/chat': ChatNamespace}
 
@@ -43,6 +45,17 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None):
       def my_view(request):
           socketio_manage(request.environ, {'': GlobalNamespace}, request)
 
+    NOTE: You must understand that this function is going to be called
+    *only once* per socket opening, *even though* you are using a long
+    polling mechanism.  The subsequent calls (for long polling) will
+    be hooked directly at the server-level, to interact with the
+    active ``Socket`` instance.  This means you will *not* get access
+    to the future ``request`` or ``environ`` objects.  This is of
+    particular importance regarding sessions (like Beaker).  The
+    session will be opened once at the opening of the Socket, and not
+    closed until the socket is closed.  You are responsible for
+    opening and closing the cookie-based session yourself if you want
+    to keep its data in sync with the rest of your GET/POST calls.
     """
     socket = environ['socketio']
     socket._set_environ(environ)
