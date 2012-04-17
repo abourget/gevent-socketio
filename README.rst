@@ -46,29 +46,21 @@ You can also contact the maintainer:
 Installation
 ============
 
-You can install with standard Python methods:
-
-.. code:: bash
+You can install with standard Python methods::
 
    pip install gevent-socketio
 
-or from source:
-
-.. code:: bash
+or from source::
 
    git clone git://github.com/abourget/gevent-socketio.git
    cd gevent-socketio
    python setup.py install
 
-For development, run instead of ``install``:
-
-.. code:: bash
+For development, run instead of ``install``::
 
    python setup.py develop
 
-If you want to do all of that in a virtualenv, run:
-
-.. code:: bash
+If you want to do all of that in a virtualenv, run::
 
    virtualenv env
    . env/bin/activate
