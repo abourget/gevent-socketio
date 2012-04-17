@@ -23,7 +23,7 @@ class RoomsMixin(object):
     def _get_room_name(self, room):
         return self.ns_name + '_' + room
 
-    def emit_to_room(self, event, args, room):
+    def emit_to_room(self, room, event, *args):
         """This is sent to all in the room (in this particular Namespace)"""
         pkt = dict(type="event",
                    name=event,
