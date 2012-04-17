@@ -50,27 +50,27 @@ You can install with standard Python methods:
 
 .. code-block:: bash
 
-  pip install gevent-socketio
+   pip install gevent-socketio
 
 or from source:
 
 .. code-block:: bash
 
-  git clone git://github.com/abourget/gevent-socketio.git
-  cd gevent-socketio
-  python setup.py install
+   git clone git://github.com/abourget/gevent-socketio.git
+   cd gevent-socketio
+   python setup.py install
 
 For development, run instead of ``install``:
 
 .. code-block:: bash
 
-  python setup.py develop
+   python setup.py develop
 
 If you want to do all of that in a virtualenv, run:
 
 .. code-block:: bash
 
-  virtualenv env
-  . env/bin/activate
-  python setup.py develop   # or install
+   virtualenv env
+   . env/bin/activate
+   python setup.py develop   # or install
 
