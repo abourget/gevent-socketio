@@ -7,11 +7,17 @@ The day to day user doesn't need to use this module directly.
 
 The packets used internally (that might be exposed if you override the
 :meth:`~socketio.namespace.BaseNamespace.process_packet` method of
-your Namespace) are dictionaries, and are different from a message
-type to the other.  Here is a list of message types available in the
+your Namespace) are dictionaries, and are different from one message
+type to another.
+
+Internal packet types
+---------------------
+
+Here is a list of message types available in the
 Socket.IO protocol:
 
-The **connect** packet:
+The connect packet
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -39,6 +45,9 @@ This last message includes a **msg_id**, and asks for an ack, which you can
 reply to with ``self.ack()``, so that the client-side callback is fired upon
 reception.
 
+The json packet
+~~~~~~~~~~~~~~~
+
 The **json** packet is like a message, with no name (unlike events) but with
 structure JSON data attached.  It is automatically decoded by gevent-socketio.
 
@@ -56,6 +65,8 @@ structure JSON data attached.  It is automatically decoded by gevent-socketio.
 
 The same ``ack`` mechanics also apply for the ``json`` packet.
 
+The event packet
+~~~~~~~~~~~~~~~~
 
 The **event** packet holds a ``name`` and some ``args`` as a list.  They are
 taken as a list on the browser side (you can ``socket.emit("event", many,
@@ -80,6 +91,8 @@ The same ack semantics apply here as well.
 [INSERT: mark the difference between when YOU create the packet, and when
 you receive it, and what you must do with it according to different ack values]
 
+The heartbeat packet
+~~~~~~~~~~~~~~~~~~~~
 
 The **heartbeat** packet just marks the connection as alive for another amount
 of time.
@@ -161,6 +174,10 @@ arguments to the saved callback on the client side:
    "args": ['woot', 'wa']}
 
 To learn more, see the `test_packet.py <https://github.com/abourget/gevent-socketio/blob/master/tests/test_packet.py>`_ test cases.  It also shows the serialization that happens on the wire.
+
+
+Other module members
+--------------------
 
 .. automodule:: socketio.packet
     :members:

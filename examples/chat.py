@@ -1,11 +1,11 @@
 from gevent import monkey; monkey.patch_all()
-from socketio import SocketIOServer, socketio_manage
+from socketio import socketio_manage
+from socketio.server import SocketIOServer
 from socketio.namespace import BaseNamespace
 from socketio.mixins import RoomsMixin, BroadcastMixin
 
 
 class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
-    
     def on_nickname(self, nickname):
         self.environ['nicknames'].append(nickname)
         self.socket.session = nickname
@@ -25,11 +25,12 @@ class Application(object):
 
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
-        environ['nicknames'] = [] 
+        environ['nicknames'] = []
 
         if not path:
             start_response('200 OK', [('Content-Type', 'text/html')])
-            return ['<h1>Welcome. Try the <a href="/chat.html">chat</a> example.</h1>']
+            return ['<h1>Welcome. '
+                'Try the <a href="/chat.html">chat</a> example.</h1>']
 
         if path in ['socket.io.js', 'chat.html', 'stylesheets/style.css']:
             try:
@@ -52,6 +53,7 @@ class Application(object):
         else:
             return not_found(start_response)
 
+
 def not_found(start_response):
     start_response('404 Not Found', [])
     return ['<h1>Not Found</h1>']
@@ -59,4 +61,5 @@ def not_found(start_response):
 
 if __name__ == '__main__':
     print 'Listening on port 8080 and on port 843 (flash policy server)'
-    SocketIOServer(('127.0.0.1', 8080), Application(), namespace="socket.io", policy_server=False).serve_forever()
+    SocketIOServer(('127.0.0.1', 8080), Application(),
+        namespace="socket.io", policy_server=False).serve_forever()
