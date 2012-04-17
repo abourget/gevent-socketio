@@ -21,14 +21,20 @@ class BaseNamespace(object):
       :linenos:
 
       def on_my_event(self, my_first_arg, my_second_arg):
-          print "This is a packet object", packet
-          print "This is a list of the arguments", args
+          print "This is the my_first_arg object", my_first_arg
+          print "This is the my_second_arg object", my_second_arg
 
       def on_my_second_event(self, whatever):
-          print "This holds the first arg that was passed", data
+          print "This holds the first arg that was passed", whatever
+
+    We can also access the full packet directly by making an event handler
+    that accepts a single argument named 'packet':
+
+    .. code-block:: python
+      :linenos:
 
       def on_third_event(self, packet):
-          print "This is the *full* packet", packet
+          print "The full packet", packet
           print "See the BaseNamespace::call_method() method for details"
     """
     def __init__(self, environ, ns_name, request=None):
@@ -163,14 +169,10 @@ class BaseNamespace(object):
 
     def process_event(self, packet):
         """This function dispatches ``event`` messages to the correct
-        functions. Override this function if you want to not dispatch messages
-        automatically to "on_event_name" methods.
-
-        If you override this function, none of the on_functions will get called
-        by default.
-
-        [MOVE TO DOCUMENTATION' around: recv_message, recv_json and
-         process_event]
+        functions. You should override this method only if you are not
+        satisfied with the automatic dispatching to
+        ``on_``-prefixed methods.  You could then implement your own dispatch.
+        See the source code for inspiration.
 
         To process events that have callbacks on the client side, you
         must define your event with a single parameter: ``packet``.
@@ -184,7 +186,6 @@ class BaseNamespace(object):
           def on_my_callback(self, packet):
               if 'ack' in packet':
                   self.emit('go_back', 'param1', id=packet['id'])
-
         """
         args = packet['args']
         name = packet['name']
@@ -302,10 +303,10 @@ class BaseNamespace(object):
         self.disconnect(silent=True)
 
     def recv_connect(self):
-        """The first time a client connection is open on a Namespace,
-        this gets called, and allows you to do boilerplate stuff for
-        the namespace, like connecting to rooms, broadcasting events
-        to others, doing authorization work, tweaking the ACLs to open
+        """Called the first time a client connection is open on a
+        Namespace. This allows you to do boilerplate stuff for
+        the namespace like connecting to rooms, broadcasting events
+        to others, doing authorization work, and tweaking the ACLs to open
         up the rest of the namespace (if it was closed at the
         beginning by having :meth:`get_initial_acl` return only
         ['recv_connect'])
@@ -318,8 +319,7 @@ class BaseNamespace(object):
     def recv_error(self, packet):
         """Override this function to handle the errors we get from the client.
 
-        You get the full packet in here, since it is not clear what you should
-        get otherwise [TODO: change this sentence, this doesn't help :P]
+        :param packet: the full packet.
         """
         pass
 

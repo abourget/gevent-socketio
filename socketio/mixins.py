@@ -1,8 +1,8 @@
 """
-You will find all sorts of Mixins in here, like implementation of Rooms, or
-Broadcast systems.
+These are general-purpose Mixins -- for use with Namespaces -- that are
+generally useful for most simple projects, e.g. Rooms, Broadcast.
 
-You can also implement your own.. take a look, it's pretty simple.
+You'll likely want to create your own Mixins.
 """
 
 
@@ -47,7 +47,7 @@ class BroadcastMixin(object):
     """
     def broadcast_event(self, event, *args):
         """
-        This is sent to all in the sockets (in this particular Namespace),
+        This is sent to all in the sockets in this particular Namespace,
         including itself.
         """
         pkt = dict(type="event",
@@ -60,7 +60,7 @@ class BroadcastMixin(object):
 
     def broadcast_event_not_me(self, event, *args):
         """
-        This is sent to all in the sockets (in this particular Namespace),
+        This is sent to all in the sockets in this particular Namespace,
         except itself.
         """
         pkt = dict(type="event",

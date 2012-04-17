@@ -5,17 +5,20 @@
 
 .. automodule:: socketio.namespace
 
-  .. autoclass:: BaseNamespace
+.. autoclass:: BaseNamespace
 
-     **Namespace initialization**
+
+Namespace initialization
+------------------------
 
      You can override this method:
 
-     .. automethod:: initialize
+     .. automethod:: BaseNamespace.initialize
 
-     **Properties**
+Namespace instance properties
+-----------------------------
 
-     .. attribute:: session
+     .. attribute:: BaseNamespace.session
 
        The :term:`session` is a simple ``dict`` that is created with
        each :class:`~socketio.virtsocket.Socket` instance, and is
@@ -23,18 +26,18 @@
        purpose store for any data you want to associated with an open
        :class:`~socketio.virtsocket.Socket`.
 
-     .. attribute:: request
+     .. attribute:: BaseNamespace.request
 
        This is the ``request`` object (or really, any object) that you
        have passed as the ``request`` parameter to the
        :func:`~socketio.socketio_manage` function.
 
-     .. attribute:: ns_name
+     .. attribute:: BaseNamespace.ns_name
 
        The name of the namespace, like ``/chat`` or the empty string,
        for the "global" namespace.
 
-     .. attribute:: environ
+     .. attribute:: BaseNamespace.environ
 
        The ``environ`` WSGI dictionary, as it was received upon
        reception of the **first** request that established the virtual
@@ -42,54 +45,57 @@
        the next polling, so beware when using cookie-based sessions
        (like Beaker).
 
-     .. attribute:: socket
+     .. attribute:: BaseNamespace.socket
 
        A reference to the :class:`~socketio.virtsocket.Socket`
        instance this namespace is attached to.
 
-     **Sending data**
+Sending data
+------------
 
      Functions to send data through the socket:
 
-     .. automethod:: emit
+     .. automethod:: BaseNamespace.emit
 
-     .. automethod:: send
+     .. automethod:: BaseNamespace.send
 
-     .. automethod:: error
+     .. automethod:: BaseNamespace.error
 
-     .. automethod:: disconnect
+     .. automethod:: BaseNamespace.disconnect
 
 
-     **Dealing with incoming data**
+Dealing with incoming data
+--------------------------
 
-     .. automethod:: process_event
+     .. automethod:: BaseNamespace.process_event
 
      You should override this method only if you are not satisfied with the
      automatic dispatching to ``on_``-prefixed methods.  You could then
      implement your own dispatch.  See the source code for inspiration.
 
-     .. automethod:: recv_connect
+     .. automethod:: BaseNamespace.recv_connect
 
-     .. automethod:: recv_message
+     .. automethod:: BaseNamespace.recv_message
 
-     .. automethod:: recv_json
+     .. automethod:: BaseNamespace.recv_json
 
-     .. automethod:: recv_error
+     .. automethod:: BaseNamespace.recv_error
 
-     .. automethod:: recv_disconnect
+     .. automethod:: BaseNamespace.recv_disconnect
 
 
-     **Process management**
+Process management
+------------------
 
      Managing the different callbacks, greenlets and tasks you spawn from
      this namespace:
 
-     .. automethod:: spawn
+     .. automethod:: BaseNamespace.spawn
 
-     .. automethod:: kill_local_jobs
+     .. automethod:: BaseNamespace.kill_local_jobs
 
-
-     **ACL system**
+ACL system
+----------
 
      The ACL system grants access to the different ``on_*()`` and
      ``recv_*()`` methods of your subclass.
@@ -121,28 +127,28 @@
      of the methods defined on your subclass, like: ``"on_my_event"`` or
      ``"recv_json"``.
 
-     .. automethod:: get_initial_acl
+     .. automethod:: BaseNamespace.get_initial_acl
 
-     .. automethod:: add_acl_method
+     .. automethod:: BaseNamespace.add_acl_method
 
-     .. automethod:: del_acl_method
+     .. automethod:: BaseNamespace.del_acl_method
 
-     .. automethod:: lift_acl_restrictions
+     .. automethod:: BaseNamespace.lift_acl_restrictions
 
-     .. automethod:: reset_acl
+     .. automethod:: BaseNamespace.reset_acl
 
      This function is used internally, but can be useful to the developer:
      
      .. automethod:: is_method_allowed
 
-
-     **Low-level methods**
+Low-level methods
+-----------------
 
      Packet dispatching methods. These functions are normally not overriden if
      you are satisfied with the normal dispatch behavior:     
 
-     .. automethod:: process_packet
+     .. automethod:: BaseNamespace.process_packet
      
-     .. automethod:: call_method_with_acl
+     .. automethod:: BaseNamespace.call_method_with_acl
 
-     .. automethod:: call_method
+     .. automethod:: BaseNamespace.call_method

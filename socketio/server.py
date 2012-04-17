@@ -16,6 +16,18 @@ class SocketIOServer(WSGIServer):
     """A WSGI Server with a resource that acts like an SocketIO."""
 
     def __init__(self, *args, **kwargs):
+        """
+        This is just like the standard WSGIServer __init__, except with a
+        few additional ``kwargs``:
+
+        :param namespace: The namespace to use. Defaults to the global
+            namespace.
+        :param transports: Optional list of transports to allow. List of
+            strings, each string should be one of
+            handler.SocketIOHandler.handler_types.
+        :param policy_server: Boolean describing whether or not to use the
+            Flash policy server.  Default True.
+        """
         self.sockets = {}
         if 'resource' in kwargs:
             print "DEPRECATION WARNING: use `namespace` instead of `resource`"
