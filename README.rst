@@ -27,20 +27,20 @@ Documentation and References
 
 You can read the renderered Sphinx docs at:
 
-  http://readthedocs.org/docs/gevent-socketio/en/latest/
+ * http://readthedocs.org/docs/gevent-socketio/en/latest/
 
 Discussion and questions happen on the mailing list:
 
-  https://groups.google.com/forum/#!forum/gevent-socketio
+ * https://groups.google.com/forum/#!forum/gevent-socketio
 
 or in the Github issue tracking:
 
-  https://github.com/abourget/gevent-socketio/issues
+ * https://github.com/abourget/gevent-socketio/issues
 
 You can also contact the maintainer:
 
-  https://twitter.com/#!/bourgetalexndre
-  https://plus.google.com/109333785244622657612
+ * https://twitter.com/#!/bourgetalexndre
+ * https://plus.google.com/109333785244622657612
 
 
 Installation
