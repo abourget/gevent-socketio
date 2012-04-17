@@ -1,0 +1,37 @@
+
+
+New in 0.3.5-beta (since 0.3)
+-----------------------------
+
+* Official repository now on Github: https://github.com/abourget/gevent-socketio
+* Official documentation now on ReadTheDocs: http://readthedocs.org/docs/gevent-socketio/en/latest/
+* Largely improved documentation
+* Added tests for packets, namespace and socket
+* Added several examples (chatter2, testapp, chatter3, chatter4, cross-origin), fixed up the chat.py example.
+* Added the ``initialize()`` method to namespaces.
+* Added ``reset_acl()`` on namespaces.
+* Renamed ``call_method`` to ``call_method_with_acl`` on namespaces.
+* Added a Gunicorn worker (GeventSocketIOWorker) and docs
+* Implemented the 'ack' callback functions, on both the Python and Javascript sides (when you emit with a callback function as the last argument in javascript, or with keyword ``callback=function`` in Python).
+* Added support for disconnection clean-up (``disconnect()`` on namespaces)
+* Added a ``session`` dict to both Socket and Namespace objects (a session is unique to a Socket, but provided on the Namespace for convenience), which can hold any session data.
+* Improved the RoomsMixin, changed signature of the "emit_to_room" function.
+* Improved the BroadcastMixin, implemented the broadcast_event_not_me()
+* Added XHR access control headers on handshake
+
+The new release is marked as beta, but is still pretty stable and can be used.  All the major features are there, but we might want to change some small bits here and there, for clarity or conciseness.
+
+
+New in 0.3 (since previous releases)
+------------------------------------
+
+* Implemented the Socket.IO 0.7+ protocol.
+* Added namespaces and a way to catch events and dispatch them
+* Added documentation
+* Works on most web frameworks where very small integration is required
+* ..woah, so much has changed..
+
+Don't use pyramid_socketio anymore, as most of the concepts have been
+moved to gevent-socketio.  Instead of using the old django-socketio
+package with single function dispatchs, use gevent-socketio directly.
+See examples and documentation for integration.
