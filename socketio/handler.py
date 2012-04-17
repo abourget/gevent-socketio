@@ -7,6 +7,7 @@ from gevent.pywsgi import WSGIHandler
 from socketio import transports
 from geventwebsocket.handler import WebSocketHandler
 
+
 class SocketIOHandler(WSGIHandler):
     RE_REQUEST_URL = re.compile(r"""
         ^/(?P<namespace>[^/]+)
@@ -35,14 +36,14 @@ class SocketIOHandler(WSGIHandler):
         if self.server.transports:
             self.transports = self.server.transports
             if not set(self.transports).issubset(set(self.handler_types)):
-                raise Exception("transports should be elements of: %s" % (self.handler_types.keys()))
+                raise Exception("transports should be elements of: %s" %
+                    (self.handler_types.keys()))
 
     def _do_handshake(self, tokens):
         if tokens["namespace"] != self.server.namespace:
             self.log_error("Namespace mismatch")
         else:
             socket = self.server.get_socket()
-            #data = "%s:15:10:jsonp-polling,htmlfile" % (socket.sessid,)
             data = "%s:15:10:%s" % (socket.sessid, ",".join(self.transports))
             self.write_smart(data)
 
@@ -109,7 +110,7 @@ class SocketIOHandler(WSGIHandler):
         if issubclass(transport, (transports.WebsocketTransport,
                                   transports.FlashSocketTransport)):
             self.__class__ = WebSocketHandler
-            self.prevent_wsgi_call = True # thank you
+            self.prevent_wsgi_call = True  # thank you
             # TODO: any errors, treat them ??
             self.handle_one_response()
 
@@ -120,8 +121,8 @@ class SocketIOHandler(WSGIHandler):
         self.transport = transport(self)
 
         jobs = self.transport.connect(socket, request_method)
-        # Keep track of those jobs (reading, writing and heartbeat jobs) so that
-        # we can kill them later with Socket.kill()
+        # Keep track of those jobs (reading, writing and heartbeat jobs) so
+        # that we can kill them later with Socket.kill()
         socket.jobs.extend(jobs)
 
         try:
@@ -136,7 +137,7 @@ class SocketIOHandler(WSGIHandler):
         except:
             self.handle_error(*sys.exc_info())
 
-        # DOUBLE-CHECK: do we need to joinall here ?
+        # TODO DOUBLE-CHECK: do we need to joinall here ?
         gevent.joinall(jobs)
 
     def handle_bad_request(self):

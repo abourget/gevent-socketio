@@ -5,14 +5,17 @@ from chatter2.views import socketio_service
 from chatter2.views import index
 from chatter2.models import DBSession
 
+
 def simple_route(config, name, url, fn):
-    """ Function to simplify creating routes in pyramid 
-        Takes the pyramid configuration, name of the route, url, and view
-        function 
+    """
+    Function to simplify creating routes in pyramid
+    Takes the pyramid configuration, name of the route, url, and view
+    function.
     """
     config.add_route(name, url)
     config.add_view(fn, route_name=name,
             renderer="chatter2:templates/%s.mako" % name)
+
 
 def main(global_config, **settings):
     config = Configurator()

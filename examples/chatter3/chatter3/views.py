@@ -5,9 +5,11 @@ from json import dumps
 from socketio.namespace import BaseNamespace
 from socketio import socketio_manage
 
+
 def index(request):
     """ Base view to load our template """
     return {}
+
 
 class ChatNamespace(BaseNamespace):
     def listener(self):
@@ -27,6 +29,7 @@ class ChatNamespace(BaseNamespace):
     def on_chat(self, msg):
         r = redis.Redis()
         r.publish('chat', dumps(msg))
+
 
 def socketio_service(request):
     retval = socketio_manage(request.environ,

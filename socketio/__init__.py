@@ -5,11 +5,12 @@ import gevent
 
 log = logging.getLogger(__name__)
 
+
 def socketio_manage(environ, namespaces, request=None, error_handler=None):
     """Main SocketIO management function, call from within your Framework of
     choice's view.
 
-    The ``environ`` variable is the WSGI ``environ``.  It is used to extract the
+    The ``environ`` variable is the WSGI ``environ``.  It is used to extract
     Socket object from the underlying server (as the 'socketio' key), and will
     be attached to both the ``Socket`` and ``Namespace`` objects.
 
@@ -41,10 +42,9 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None):
     This is a simple example using Pyramid:
 
     .. code-block:: python
-    
+
       def my_view(request):
           socketio_manage(request.environ, {'': GlobalNamespace}, request)
-
     NOTE: You must understand that this function is going to be called
     *only once* per socket opening, *even though* you are using a long
     polling mechanism.  The subsequent calls (for long polling) will

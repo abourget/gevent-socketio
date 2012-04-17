@@ -7,15 +7,18 @@ from gunicorn.workers.ggevent import GeventPyWSGIWorker
 from socketio.server import SocketIOServer
 from socketio.handler import SocketIOHandler
 
+
 class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
     """ The base gunicorn worker class """
     def run(self):
         self.socket.setblocking(1)
         pool = Pool(self.worker_connections)
-        self.server_class.base_env['wsgi.multiprocess'] = (self.cfg.workers > 1)
-        server = self.server_class(self.socket, application=self.wsgi,
-                        spawn=pool, handler_class=self.wsgi_handler,
-                        namespace=self.namespace, policy_server=self.policy_server)
+        self.server_class.base_env['wsgi.multiprocess'] = \
+            self.cfg.workers > 1
+        server = self.server_class(
+            self.socket, application=self.wsgi,
+            spawn=pool, handler_class=self.wsgi_handler,
+            namespace=self.namespace, policy_server=self.policy_server)
         server.start()
         try:
             while self.alive:
@@ -37,6 +40,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
         except:
             pass
 
+
 class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     """
     Default gunicorn worker utilizing gevent
@@ -46,8 +50,8 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     """
     server_class = SocketIOServer
     wsgi_handler = SocketIOHandler
-    #we need to define a namespace for the server, it would be nice if this was
-    #a configuration option, will probably end up how this implemented, for now this
-    #is just a proof of concept to make sure this will work
+    # We need to define a namespace for the server, it would be nice if this
+    # was a configuration option, will probably end up how this implemented,
+    # for now this is just a proof of concept to make sure this will work
     namespace = 'socket.io'
-    policy_server = False #don't run the flash policy server
+    policy_server = False  # Don't run the flash policy server
