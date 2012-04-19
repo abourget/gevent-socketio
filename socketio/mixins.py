@@ -33,7 +33,7 @@ class RoomsMixin(object):
         for sessid, socket in self.socket.server.sockets.iteritems():
             if 'rooms' not in socket.session:
                 continue
-            if room_name in socket.session['rooms']:
+            if room_name in socket.session['rooms'] and self.socket != socket:
                 socket.send_packet(pkt)
 
 
