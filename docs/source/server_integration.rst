@@ -27,7 +27,7 @@ For paster, you just have to define the configuration like this:
     host = 0.0.0.0
     port = 6543
     workers = 4
-    worker_class = socketio.gunicorn.GeventSocketIOWorker
+    worker_class = socketio.sgunicorn.GeventSocketIOWorker
 
 pyramid's pserve
 ----------------
