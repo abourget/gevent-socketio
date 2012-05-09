@@ -24,6 +24,9 @@
     <button id="b5">Test 5</button>
     <button id="b6">Test 6</button>
     <button id="b7">Test 7</button>
+    <button id="rtc_button">Send WebRTC invitation</button>
+    <video id="rtc_video"></video>
+    <video id="rtc_remote_video"></video>
   </div>
   </body>
 </html>

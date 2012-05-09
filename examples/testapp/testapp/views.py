@@ -3,6 +3,7 @@ import gevent
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socketio.mixins import RoomsMixin, BroadcastMixin
+from gevent import socket
 
 def index(request):
     """ Base view to load our template """
@@ -47,8 +48,8 @@ There is a second way to ask for an ack, sending a packet like this:
  id: 1,
  ack: 'data',
  endpoint: '',
- name: 'tobi',
- args: []
+ name: 'chat',
+ args: ['', '']
 }
 
 {type: 'json',
@@ -124,6 +125,11 @@ class ChatIONamespace(BaseNamespace, RoomsMixin):
         self.emit('callmeback', 'this is a first param',
                   'this is the last param', callback=cb2)
 
+    def on_rtc_invite(self, sdp):
+        print "Got an RTC invite, now pushing to others..."
+        self.emit_to_room('room1', 'rtc_invite', self.session['nickname'],
+                          sdp)
+        
     def recv_connect(self):
         self.session['nickname'] = 'guest123'
         self.join('room1')
