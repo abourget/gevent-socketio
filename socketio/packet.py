@@ -72,13 +72,14 @@ def encode(data):
         if msg == '3':
             payload = data['data']
         if msg == '4':
-            payload = json.dumps(data['data'], separators=(',', ':'))
+            payload = json.dumps(data['data'], separators=(',', ':'),
+                                 **json_decimal_args)
         if msg == '5':
             d = {}
             d['name'] = data['name']
             if 'args' in data and data['args'] != []:
                 d['args'] = data['args']
-            payload = json.dumps(d, separators=(',', ':'))
+            payload = json.dumps(d, separators=(',', ':'), **json_decimal_args)
         if 'id' in data:
             msg += ':' + str(data['id'])
             if data['ack'] == 'data':
@@ -97,7 +98,8 @@ def encode(data):
         # '6:::' [id] '+' [data]
         msg += '::' + data.get('endpoint', '') + ':' + str(data['ackId'])
         if 'args' in data and data['args'] != []:
-            msg += '+' + json.dumps(data['args'], separators=(',', ':'))
+            msg += '+' + json.dumps(data['args'], separators=(',', ':'),
+                                    **json_decimal_args)
 
     elif msg == '7':
         # '7::' [endpoint] ':' [reason] '+' [advice]
