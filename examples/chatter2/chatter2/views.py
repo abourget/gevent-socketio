@@ -1,5 +1,6 @@
 from socketio.namespace import BaseNamespace
 from socketio import socketio_manage
+from socketio.mixins import BroadcastMixin
 
 
 def index(request):
@@ -7,9 +8,9 @@ def index(request):
     return {}
 
 
-class NamedUsersRoomsMixin(object):
+class NamedUsersRoomsMixin(BroadcastMixin):
     def __init__(self, *args, **kwargs):
-        super(NamedUsersRoomsMixin).__init__(self, *args, **kwargs)
+        super(NamedUsersRoomsMixin, self).__init__(*args, **kwargs)
         if 'rooms' not in self.session:
             self.session['rooms'] = set()  # a set of simple strings
             self.session['nickname'] = 'guest123'
