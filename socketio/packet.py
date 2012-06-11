@@ -49,7 +49,6 @@ def encode(data):
     """
     Encode an attribute dict into a byte string.
     """
-    payload = ''
     msg = str(MSG_TYPES[data['type']])
 
     if msg in ['0', '1']:
@@ -71,27 +70,22 @@ def encode(data):
         # socket.io, but by the user instead.
         if msg == '3':
             payload = data['data']
-        if msg == '4':
+        elif msg == '4':
             payload = json.dumps(data['data'], separators=(',', ':'))
-        if msg == '5':
-            d = {}
-            d['name'] = data['name']
+        elif msg == '5':
+            d = { 'name': data['name'] }
             if 'args' in data and data['args'] != []:
                 d['args'] = data['args']
             payload = json.dumps(d, separators=(',', ':'))
-        if 'id' in data:
-            msg += ':' + str(data['id'])
-            if data['ack'] == 'data':
-                msg += '+'
-            msg += ':'
-        else:
-            msg += '::'
-        if 'endpoint' not in data:
-            data['endpoint'] = ''
-        if payload != '':
-            msg += data['endpoint'] + ':' + payload
-        else:
-            msg += data['endpoint']
+        msg_id = str(data.get('id',''))
+        if msg_id is None:
+            msg_id = ''
+        if data.get('ack',None) == 'data':
+            msg_id += '+'
+        endpoint = data.get('endpoint','')
+        if endpoint is None:
+            endpoint = ''
+        msg = ':'.join((msg, msg_id, endpoint, payload))
 
     elif msg == '6':
         # '6:::' [id] '+' [data]
@@ -121,9 +115,8 @@ def decode(rawstr):
     decoded_msg = {}
     split_data = rawstr.split(":", 3)
     msg_type = split_data[0]
-    msg_id = split_data[1]
-    endpoint = split_data[2]
-
+    msg_id = split_data[1] if len(split_data)>1 else ''
+    endpoint = split_data[2] if len(split_data)>2 else ''
     data = ''
 
     if msg_id != '':
