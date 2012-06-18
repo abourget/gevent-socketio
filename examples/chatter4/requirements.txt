@@ -2,4 +2,5 @@ pyramid
 gevent
 gevent-socketio
 pyramid_socketio
+SQLAlchemy
 redis
