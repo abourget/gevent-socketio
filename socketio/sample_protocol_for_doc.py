@@ -258,9 +258,9 @@ class GlobalNamespace(BaseNamespace):
 
 def auth_method(handshake_packet):
     """Something"""
-    handshake_packet.query
-    handshake_packet.method  # POST, GET, OPTIONS
-    handshake_packet.
+    #handshake_packet.query
+    #handshake_packet.method  # POST, GET, OPTIONS
+    #handshake_packet.
 
     # do things
 
