@@ -34,9 +34,10 @@ class SocketIOServer(WSGIServer):
         self.namespace = kwargs.pop('resource', kwargs.pop('namespace',
                                                            'socket.io'))
         self.transports = kwargs.pop('transports', None)
+        self.policytuple = kwargs.pop('policyserver', (args[0], 843))
 
         if kwargs.pop('policy_server', True):
-            self.policy_server = FlashPolicyServer()
+            self.policy_server = FlashPolicyServer(self.policytuple)
         else:
             self.policy_server = None
 
