@@ -1,9 +1,11 @@
 from gevent.server import StreamServer
+import socket
 
 __all__ = ['FlashPolicyServer']
 
 
 class FlashPolicyServer(StreamServer):
+    policyrequest = "<policy-file-request/>"
     policy = """<?xml version="1.0"?><!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>"""
 
@@ -17,8 +19,6 @@ class FlashPolicyServer(StreamServer):
         sock.settimeout(3)
         try:
             # try to receive at most 128 bytes (`POLICYREQUEST` is shorter)
-            # Interestingly if we dont do this and we write to the spcket directly
-            # I am getting strange errors.
             input = sock.recv(128)
             if input.startswith(FlashPolicyServer.policyrequest):
                 sock.sendall(FlashPolicyServer.policy)
