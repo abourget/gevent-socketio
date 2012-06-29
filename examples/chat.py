@@ -35,7 +35,7 @@ class Application(object):
             return ['<h1>Welcome. '
                 'Try the <a href="/chat.html">chat</a> example.</h1>']
 
-        if path in ['socket.io.js', 'chat.html', 'stylesheets/style.css']:
+        if path in ['socket.io.js', 'chat.html', 'stylesheets/style.css', 'WebSocketMain.swf']:
             try:
                 data = open(path).read()
             except Exception:
@@ -45,6 +45,8 @@ class Application(object):
                 content_type = "text/javascript"
             elif path.endswith(".css"):
                 content_type = "text/css"
+            elif path.endswith(".swf"):
+                content_type = "application/x-shockwave-flash"
             else:
                 content_type = "text/html"
 
@@ -64,5 +66,6 @@ def not_found(start_response):
 
 if __name__ == '__main__':
     print 'Listening on port 8080 and on port 843 (flash policy server)'
-    SocketIOServer(('127.0.0.1', 8080), Application(),
-        namespace="socket.io", policy_server=False).serve_forever()
+    SocketIOServer(('0.0.0.0', 8080), Application(),
+        namespace="socket.io", policy_server=True, 
+        policy_listener=('0.0.0.0', 843)).serve_forever()

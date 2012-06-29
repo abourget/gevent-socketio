@@ -36,7 +36,8 @@ class SocketIOServer(WSGIServer):
         self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):
-            self.policy_server = FlashPolicyServer()
+            policylistener = kwargs.pop('policy_listener', (args[0][0], 843))
+            self.policy_server = FlashPolicyServer(policylistener)
         else:
             self.policy_server = None
 
