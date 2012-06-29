@@ -26,6 +26,9 @@ class SocketIOServer(WSGIServer):
             handler.SocketIOHandler.handler_types.
         :param policy_server: Boolean describing whether or not to use the
             Flash policy server.  Default True.
+        :param policy_listener : A tuple containing (host, port) for the 
+            policy server.  This is optional and used only if policy server 
+            is set to true.  The default value is 0.0.0.0:843
         """
         self.sockets = {}
         self.namespace = kwargs.pop('resource', 'socket.io')
