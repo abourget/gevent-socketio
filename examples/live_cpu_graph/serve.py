@@ -19,7 +19,7 @@ class CPUNamespace(BaseNamespace, BroadcastMixin):
                                (sum(vals) - sum(prev)))
                     self.emit('cpu_data', {'point': percent})
                 prev = vals
-                gevent.sleep(0.5)
+                gevent.sleep(0.1)
         self.spawn(sendcpu)
 
 
