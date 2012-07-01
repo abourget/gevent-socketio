@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link href="static/css/style.css" rel="stylesheet">
+    <script type="text/javascript" src="static/jquery-1.6.1.min.js"></script>
+    <script type="text/javascript" src="static/jquery.flot.js"></script>
+    <script type="text/javascript" src="static/socket.io.js"></script>
+    <script>
+
+WEB_SOCKET_SWF_LOCATION = "/static/WebSocketMain.swf";
+WEB_SOCKET_DEBUG = true;
+
+// socket.io specific code
+var socket = io.connect('/cpu');
+
+socket.on('connect', function () {
+    socket.emit('connect', 'wtf');
+});
+
+var d1 = [];
+
+socket.on('cpu_data', function(data) {
+    console.log(data);
+    d1.push([d1.length, data.point]);
+    $.plot($('#graph'), [{label: "CPU Load", data: d1}]);
+});
+
+  </script>
+  </head>
+<body>
+  <div id="graph" style="width: 700px; height: 400px;"></div>
+</body>
+</html>
