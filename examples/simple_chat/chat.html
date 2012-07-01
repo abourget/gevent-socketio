@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link href="stylesheets/style.css" rel="stylesheet">
-    <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.1.min.js">
-    </script><script type="text/javascript" src="socket.io.js"></script>
+    <link href="static/css/style.css" rel="stylesheet">
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.1.min.js"></script>
+    <script type="text/javascript" src="static/socket.io.js"></script>
     <script>    
 
-
-WEB_SOCKET_SWF_LOCATION = "/WebSocketMain.swf";
+WEB_SOCKET_SWF_LOCATION = "/static/WebSocketMain.swf";
 WEB_SOCKET_DEBUG = true;
 
 // socket.io specific code
@@ -46,7 +45,7 @@ function message (from, msg) {
     $('#lines').append($('<p>').append($('<b>').text(from), msg));
 }
 
-// dom manipulation
+// DOM manipulation
 $(function () {
     $('#set-nickname').submit(function (ev) {
         socket.emit('nickname', $('#nick').val(), function (set) {
