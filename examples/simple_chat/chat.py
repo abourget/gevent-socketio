@@ -35,7 +35,7 @@ class Application(object):
             return ['<h1>Welcome. '
                 'Try the <a href="/chat.html">chat</a> example.</h1>']
 
-        if path in ['socket.io.js', 'chat.html', 'stylesheets/style.css', 'WebSocketMain.swf']:
+        if path.startswith('static/') or path == 'chat.html':
             try:
                 data = open(path).read()
             except Exception:
