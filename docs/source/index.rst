@@ -153,10 +153,11 @@ The ``gevent-socketio`` holds several examples:
 
   https://github.com/abourget/gevent-socketio/tree/master/examples
 
-  * ``chat.py`` is a bare-bone WSGI app with a minimal socketio integration
-  * ``chatter2`` is a simple chat application, showing off the minimal setup
-  * ``chatter3`` is an app using socket.io, backbone.js and redis for pubsub
-  * ``chatter4`` is ``chatter3`` with persistence added.
+  * ``simple_chat`` is a bare-bone WSGI app with a minimal socketio integration
+  * ``simple_pyramid_chat`` is a simple chat application built on Pyramid
+  * ``pyramid_backbone_redis_chat`` is a Pyramid app using backbone.js and redis for pubsub
+  * ``pyramid_backbone_redis_chat_persistence`` is a Pyramid app using
+  backbone.js, redis for pubsub and features persistence
   * ``testapp`` is the app we use to test the different features, so there
                 are a couple of more advanced use-cases demonstrated there
 
