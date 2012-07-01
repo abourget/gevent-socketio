@@ -16,7 +16,8 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
         self.join('main_room')
 
     def on_user_message(self, msg):
-        self.emit_to_room('main_room', 'msg_to_room', self.socket.session['nickname'], msg)
+        self.emit_to_room('main_room', 'msg_to_room',
+            self.socket.session['nickname'], msg)
 
     def recv_message(self, message):
         print "PING!!!", message
@@ -67,5 +68,5 @@ def not_found(start_response):
 if __name__ == '__main__':
     print 'Listening on port 8080 and on port 843 (flash policy server)'
     SocketIOServer(('0.0.0.0', 8080), Application(),
-        namespace="socket.io", policy_server=True, 
+        namespace="socket.io", policy_server=True,
         policy_listener=('0.0.0.0', 843)).serve_forever()

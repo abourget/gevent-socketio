@@ -45,7 +45,7 @@ function message (from, msg) {
     $('#lines').append($('<p>').append($('<b>').text(from), msg));
 }
 
-// dom manipulation
+// DOM manipulation
 $(function () {
     $('#set-nickname').submit(function (ev) {
         socket.emit('nickname', $('#nick').val(), function (set) {
