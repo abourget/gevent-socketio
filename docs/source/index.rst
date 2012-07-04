@@ -287,6 +287,7 @@ PyCon 2012 and the Sprints, for bringing this project up to version
 Current maintainer:
 
  * Alexandre Bourget
+ * John Anderson
 
 Contributors:
 
@@ -295,7 +296,6 @@ Contributors:
  * Lon Ingram
  * Eugene Baumstein
  * Alexandre Bourget
- * John Anderson
  * Sébastien Béal
  * jpellerin (JP)
  * Philip Neustrom
