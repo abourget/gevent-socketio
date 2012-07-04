@@ -123,6 +123,7 @@ class BaseNamespace(object):
         self.allowed_methods = self.get_initial_acl()
 
     def process_packet(self, packet):
+        import pdb; pdb.set_trace()
         """If you override this, NONE of the functions in this class
         will be called.  It is responsible for dispatching to
         :meth:`process_event` (which in turn calls ``on_*()`` and

@@ -1,4 +1,7 @@
-/*! Socket.IO.js build:0.9.1-1, development. Copyright(c) 2011 LearnBoost <dev@learnboost.com> MIT Licensed */
+/*! Socket.IO.js build:0.9.6, development. Copyright(c) 2011 LearnBoost <dev@learnboost.com> MIT Licensed */
+
+var io = ('undefined' === typeof module ? {} : module.exports);
+(function() {
 
 /**
  * socket.io
@@ -22,7 +25,7 @@
    * @api public
    */
 
-  io.version = '0.9.1-1';
+  io.version = '0.9.6';
 
   /**
    * Protocol implemented.
@@ -452,6 +455,15 @@
 
   util.ua.webkit = 'undefined' != typeof navigator
     && /webkit/i.test(navigator.userAgent);
+
+   /**
+   * Detect iPad/iPhone/iPod.
+   *
+   * @api public
+   */
+
+  util.ua.iDevice = 'undefined' != typeof navigator
+      && /iPad|iPhone|iPod/i.test(navigator.userAgent);
 
 })('undefined' != typeof io ? io : module.exports, this);
 
@@ -1304,6 +1316,10 @@
       this.onConnect();
     }
 
+    if (packet.type == 'error' && packet.advice == 'reconnect') {
+      this.open = false;
+    }
+
     this.socket.onPacket(packet);
 
     return this;
@@ -1517,7 +1533,7 @@
         (!this.isXDomain() || io.util.ua.hasCORS)) {
       var self = this;
 
-      io.util.on(global, 'beforeunload', function () {
+      io.util.on(global, 'unload', function () {
         self.disconnectSync();
       }, false);
     }
@@ -1584,6 +1600,7 @@
 
     function complete (data) {
       if (data instanceof Error) {
+        self.connecting = false;
         self.onError(data.message);
       } else {
         fn.apply(null, data.split(':'));
@@ -1621,6 +1638,7 @@
           if (xhr.status == 200) {
             complete(xhr.responseText);
           } else {
+            self.connecting = false;            
             !self.reconnecting && self.onError(xhr.responseText);
           }
         }
@@ -1663,15 +1681,16 @@
     }
 
     var self = this;
-
+    self.connecting = true;
+    
     this.handshake(function (sid, heartbeat, close, transports) {
       self.sessionid = sid;
       self.closeTimeout = close * 1000;
       self.heartbeatTimeout = heartbeat * 1000;
-      self.transports = io.util.intersect(
+      self.transports = transports ? io.util.intersect(
           transports.split(',')
         , self.options.transports
-      );
+      ) : self.options.transports;
 
       self.setHeartbeatTimeout();
 
@@ -1714,7 +1733,7 @@
         });
       }
 
-      connect();
+      connect(self.transports);
 
       self.once('connect', function (){
         clearTimeout(self.connectTimeoutTimer);
@@ -2343,10 +2362,23 @@
    * @api public
    */
 
-  WS.prototype.send = function (data) {
-    this.websocket.send(data);
-    return this;
-  };
+  // Do to a bug in the current IDevices browser, we need to wrap the send in a 
+  // setTimeout, when they resume from sleeping the browser will crash if 
+  // we don't allow the browser time to detect the socket has been closed
+  if (io.util.ua.iDevice) {
+    WS.prototype.send = function (data) {
+      var self = this;
+      setTimeout(function() {
+         self.websocket.send(data);
+      },0);
+      return this;
+    };
+  } else {
+    WS.prototype.send = function (data) {
+      this.websocket.send(data);
+      return this;
+    };
+  }
 
   /**
    * Payload
@@ -2991,7 +3023,7 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
    *
    * @api public
    */
-  
+
   exports.XHR = XHR;
 
   /**
@@ -3108,7 +3140,7 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
   /**
    * Disconnects the established `XHR` connection.
    *
-   * @returns {Transport} 
+   * @returns {Transport}
    * @api public
    */
 
@@ -3166,7 +3198,11 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
 
   XHR.check = function (socket, xdomain) {
     try {
-      if (io.util.request(xdomain)) {
+      var request = io.util.request(xdomain),
+          usesXDomReq = (global.XDomainRequest && request instanceof XDomainRequest),
+          socketProtocol = (socket && socket.options && socket.options.secure ? 'https:' : 'http:'),
+          isXProtocol = (socketProtocol != global.location.protocol);
+      if (request && !(usesXDomReq && isXProtocol)) {
         return true;
       }
     } catch(e) {}
@@ -3175,8 +3211,8 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
   };
 
   /**
-   * Check if the XHR transport supports corss domain requests.
-   * 
+   * Check if the XHR transport supports cross domain requests.
+   *
    * @returns {Boolean}
    * @api public
    */
@@ -3609,8 +3645,9 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
 
       form.className = 'socketio';
       form.style.position = 'absolute';
-      form.style.top = '-1000px';
-      form.style.left = '-1000px';
+      form.style.top = '0px';
+      form.style.left = '0px';
+      form.style.display = 'none';
       form.target = id;
       form.method = 'POST';
       form.setAttribute('accept-charset', 'utf-8');
@@ -3777,3 +3814,5 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
   , 'undefined' != typeof io ? io : module.parent.exports
   , this
 );
+
+})();

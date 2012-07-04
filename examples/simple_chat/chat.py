@@ -22,6 +22,9 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
     def recv_message(self, message):
         print "PING!!!", message
 
+    def recv_disconnect(self):
+        print "DISCONNECTED!!"
+
 
 class Application(object):
     def __init__(self):
