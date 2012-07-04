@@ -251,6 +251,12 @@ class TestDecodeMessage(TestCase):
                                            'data': {u'a': u'b'}})
     def test_decode_event(self):
         """decoding an event packet """
+        decoded_message = decode('5:::{"name":"woot", "args": ["foo"]}')
+        self.assertEqual(decoded_message, {'type': 'event',
+                                           'name': 'woot',
+                                           'endpoint': '',
+                                           'args': ["foo"]})
+
         decoded_message = decode('5:::{"name":"woot"}')
         self.assertEqual(decoded_message, {'type': 'event',
                                            'name': 'woot',
