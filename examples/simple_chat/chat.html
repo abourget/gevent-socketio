@@ -2,7 +2,7 @@
 <html>
   <head>
     <link href="static/css/style.css" rel="stylesheet">
-    <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.1.min.js"></script>
+    <script type="text/javascript" src="static/jquery-1.6.1.min.js"></script>
     <script type="text/javascript" src="static/socket.io.js"></script>
     <script>    
 
@@ -23,11 +23,12 @@ socket.on('announcement', function (msg) {
 socket.on('nicknames', function (nicknames) {
     $('#nicknames').empty().append($('<span>Online: </span>'));
     for (var i in nicknames) {
-	  $().append($('<b>').text(nicknames[i]));
+	  $('#nicknames').append($('<b>').text(nicknames[i]));
     }
 });
 
 socket.on('msg_to_room', message);
+
 socket.on('reconnect', function () {
     $('#lines').remove();
     message('System', 'Reconnected to the server');
@@ -85,7 +86,7 @@ $(function () {
       <div class="wrap">Connecting to socket.io server</div>
     </div>
     <div id="messages">
-      <div id="nicknames"></div>
+      <div id="nicknames"><span>Online:</span></div>
       <div id="lines"></div>
     </div>
     <form id="send-message">
