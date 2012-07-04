@@ -191,6 +191,20 @@ class TestBaseNamespace(TestCase):
             raise Exception("""We should not be able to delete an acl that
             doesn't exist""")
 
+    def test_allowed_event_name_regex(self):
+        pkt = {'type': 'event',
+               'name': '$foo',
+               'endpoint': '/chat',
+               'args': []}
+
+        self.ns.process_packet(pkt)
+        args = ['unallowed_event_name',
+                'name must only contains alpha numerical characters',
+                ]
+        kwargs = dict(msg_id=None, endpoint='/woot', quiet=False)
+
+        self.environ['socketio'].error.assert_called_with(*args, **kwargs)
+
 class TestChatNamespace(TestCase):
     def setUp(self):
         server = MockSocketIOServer()
