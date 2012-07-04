@@ -269,7 +269,8 @@ class TestDecodeMessage(TestCase):
     def test_decode_event_error(self):
         """decoding an event packet """
         decoded_message = decode('5:::')
-        self.assertEqual(decoded_message, {'type': 'event',
+        self.assertEqual(decoded_message, {'args': [],
+                                            'type': 'event',
                                            'endpoint': '',
                                            })
 
