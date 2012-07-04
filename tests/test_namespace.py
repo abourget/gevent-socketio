@@ -4,7 +4,6 @@ from socketio.namespace import BaseNamespace
 from socketio.virtsocket import Socket
 from mock import MagicMock
 
-
 class MockSocketIOServer(object):
     """Mock a SocketIO server"""
     def __init__(self, *args, **kwargs):
@@ -40,6 +39,13 @@ class ChatNamespace(BaseNamespace):
     def on_baz(foo, bar, baz):
         return 'c'
 
+class GlobalNamespace(BaseNamespace):
+    def on_woot(self):
+        return ''
+
+    def on_tobi(self):
+        return ''
+
 class TestBaseNamespace(TestCase):
     def setUp(self):
         server = MockSocketIOServer()
@@ -47,7 +53,7 @@ class TestBaseNamespace(TestCase):
         socket = MockSocket(server)
         socket.error = MagicMock()
         self.environ['socketio'] = socket
-        self.ns = BaseNamespace(self.environ, '/woot')
+        self.ns = GlobalNamespace(self.environ, '/woot')
 
     def test_process_packet_disconnect(self):
         pkt = {'type': 'disconnect',
@@ -147,6 +153,7 @@ class TestBaseNamespace(TestCase):
                'endpoint': '',
                'args': []}
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
     def test_process_packet_error(self):
         """processing error packet """
@@ -182,6 +189,7 @@ class TestBaseNamespace(TestCase):
                'data': '\n',
                'endpoint': ''}
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
     def test_del_acl_method(self):
         pkt = {'type': 'event',
@@ -237,6 +245,7 @@ class TestChatNamespace(TestCase):
                'endpoint': '/chat',
                'args': []}
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
     def test_blocked_event(self):
         pkt = {'type': 'event',

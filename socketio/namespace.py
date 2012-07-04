@@ -141,6 +141,7 @@ class BaseNamespace(object):
         * on_*()
         """
         packet_type = packet['type']
+
         if packet_type == 'event':
             return self.process_event(packet)
         elif packet_type == 'message':
@@ -164,7 +165,7 @@ class BaseNamespace(object):
                 print "ERROR: Call to callback function failed", packet
         elif packet_type == 'disconnect':
             # Force a disconnect on the namespace.
-            self.disconnect(silent=True)
+            return self.call_method_with_acl('recv_disconnect', packet)
         else:
             print "Unprocessed packet", packet
         # TODO: manage the other packet types: disconnect
