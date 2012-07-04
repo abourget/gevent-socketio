@@ -41,7 +41,9 @@ class TestBaseNamespace(TestCase):
     def setUp(self):
         server = MockSocketIOServer()
         self.environ = {}
-        self.environ['socketio'] = MockSocket(server)
+        socket = MockSocket(server)
+        socket.error = MagicMock()
+        self.environ['socketio'] = socket
         self.ns = BaseNamespace(self.environ, '/woot')
 
     def test_process_packet_disconnect(self):
@@ -167,6 +169,27 @@ class TestBaseNamespace(TestCase):
                'data': '\n',
                'endpoint': ''}
         self.ns.process_packet(pkt)
+
+    def test_del_acl_method(self):
+        pkt = {'type': 'event',
+               'name': 'foo',
+               'endpoint': '/chat',
+               'args': []}
+
+        message =  ("Trying to delete an ACL method, but none were"
+                + " defined yet! Or: No ACL restrictions yet, why would you"
+                + " delete one?")
+        try:
+            self.ns.del_acl_method('on_foo')
+            self.ns.process_packet(pkt)
+        except ValueError as e:
+            self.assertEqual(
+                message,
+                e.message,
+            )
+        else:
+            raise Exception("""We should not be able to delete an acl that
+            doesn't exist""")
 
 class TestChatNamespace(TestCase):
     def setUp(self):
