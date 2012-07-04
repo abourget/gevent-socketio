@@ -199,7 +199,7 @@ class BaseNamespace(object):
         # the method arg and if you passed a dict, it will be a dict
         # as the first parameter.
 
-        return self.call_method(method_name, packet, *args)
+        return self.call_method_with_acl(method_name, packet, *args)
 
     def call_method_with_acl(self, method_name, packet, *args):
         """You should always use this function to call the methods,

@@ -2,6 +2,7 @@ from unittest import TestCase, main
 
 from socketio.namespace import BaseNamespace
 from socketio.virtsocket import Socket
+from mock import MagicMock
 
 
 class MockSocketIOServer(object):
@@ -16,9 +17,17 @@ class MockSocketIOServer(object):
 class MockSocket(Socket):
     pass
 
+class ChatNamespace(BaseNamespace):
+    def get_initial_acl(self):
+        return 'on_foo'
+
+    def on_foo(self):
+        return 'a'
+
+    def on_bar(self):
+        return 'b'
 
 class TestBaseNamespace(TestCase):
-
     def setUp(self):
         server = MockSocketIOServer()
         self.environ = {}
@@ -148,6 +157,46 @@ class TestBaseNamespace(TestCase):
                'data': '\n',
                'endpoint': ''}
         self.ns.process_packet(pkt)
+
+class TestChatNamespace(TestCase):
+    def setUp(self):
+        server = MockSocketIOServer()
+        self.environ = {}
+        socket = MockSocket(server)
+        socket.error = MagicMock()
+        self.environ['socketio'] = socket
+        self.ns = ChatNamespace(
+            self.environ,
+            '/chat'
+        )
+
+    def test_allowed_event(self):
+        pkt = {'type': 'event',
+               'name': 'foo',
+               'endpoint': '/chat',
+               'args': []}
+        self.ns.process_packet(pkt)
+
+    def test_blocked_event(self):
+        pkt = {'type': 'event',
+               'name': 'bar',
+               'endpoint': '/chat',
+               'args': []}
+
+        self.ns.process_packet(pkt)
+
+        args = [ 
+                'method_access_denied',
+                'You do not have access to method "on_bar"',
+        ]
+
+        kwargs = dict( 
+                msg_id=None,
+                endpoint='/chat',
+                quiet=False
+        )
+
+        self.environ['socketio'].error.assert_called_with(*args, **kwargs)
 
 if __name__ == '__main__':
     main()

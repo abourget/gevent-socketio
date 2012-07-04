@@ -28,7 +28,7 @@ setup(
     install_requires=("gevent-websocket",),
     setup_requires=('versiontools >= 1.7'),
     cmdclass = {'test': PyTest},
-    tests_require=['pytest'],
+    tests_require=['pytest', 'mock'],
     packages=find_packages(exclude=["examples", "tests"]),
     classifiers=[
         "Development Status :: 4 - Beta",
