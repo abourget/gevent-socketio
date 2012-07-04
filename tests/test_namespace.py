@@ -37,6 +37,9 @@ class ChatNamespace(BaseNamespace):
     def on_bar(self):
         return 'b'
 
+    def on_baz(foo, bar, baz):
+        return 'c'
+
 class TestBaseNamespace(TestCase):
     def setUp(self):
         server = MockSocketIOServer()
@@ -51,6 +54,7 @@ class TestBaseNamespace(TestCase):
                'endpoint': '/woot'
                }
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
     def test_process_packet_connect(self):
         """processing a connection packet """
@@ -59,6 +63,7 @@ class TestBaseNamespace(TestCase):
                'qs': ''
                }
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
         # processing a connection packet with query string
         pkt = {'type': 'connect',
@@ -66,6 +71,7 @@ class TestBaseNamespace(TestCase):
                'qs': '?test=1'
                }
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
     def test_process_packet_heartbeat(self):
         """processing a heartbeat packet """
@@ -74,6 +80,7 @@ class TestBaseNamespace(TestCase):
                'endpoint': ''
                }
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
     def test_process_packet_message(self):
         """processing a message packet """
@@ -83,6 +90,7 @@ class TestBaseNamespace(TestCase):
                'data': 'woot'}
         data = self.ns.process_packet(pkt)
         self.assertEqual(data, pkt['data'])
+        assert not self.environ['socketio'].error.called
 
         # processing a message packet with id and endpoint
         pkt = {'type': 'message',
@@ -92,6 +100,7 @@ class TestBaseNamespace(TestCase):
                'data': ''}
         data = self.ns.process_packet(pkt)
         self.assertEqual(data, pkt['data'])
+        assert not self.environ['socketio'].error.called
 
     def test_process_packet_json(self):
         """processing json packet """
@@ -100,6 +109,7 @@ class TestBaseNamespace(TestCase):
                'data': '2'}
         data = self.ns.process_packet(pkt)
         self.assertEqual(data, pkt['data'])
+        assert not self.environ['socketio'].error.called
 
     # processing json packet with message id and ack data
         pkt = {'type': 'json',
@@ -109,6 +119,7 @@ class TestBaseNamespace(TestCase):
                'data': {u'a': u'b'}}
         data = self.ns.process_packet(pkt)
         self.assertEqual(data, pkt['data'])
+        assert not self.environ['socketio'].error.called
 
     def test_process_packet_event(self):
         """processing an event packet """
@@ -117,6 +128,7 @@ class TestBaseNamespace(TestCase):
                'endpoint': '',
                'args': []}
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
         # processing an event packet with message id and ack
         pkt = {'type': 'event',
@@ -126,6 +138,7 @@ class TestBaseNamespace(TestCase):
                'endpoint': '',
                'args': []}
         self.ns.process_packet(pkt)
+        assert not self.environ['socketio'].error.called
 
     def test_process_packet_ack(self):
         """processing a ack packet """
@@ -320,7 +333,21 @@ class TestChatNamespace(TestCase):
 
         assert not self.environ['socketio'].error.called
 
+    def test_call_method_invalid_definition(self):
+        pkt = {'type': 'event',
+               'name': 'baz',
+               'endpoint': '/chat',
+               'args': []}
 
+        self.ns.add_acl_method('on_baz')
+
+        self.ns.process_packet(pkt)
+        kwargs = dict(msg_id=None, endpoint='/chat', quiet=False)
+        self.environ['socketio'].error.assert_called_with(
+            "invalid_method_args",
+            "The server-side method is invalid, as it doesn't "
+            "have 'self' as its first argument"
+        , **kwargs)
 
 if __name__ == '__main__':
     main()
