@@ -307,7 +307,9 @@ class BaseNamespace(object):
 
     def recv_connect(self):
         """Called the first time a client connection is open on a
-        Namespace. This allows you to do boilerplate stuff for
+        Namespace. This *does not* fire on the global namespace.
+
+        This allows you to do boilerplate stuff for
         the namespace like connecting to rooms, broadcasting events
         to others, doing authorization work, and tweaking the ACLs to open
         up the rest of the namespace (if it was closed at the
