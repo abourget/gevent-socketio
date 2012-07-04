@@ -336,6 +336,13 @@ class TestDecodeMessage(TestCase):
         self.assertEqual(decoded_message, {'type': 'message',
                                            'data': '\n',
                                            'endpoint': ''})
+
+    def test_decode_noop(self):
+        """decoding a noop packet """
+        decoded_message = decode('8::')
+        self.assertEqual(decoded_message, {'type': 'noop',
+                                            'endpoint': ''
+                                            })
         
 if __name__ == '__main__':
     main()
