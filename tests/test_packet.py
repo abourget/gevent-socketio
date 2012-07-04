@@ -343,6 +343,15 @@ class TestDecodeMessage(TestCase):
         self.assertEqual(decoded_message, {'type': 'noop',
                                             'endpoint': ''
                                             })
-        
+
+    def test_except_on_invalid_message_type(self):
+        """decoding a noop packet """
+        try:
+            decoded_message = decode('99::')
+        except Exception as e:
+            self.assertEqual(e.message, "Unknown message type: 99")
+        else:
+            self.assertEqual(decoded_message, None,
+                    "We should not get a valid message")
 if __name__ == '__main__':
     main()

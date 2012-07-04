@@ -139,7 +139,12 @@ def decode(rawstr):
             decoded_msg['ack'] = True
 
     # common to every message
-    decoded_msg['type'] = MSG_VALUES[int(msg_type)]
+    msg_type_id = int(msg_type)
+    if msg_type_id in MSG_VALUES:
+        decoded_msg['type'] = MSG_VALUES[int(msg_type)]
+    else:
+        raise Exception("Unknown message type: %s" % msg_type)
+
     decoded_msg['endpoint'] = endpoint
 
     if len(split_data) > 3:
@@ -195,7 +200,5 @@ def decode(rawstr):
                 decoded_msg['reason'] = ''
     elif msg_type == "8":  # noop
         pass
-    else:
-        raise Exception("Unknown message type: %s" % msg_type)
 
     return decoded_msg
