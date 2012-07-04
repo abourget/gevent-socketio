@@ -44,11 +44,19 @@ class ChatNamespace(BaseNamespace, NamedUsersRoomsMixin):
     def on_chat(self, msg):
         self.broadcast_event('chat', msg)
 
+    def recv_connect(self):
+        print "RECV CONNECT!!!"
+        self.broadcast_event('user_connect')
+
+    def recv_disconnect(self):
+        self.broadcast_event('user_disconnect')
+        self.disconnect(silent=True)
+
 
 def socketio_service(request):
     retval = socketio_manage(request.environ,
         {
-            '': ChatNamespace,
+            '/chat': ChatNamespace,
         }, request=request
     )
 
