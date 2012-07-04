@@ -226,6 +226,29 @@ class TestBaseNamespace(TestCase):
 
         self.environ['socketio'].error.assert_called_with(*args, **kwargs)
 
+    def test_method_not_found(self):
+        """ test calling a method that doesn't exist """
+
+        pkt = {'type': 'event',
+               'name': 'foo',
+               'endpoint': '/chat',
+               'args': []
+               }
+
+        self.ns.process_packet(pkt)
+
+        kwargs = dict(
+            msg_id=None,
+            endpoint='/woot',
+            quiet=False
+        )
+
+        self.environ['socketio'].error.assert_called_with(
+            'no_such_method',
+            'The method "%s" was not found' % 'on_foo',
+            **kwargs
+        )
+
 class TestChatNamespace(TestCase):
     def setUp(self):
         server = MockSocketIOServer()
