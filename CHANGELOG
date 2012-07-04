@@ -1,4 +1,10 @@
-
+New in 0.3.5-rc1 (since 0.3.5-beta)
+-----------------------------
+    * Better test coverage on packets and namespace
+    * recv_disconnect now works from heartbeats
+    * ACLs weren't being checked when events fired
+    * Handle decimals in messages now
+    * Flash policy server support was improved, now default to port 10843
 
 New in 0.3.5-beta (since 0.3)
 -----------------------------
