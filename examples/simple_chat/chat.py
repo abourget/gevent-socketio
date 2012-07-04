@@ -8,12 +8,21 @@ from socketio.mixins import RoomsMixin, BroadcastMixin
 
 class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
     def on_nickname(self, nickname):
-        self.environ['nicknames'].append(nickname)
+        self.request['nicknames'].append(nickname)
         self.socket.session['nickname'] = nickname
         self.broadcast_event('announcement', '%s has connected' % nickname)
-        self.broadcast_event('nicknames', self.environ['nicknames'])
+        self.broadcast_event('nicknames', self.request['nicknames'])
         # Just have them join a default-named room
         self.join('main_room')
+
+    def disconnect(self, silent=False):
+        # Remove nickname from the list.
+        nickname = self.socket.session['nickname']
+        self.request['nicknames'].remove(nickname)
+        self.broadcast_event('announcement', '%s has disconnected' % nickname)
+        self.broadcast_event('nicknames', self.request['nicknames'])
+
+        return super(ChatNamespace, self).disconnect(silent=silent)
 
     def on_user_message(self, msg):
         self.emit_to_room('main_room', 'msg_to_room',
@@ -29,10 +38,14 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
 class Application(object):
     def __init__(self):
         self.buffer = []
+        # Dummy request object to maintain state between Namespace
+        # initialization.
+        self.request = {
+            'nicknames': [],
+        }
 
     def __call__(self, environ, start_response):
         path = environ['PATH_INFO'].strip('/')
-        environ['nicknames'] = []
 
         if not path:
             start_response('200 OK', [('Content-Type', 'text/html')])
@@ -58,7 +71,7 @@ class Application(object):
             return [data]
 
         if path.startswith("socket.io"):
-            socketio_manage(environ, {'': ChatNamespace})
+            socketio_manage(environ, {'': ChatNamespace}, self.request)
         else:
             return not_found(start_response)
 
