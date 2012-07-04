@@ -180,6 +180,14 @@ class TestEncodeMessage(TestCase):
                                   })
         self.assertEqual(encoded_message, '7:::/woot')
 
+    def test_encode_noop(self):
+        """encoding a noop packet """
+        encoded_message = encode({'type': 'noop',
+                                  'endpoint': '',
+                                  'data': ''
+                                  })
+        self.assertEqual(encoded_message, '8::')
+
 
 class TestDecodeMessage(TestCase):
     

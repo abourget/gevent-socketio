@@ -1,6 +1,6 @@
 try:
     import simplejson as json
-    json_decimal_args = {"use_decimal": True}
+    json_decimal_args = {"use_decimal": True} # pragma: no cover
 except ImportError:
     import json
     import decimal
@@ -110,6 +110,7 @@ def encode(data):
             msg += '+' + str(ERROR_ADVICES[data['advice']])
         msg += data['endpoint']
 
+    # NoOp, used to close a poll after the polling duration time
     elif msg == '8':
         msg += '::'
 
