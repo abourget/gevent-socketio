@@ -1,3 +1,0 @@
-pyramid
-gevent-socketio
-gevent-websocket
