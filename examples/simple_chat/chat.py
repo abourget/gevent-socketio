@@ -15,14 +15,14 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
         # Just have them join a default-named room
         self.join('main_room')
 
-    def disconnect(self, silent=False):
+    def recv_disconnect(self):
         # Remove nickname from the list.
         nickname = self.socket.session['nickname']
         self.request['nicknames'].remove(nickname)
         self.broadcast_event('announcement', '%s has disconnected' % nickname)
         self.broadcast_event('nicknames', self.request['nicknames'])
 
-        return super(ChatNamespace, self).disconnect(silent=silent)
+        self.disconnect(silent=True)
 
     def on_user_message(self, msg):
         self.emit_to_room('main_room', 'msg_to_room',
@@ -30,10 +30,6 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
 
     def recv_message(self, message):
         print "PING!!!", message
-
-    def recv_disconnect(self):
-        print "DISCONNECTED!!"
-
 
 class Application(object):
     def __init__(self):
