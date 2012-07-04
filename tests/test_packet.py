@@ -5,7 +5,7 @@ Tests based on the Socket.IO spec: https://github.com/LearnBoost/socket.io-spec
 from unittest import TestCase, main
 
 from socketio.packet import encode, decode
-
+import decimal
 
 class TestEncodeMessage(TestCase):
 
@@ -63,7 +63,7 @@ class TestEncodeMessage(TestCase):
                                   'data': '2'
                                   })
         self.assertEqual(encoded_message, '4:::"2"')
-        
+
         # encoding json packet with message id and ack data
         encoded_message = encode({'type': 'json',
                                   'id': 1,
@@ -72,6 +72,18 @@ class TestEncodeMessage(TestCase):
                                   'data': {'a' : 'b'}
                                   })
         self.assertEqual(encoded_message, '4:1+::{"a":"b"}')
+
+    def test_encode_json_decimals(self):
+        """encoding JSON packet with a decimal"""
+        # encoding json packet with message id and ack data
+        encoded_message = encode({'type': 'json',
+                                  'id': 1,
+                                  'ack': 'data',
+                                  'endpoint': '',
+                                  'data': {'a' : decimal.Decimal(0.5)}
+                                  })
+        self.assertEqual(encoded_message, '4:1+::{"a":0.5}')
+
 
     def test_encode_event(self):
         """encoding an event packet """
@@ -229,7 +241,6 @@ class TestDecodeMessage(TestCase):
                                            'endpoint': '',
                                            'ack': 'data',
                                            'data': {u'a': u'b'}})
-
     def test_decode_event(self):
         """decoding an event packet """
         decoded_message = decode('5:::{"name":"woot"}')
