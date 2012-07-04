@@ -18,8 +18,18 @@ class MockSocket(Socket):
     pass
 
 class ChatNamespace(BaseNamespace):
+    def __init__(self, *args, **kwargs):
+        self.use_set = args[0]
+
+        super(ChatNamespace, self).__init__(*args[1:], **kwargs)
+
     def get_initial_acl(self):
-        return 'on_foo'
+        acls = ['on_foo']
+
+        if self.use_set == True:
+            return set(acls)
+        else:
+            return acls
 
     def on_foo(self):
         return 'a'
@@ -166,6 +176,7 @@ class TestChatNamespace(TestCase):
         socket.error = MagicMock()
         self.environ['socketio'] = socket
         self.ns = ChatNamespace(
+            False,
             self.environ,
             '/chat'
         )
@@ -197,6 +208,82 @@ class TestChatNamespace(TestCase):
         )
 
         self.environ['socketio'].error.assert_called_with(*args, **kwargs)
+
+    def test_add_acl_method(self):
+        pkt = {'type': 'event',
+               'name': 'bar',
+               'endpoint': '/chat',
+               'args': []}
+
+        self.ns.add_acl_method('on_bar')
+
+        self.ns.process_packet(pkt)
+
+        assert not self.environ['socketio'].error.called
+
+    def test_del_acl_method(self):
+        pkt = {'type': 'event',
+               'name': 'foo',
+               'endpoint': '/chat',
+               'args': []}
+
+        self.ns.del_acl_method('on_foo')
+
+        self.ns.process_packet(pkt)
+
+        args = [ 
+                'method_access_denied',
+                'You do not have access to method "on_foo"',
+        ]
+
+        kwargs = dict(
+                msg_id=None,
+                endpoint='/chat',
+                quiet=False
+        )
+
+        self.environ['socketio'].error.assert_called_with(*args, **kwargs)
+
+    def test_lift_acl_restrictions(self):
+        pkt1 = {'type': 'event',
+               'name': 'foo',
+               'endpoint': '/chat',
+               'args': []}
+
+        self.ns.lift_acl_restrictions()
+
+        self.ns.process_packet(pkt1)
+
+        assert not self.environ['socketio'].error.called
+
+        pkt2 = {'type': 'event',
+               'name': 'bar',
+               'endpoint': '/chat',
+               'args': []}
+
+        self.ns.process_packet(pkt2)
+
+        assert not self.environ['socketio'].error.called
+
+    def test_use_set_on_acl(self):
+        self.ns = ChatNamespace(
+            True,
+            self.environ,
+            '/chat'
+        )
+
+        pkt = {'type': 'event',
+               'name': 'bar',
+               'endpoint': '/chat',
+               'args': []}
+
+        self.ns.add_acl_method('on_bar')
+
+        self.ns.process_packet(pkt)
+
+        assert not self.environ['socketio'].error.called
+
+
 
 if __name__ == '__main__':
     main()
