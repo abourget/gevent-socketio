@@ -165,12 +165,13 @@ def decode(rawstr):
             data = json.loads(data)
         except ValueError, e:
             print("Invalid JSON event message", data)
-
-        decoded_msg['name'] = data.pop('name')
-        if 'args' in data:
-            decoded_msg['args'] = data['args']
+            data = {}
         else:
-            decoded_msg['args'] = []
+            decoded_msg['name'] = data.pop('name')
+            if 'args' in data:
+                decoded_msg['args'] = data['args']
+            else:
+                decoded_msg['args'] = []
 
     elif msg_type == "6":  # ack
         if '+' in data:

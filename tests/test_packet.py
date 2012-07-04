@@ -266,6 +266,13 @@ class TestDecodeMessage(TestCase):
                                            'endpoint': '',
                                            'args': []})
 
+    def test_decode_event_error(self):
+        """decoding an event packet """
+        decoded_message = decode('5:::')
+        self.assertEqual(decoded_message, {'type': 'event',
+                                           'endpoint': '',
+                                           })
+
     def test_decode_ack(self):
         """decoding a ack packet """
         decoded_message = decode('6:::140')
