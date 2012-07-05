@@ -151,6 +151,7 @@ class BaseNamespace(object):
             return self.call_method_with_acl('recv_json', packet,
                                              packet['data'])
         elif packet_type == 'connect':
+            self.socket.send_packet(packet)
             return self.call_method_with_acl('recv_connect', packet)
         elif packet_type == 'error':
             return self.call_method_with_acl('recv_error', packet)
