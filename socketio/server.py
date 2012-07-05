@@ -20,8 +20,7 @@ class SocketIOServer(WSGIServer):
         This is just like the standard WSGIServer __init__, except with a
         few additional ``kwargs``:
 
-        :param namespace: The namespace to use. Defaults to the global
-            namespace.
+        :param resource: The URL which has to be identified as a socket.io request.  Defaults to the /socket.io/ URL.
         :param transports: Optional list of transports to allow. List of
             strings, each string should be one of
             handler.SocketIOHandler.handler_types.
@@ -32,10 +31,7 @@ class SocketIOServer(WSGIServer):
             is set to true.  The default value is 0.0.0.0:843
         """
         self.sockets = {}
-        if 'resource' in kwargs:
-            print "DEPRECATION WARNING: use `namespace` instead of `resource`"
-        self.namespace = kwargs.pop('resource', kwargs.pop('namespace',
-                                                           'socket.io'))
+        self.namespace = kwargs.pop('resource', 'socket.io')
         self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):

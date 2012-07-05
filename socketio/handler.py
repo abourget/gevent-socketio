@@ -10,12 +10,12 @@ from geventwebsocket.handler import WebSocketHandler
 
 class SocketIOHandler(WSGIHandler):
     RE_REQUEST_URL = re.compile(r"""
-        ^/(?P<namespace>[^/]+)
+        ^/(?P<resource>[^/]+)
          /(?P<protocol_version>[^/]+)
          /(?P<transport_id>[^/]+)
          /(?P<sessid>[^/]+)/?$
          """, re.X)
-    RE_HANDSHAKE_URL = re.compile(r"^/(?P<namespace>[^/]+)/1/$", re.X)
+    RE_HANDSHAKE_URL = re.compile(r"^/(?P<resource>[^/]+)/1/$", re.X)
 
     handler_types = {
         'websocket': transports.WebsocketTransport,
@@ -40,8 +40,8 @@ class SocketIOHandler(WSGIHandler):
                     (self.handler_types.keys()))
 
     def _do_handshake(self, tokens):
-        if tokens["namespace"] != self.server.namespace:
-            self.log_error("Namespace mismatch")
+        if tokens["resource"] != self.server.resource:
+            self.log_error("socket.io URL mismatch")
         else:
             socket = self.server.get_socket()
             data = "%s:15:10:%s" % (socket.sessid, ",".join(self.transports))
@@ -77,7 +77,7 @@ class SocketIOHandler(WSGIHandler):
         path = self.environ.get('PATH_INFO')
 
         # Kick non-socket.io requests to our superclass
-        if not path.lstrip('/').startswith(self.server.namespace):
+        if not path.lstrip('/').startswith(self.server.resource):
             return super(SocketIOHandler, self).handle_one_response()
 
         self.status = None
