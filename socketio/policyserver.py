@@ -12,5 +12,16 @@ class FlashPolicyServer(StreamServer):
             listener = ('0.0.0.0', 10843)
         StreamServer.__init__(self, listener=listener, backlog=backlog)
 
-    def handle(self, socket, address):
-        socket.sendall(self.policy)
+    def handle(self, sock, address):
+        # send and read functions should not wait longer than three seconds
+        sock.settimeout(3)
+        try:
+            # try to receive at most 128 bytes (`POLICYREQUEST` is shorter)
+            # Interestingly if we dont do this and we write to the spcket directly
+            # I am getting strange errors.
+            input = sock.recv(128)
+            if input.startswith(FlashPolicyServer.policyrequest):
+                sock.sendall(FlashPolicyServer.policy)
+        except socket.timeout:
+            pass
+        sock.close()
