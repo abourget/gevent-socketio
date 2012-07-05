@@ -1,10 +1,18 @@
 $(document).ready(function() {
     // connect to the websocket
-    var socket = io.connect();
+    var socket = io.connect('/chat');
 
     // Listen for the event "chat" and add the content to the log
     socket.on("chat", function(e) {
         $("#chatlog").append(e + "<br />");
+    });
+
+    socket.on("user_disconnect", function() {
+        $("#chatlog").append("user disconnected" + "<br />");
+    });
+
+    socket.on("user_connect", function() {
+        $("#chatlog").append("user connected" + "<br />");
     });
 
     // Execute whenever the form is submitted

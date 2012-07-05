@@ -203,7 +203,10 @@ class Socket(object):
             self.server_queue.put_nowait(None)
             self.client_queue.put_nowait(None)
             self.disconnect()
-            self.server.sockets.pop(self.sessid)
+
+            if self.sessid in self.server.sockets:
+                self.server.sockets.pop(self.sessid)
+
             # gevent.kill(self.wsgi_app_greenlet)
         else:
             pass  # Fail silently
@@ -278,7 +281,7 @@ class Socket(object):
                        calls.
         """
         for ns_name, ns in list(self.active_ns.iteritems()):
-            ns.disconnect(silent=silent)
+            ns.recv_disconnect()
 
     def remove_namespace(self, namespace):
         """This removes a Namespace object from the socket.
@@ -389,7 +392,7 @@ class Socket(object):
                 # Killing Socket-level jobs
                 gevent.killall(self.jobs)
                 for ns_name, ns in list(self.active_ns.iteritems()):
-                    ns.disconnect(silent=True)
+                    ns.recv_disconnect()
 
     def _spawn_watcher(self):
         job = gevent.spawn(self._watcher)

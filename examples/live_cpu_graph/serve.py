@@ -1,25 +1,26 @@
 from gevent import monkey; monkey.patch_all()
+import gevent
 
 from socketio import socketio_manage
 from socketio.server import SocketIOServer
 from socketio.namespace import BaseNamespace
-from socketio.mixins import RoomsMixin, BroadcastMixin
+from socketio.mixins import BroadcastMixin
 
 
-class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
-    def on_nickname(self, nickname):
-        self.environ['nicknames'].append(nickname)
-        self.socket.session['nickname'] = nickname
-        self.broadcast_event('announcement', '%s has connected' % nickname)
-        self.broadcast_event('nicknames', self.environ['nicknames'])
-        # Just have them join a default-named room
-        self.join('main_room')
-
-    def on_user_message(self, msg):
-        self.emit_to_room('main_room', 'msg_to_room', self.socket.session['nickname'], msg)
-
-    def recv_message(self, message):
-        print "PING!!!", message
+class CPUNamespace(BaseNamespace, BroadcastMixin):
+    def recv_connect(self):
+        def sendcpu():
+            prev = None
+            while True:
+                vals = map(int, [x for x in open('/proc/stat').readlines()
+                                 if x.startswith('cpu ')][0].split()[1:5])
+                if prev:
+                    percent = (100.0 * (sum(vals[:3]) - sum(prev[:3])) /
+                               (sum(vals) - sum(prev)))
+                    self.emit('cpu_data', {'point': percent})
+                prev = vals
+                gevent.sleep(0.1)
+        self.spawn(sendcpu)
 
 
 class Application(object):
@@ -27,15 +28,9 @@ class Application(object):
         self.buffer = []
 
     def __call__(self, environ, start_response):
-        path = environ['PATH_INFO'].strip('/')
-        environ['nicknames'] = []
+        path = environ['PATH_INFO'].strip('/') or 'index.html'
 
-        if not path:
-            start_response('200 OK', [('Content-Type', 'text/html')])
-            return ['<h1>Welcome. '
-                'Try the <a href="/chat.html">chat</a> example.</h1>']
-
-        if path in ['socket.io.js', 'chat.html', 'stylesheets/style.css', 'WebSocketMain.swf']:
+        if path.startswith('static/') or path == 'index.html':
             try:
                 data = open(path).read()
             except Exception:
@@ -54,7 +49,7 @@ class Application(object):
             return [data]
 
         if path.startswith("socket.io"):
-            socketio_manage(environ, {'': ChatNamespace})
+            socketio_manage(environ, {'/cpu': CPUNamespace})
         else:
             return not_found(start_response)
 
@@ -67,5 +62,5 @@ def not_found(start_response):
 if __name__ == '__main__':
     print 'Listening on port 8080 and on port 843 (flash policy server)'
     SocketIOServer(('0.0.0.0', 8080), Application(),
-        namespace="socket.io", policy_server=True, 
+        namespace="socket.io", policy_server=True,
         policy_listener=('0.0.0.0', 843)).serve_forever()

@@ -1,6 +1,6 @@
 try:
     import simplejson as json
-    json_decimal_args = {"use_decimal": True}
+    json_decimal_args = {"use_decimal": True} # pragma: no cover
 except ImportError:
     import json
     import decimal
@@ -110,6 +110,7 @@ def encode(data):
             msg += '+' + str(ERROR_ADVICES[data['advice']])
         msg += data['endpoint']
 
+    # NoOp, used to close a poll after the polling duration time
     elif msg == '8':
         msg += '::'
 
@@ -138,7 +139,12 @@ def decode(rawstr):
             decoded_msg['ack'] = True
 
     # common to every message
-    decoded_msg['type'] = MSG_VALUES[int(msg_type)]
+    msg_type_id = int(msg_type)
+    if msg_type_id in MSG_VALUES:
+        decoded_msg['type'] = MSG_VALUES[int(msg_type)]
+    else:
+        raise Exception("Unknown message type: %s" % msg_type)
+
     decoded_msg['endpoint'] = endpoint
 
     if len(split_data) > 3:
@@ -164,12 +170,13 @@ def decode(rawstr):
             data = json.loads(data)
         except ValueError, e:
             print("Invalid JSON event message", data)
-
-        decoded_msg['name'] = data.pop('name')
-        if 'args' in data:
-            decoded_msg['args'] = data['args']
-        else:
             decoded_msg['args'] = []
+        else:
+            decoded_msg['name'] = data.pop('name')
+            if 'args' in data:
+                decoded_msg['args'] = data['args']
+            else:
+                decoded_msg['args'] = []
 
     elif msg_type == "6":  # ack
         if '+' in data:
@@ -193,7 +200,5 @@ def decode(rawstr):
                 decoded_msg['reason'] = ''
     elif msg_type == "8":  # noop
         pass
-    else:
-        raise Exception("Unknown message type: %s" % msg_type)
 
     return decoded_msg

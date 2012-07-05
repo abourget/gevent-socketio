@@ -5,7 +5,7 @@ Tests based on the Socket.IO spec: https://github.com/LearnBoost/socket.io-spec
 from unittest import TestCase, main
 
 from socketio.packet import encode, decode
-
+import decimal
 
 class TestEncodeMessage(TestCase):
 
@@ -63,7 +63,7 @@ class TestEncodeMessage(TestCase):
                                   'data': '2'
                                   })
         self.assertEqual(encoded_message, '4:::"2"')
-        
+
         # encoding json packet with message id and ack data
         encoded_message = encode({'type': 'json',
                                   'id': 1,
@@ -72,6 +72,18 @@ class TestEncodeMessage(TestCase):
                                   'data': {'a' : 'b'}
                                   })
         self.assertEqual(encoded_message, '4:1+::{"a":"b"}')
+
+    def test_encode_json_decimals(self):
+        """encoding JSON packet with a decimal"""
+        # encoding json packet with message id and ack data
+        encoded_message = encode({'type': 'json',
+                                  'id': 1,
+                                  'ack': 'data',
+                                  'endpoint': '',
+                                  'data': {'a' : decimal.Decimal(0.5)}
+                                  })
+        self.assertEqual(encoded_message, '4:1+::{"a":0.5}')
+
 
     def test_encode_event(self):
         """encoding an event packet """
@@ -168,6 +180,14 @@ class TestEncodeMessage(TestCase):
                                   })
         self.assertEqual(encoded_message, '7:::/woot')
 
+    def test_encode_noop(self):
+        """encoding a noop packet """
+        encoded_message = encode({'type': 'noop',
+                                  'endpoint': '',
+                                  'data': ''
+                                  })
+        self.assertEqual(encoded_message, '8::')
+
 
 class TestDecodeMessage(TestCase):
     
@@ -229,9 +249,14 @@ class TestDecodeMessage(TestCase):
                                            'endpoint': '',
                                            'ack': 'data',
                                            'data': {u'a': u'b'}})
-
     def test_decode_event(self):
         """decoding an event packet """
+        decoded_message = decode('5:::{"name":"woot", "args": ["foo"]}')
+        self.assertEqual(decoded_message, {'type': 'event',
+                                           'name': 'woot',
+                                           'endpoint': '',
+                                           'args': ["foo"]})
+
         decoded_message = decode('5:::{"name":"woot"}')
         self.assertEqual(decoded_message, {'type': 'event',
                                            'name': 'woot',
@@ -246,6 +271,14 @@ class TestDecodeMessage(TestCase):
                                            'name': 'tobi',
                                            'endpoint': '',
                                            'args': []})
+
+    def test_decode_event_error(self):
+        """decoding an event packet """
+        decoded_message = decode('5:::')
+        self.assertEqual(decoded_message, {'args': [],
+                                            'type': 'event',
+                                           'endpoint': '',
+                                           })
 
     def test_decode_ack(self):
         """decoding a ack packet """
@@ -303,6 +336,22 @@ class TestDecodeMessage(TestCase):
         self.assertEqual(decoded_message, {'type': 'message',
                                            'data': '\n',
                                            'endpoint': ''})
-        
+
+    def test_decode_noop(self):
+        """decoding a noop packet """
+        decoded_message = decode('8::')
+        self.assertEqual(decoded_message, {'type': 'noop',
+                                            'endpoint': ''
+                                            })
+
+    def test_except_on_invalid_message_type(self):
+        """decoding a noop packet """
+        try:
+            decoded_message = decode('99::')
+        except Exception as e:
+            self.assertEqual(e.message, "Unknown message type: 99")
+        else:
+            self.assertEqual(decoded_message, None,
+                    "We should not get a valid message")
 if __name__ == '__main__':
     main()

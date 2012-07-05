@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link href="stylesheets/style.css" rel="stylesheet">
-    <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.1.min.js">
-    </script><script type="text/javascript" src="socket.io.js"></script>
+    <link href="static/css/style.css" rel="stylesheet">
+    <script type="text/javascript" src="static/jquery-1.6.1.min.js"></script>
+    <script type="text/javascript" src="static/socket.io.js"></script>
     <script>    
 
-
-WEB_SOCKET_SWF_LOCATION = "/WebSocketMain.swf";
+WEB_SOCKET_SWF_LOCATION = "/static/WebSocketMain.swf";
 WEB_SOCKET_DEBUG = true;
 
 // socket.io specific code
@@ -24,11 +23,12 @@ socket.on('announcement', function (msg) {
 socket.on('nicknames', function (nicknames) {
     $('#nicknames').empty().append($('<span>Online: </span>'));
     for (var i in nicknames) {
-	  $().append($('<b>').text(nicknames[i]));
+	  $('#nicknames').append($('<b>').text(nicknames[i]));
     }
 });
 
 socket.on('msg_to_room', message);
+
 socket.on('reconnect', function () {
     $('#lines').remove();
     message('System', 'Reconnected to the server');
@@ -46,7 +46,7 @@ function message (from, msg) {
     $('#lines').append($('<p>').append($('<b>').text(from), msg));
 }
 
-// dom manipulation
+// DOM manipulation
 $(function () {
     $('#set-nickname').submit(function (ev) {
         socket.emit('nickname', $('#nick').val(), function (set) {
@@ -86,7 +86,7 @@ $(function () {
       <div class="wrap">Connecting to socket.io server</div>
     </div>
     <div id="messages">
-      <div id="nicknames"></div>
+      <div id="nicknames"><span>Online:</span></div>
       <div id="lines"></div>
     </div>
     <form id="send-message">

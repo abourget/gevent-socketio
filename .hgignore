@@ -1,7 +1,0 @@
-syntax: glob
-
-env*
-.DS_Store
-*pyc
-notes
-ext

@@ -72,9 +72,11 @@ class BaseNamespace(object):
     def del_acl_method(self, method_name):
         """ACL system: ensure the user will not have access to that method."""
         if self.allowed_methods is None:
-            raise ValueError("""Trying to delete an ACL method, but none were
-            defined yet! Or: No ACL restrictions yet, why would you delete
-            one?""")
+            raise ValueError(
+                "Trying to delete an ACL method, but none were"
+                + " defined yet! Or: No ACL restrictions yet, why would you"
+                + " delete one?"
+            )
 
         self.allowed_methods.remove(method_name)
 
@@ -139,6 +141,7 @@ class BaseNamespace(object):
         * on_*()
         """
         packet_type = packet['type']
+
         if packet_type == 'event':
             return self.process_event(packet)
         elif packet_type == 'message':
@@ -148,6 +151,7 @@ class BaseNamespace(object):
             return self.call_method_with_acl('recv_json', packet,
                                              packet['data'])
         elif packet_type == 'connect':
+            self.socket.send_packet(packet)
             return self.call_method_with_acl('recv_connect', packet)
         elif packet_type == 'error':
             return self.call_method_with_acl('recv_error', packet)
@@ -162,7 +166,7 @@ class BaseNamespace(object):
                 print "ERROR: Call to callback function failed", packet
         elif packet_type == 'disconnect':
             # Force a disconnect on the namespace.
-            self.disconnect(silent=True)
+            return self.call_method_with_acl('recv_disconnect', packet)
         else:
             print "Unprocessed packet", packet
         # TODO: manage the other packet types: disconnect
@@ -199,7 +203,7 @@ class BaseNamespace(object):
         # the method arg and if you passed a dict, it will be a dict
         # as the first parameter.
 
-        return self.call_method(method_name, packet, *args)
+        return self.call_method_with_acl(method_name, packet, *args)
 
     def call_method_with_acl(self, method_name, packet, *args):
         """You should always use this function to call the methods,
@@ -304,7 +308,9 @@ class BaseNamespace(object):
 
     def recv_connect(self):
         """Called the first time a client connection is open on a
-        Namespace. This allows you to do boilerplate stuff for
+        Namespace. This *does not* fire on the global namespace.
+
+        This allows you to do boilerplate stuff for
         the namespace like connecting to rooms, broadcasting events
         to others, doing authorization work, and tweaking the ACLs to open
         up the rest of the namespace (if it was closed at the

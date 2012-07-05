@@ -11,7 +11,7 @@ class FlashPolicyServer(StreamServer):
 
     def __init__(self, listener=None, backlog=None):
         if listener is None:
-            listener = ('0.0.0.0', 843)
+            listener = ('0.0.0.0', 10843)
         StreamServer.__init__(self, listener=listener, backlog=backlog)
 
     def handle(self, sock, address):
