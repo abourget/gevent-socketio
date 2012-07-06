@@ -1,5 +1,6 @@
 from gevent import monkey; monkey.patch_all()
 import gevent
+import psutil
 
 from socketio import socketio_manage
 from socketio.server import SocketIOServer
@@ -12,11 +13,10 @@ class CPUNamespace(BaseNamespace, BroadcastMixin):
         def sendcpu():
             prev = None
             while True:
-                vals = map(int, [x for x in open('/proc/stat').readlines()
-                                 if x.startswith('cpu ')][0].split()[1:5])
+                vals = psutil.cpu_percent(interval=1, percpu=True)
+
                 if prev:
-                    percent = (100.0 * (sum(vals[:3]) - sum(prev[:3])) /
-                               (sum(vals) - sum(prev)))
+                    percent = (sum(vals) - sum(prev))
                     self.emit('cpu_data', {'point': percent})
                 prev = vals
                 gevent.sleep(0.1)
@@ -60,7 +60,7 @@ def not_found(start_response):
 
 
 if __name__ == '__main__':
-    print 'Listening on port 8080 and on port 843 (flash policy server)'
+    print 'Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)'
     SocketIOServer(('0.0.0.0', 8080), Application(),
-        namespace="socket.io", policy_server=True,
-        policy_listener=('0.0.0.0', 843)).serve_forever()
+        resource="socket.io", policy_server=True,
+        policy_listener=('0.0.0.0', 10843)).serve_forever()
