@@ -1,4 +1,7 @@
 $(document).ready(function() {
+    WEB_SOCKET_SWF_LOCATION = "/static/WebSocketMain.swf";
+    WEB_SOCKET_DEBUG = true;
+
     // connect to the websocket
     var socket = io.connect();
     socket.emit('subscribe')
