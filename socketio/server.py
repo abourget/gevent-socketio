@@ -31,7 +31,7 @@ class SocketIOServer(WSGIServer):
             is set to true.  The default value is 0.0.0.0:843
         """
         self.sockets = {}
-        self.namespace = kwargs.pop('resource', 'socket.io')
+        self.resource = kwargs.pop('resource', 'socket.io')
         self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):
