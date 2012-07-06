@@ -1,6 +1,8 @@
 New in 0.3.5-rc2 (since 0.3.5-rc1)
 -----------------------------
     * We echo the connect packet back to the client now
+    * namespace on handler is now called 'resource' to match node.js
+    * Even better flash policy support, well tested in IE
 
 New in 0.3.5-rc1 (since 0.3.5-beta)
 -----------------------------
