@@ -5,7 +5,8 @@ from gevent import monkey; monkey.patch_all()
 if __name__ == '__main__':
 
     app = get_app('development.ini')
-    print ('Listening on port http://127.0.0.1:8080 and on '
-           'port 843 (flash policy server)')
-    SocketIOServer(('127.0.0.1', 8080), app, namespace="socket.io",
-            policy_server=False).serve_forever()
+    print 'Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)'
+
+    SocketIOServer(('0.0.0.0', 8080), app,
+        resource="socket.io", policy_server=True,
+        policy_listener=('0.0.0.0', 10843)).serve_forever()
