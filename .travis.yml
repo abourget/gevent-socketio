@@ -3,7 +3,7 @@ python:
   - "2.6"
   - "2.7"
 # command to install dependencies
-install: python setup.py install
+install: pip install cython greenlet
 
 # command to run tests
-script: python setup.py test
+script: python setup.py install && python setup.py test
