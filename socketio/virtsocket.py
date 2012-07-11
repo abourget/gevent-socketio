@@ -393,6 +393,7 @@ class Socket(object):
                 gevent.killall(self.jobs)
                 for ns_name, ns in list(self.active_ns.iteritems()):
                     ns.recv_disconnect()
+                break
 
     def _spawn_watcher(self):
         job = gevent.spawn(self._watcher)
