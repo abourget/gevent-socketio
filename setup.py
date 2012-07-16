@@ -14,7 +14,7 @@ class PyTest(TestCommand):
 
 setup(
     name="gevent-socketio",
-    version="0.3.5-rc1",
+    version="0.3.5-rc2",
     description=(
         "SocketIO server based on the Gevent pywsgi server, "
         "a Python network library"),
