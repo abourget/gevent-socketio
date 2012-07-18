@@ -2,4 +2,4 @@ A sample pyramid application using socket.io, backbone.js, and redis for pubsub
 
 To get the app running:
 python setup.py develop
-python run.py
+python serve.py
