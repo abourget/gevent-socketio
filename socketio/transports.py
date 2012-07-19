@@ -19,9 +19,8 @@ class BaseTransport(object):
         self.handler = handler
 
     def write(self, data=""):
-        if 'Content-Length' not in self.handler.response_headers_list:
+        if 'Content-Length' not in [x[0] for x in self.handler.response_headers]:
             self.handler.response_headers.append(('Content-Length', len(data)))
-            self.handler.response_headers_list.append('Content-Length')
 
         self.handler.write(data)
 
@@ -30,7 +29,6 @@ class BaseTransport(object):
             headers.append(self.content_type)
 
         headers.extend(self.headers)
-        #print headers
         self.handler.start_response(status, headers, **kwargs)
 
 
