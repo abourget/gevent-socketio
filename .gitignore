@@ -24,6 +24,7 @@ parts
 bin
 develop-eggs
 .installed.cfg
+.mr.developer.cfg
 
 # Installer logs
 pip-log.txt
