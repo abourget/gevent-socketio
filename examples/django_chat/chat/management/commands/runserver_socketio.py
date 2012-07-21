@@ -51,12 +51,11 @@ class Command(BaseCommand):
             print "SocketIOServer running on %s:%s" % bind
             print
             handler = self.get_handler(*args, **options)
-            server = SocketIOServer(bind, handler, resource="socket.io", policy_server=False)
+            server = SocketIOServer(bind, handler, resource="socket.io", policy_server=True)
             server.serve_forever()
         except KeyboardInterrupt:
             if RELOAD:
-                server.kill()
-                print
+                server.stop()
                 print "Reloading..."
                 restart_with_reloader()
             else:

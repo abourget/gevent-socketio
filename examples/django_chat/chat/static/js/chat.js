@@ -40,7 +40,7 @@ function message (from, msg) {
 $(function () {
     $('#set-nickname').submit(function (ev) {
         socket.emit('nickname', $('#nick').val(), function (set) {
-            if (!set) {
+            if (set) {
                 clear();
                 return $('#chat').addClass('nickname-set');
             }
