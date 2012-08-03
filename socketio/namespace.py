@@ -185,7 +185,10 @@ class BaseNamespace(object):
         The first one is simply to return an object.  If the incoming
         packet requested has an 'ack' field set, meaning the browser is
         waiting for callback data, it will automatically be packaged
-        and sent, associated with the 'ackId' from the browser.
+        and sent, associated with the 'ackId' from the browser. The
+        return value must be a *sequence* of elements, that will be
+        mapped to the positional parameters of the callback function
+        on the browser side.
 
         If you want to *know* that you're dealing with a packet
         that requires a return value, you can do those things manually
