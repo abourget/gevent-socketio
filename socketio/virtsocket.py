@@ -379,6 +379,10 @@ class Socket(object):
 
             # Has the client requested an 'ack' with the reply parameters ?
             if pkt.get('ack') == "data" and pkt.get('id'):
+                if type(retval) is tuple:
+                    args = list(retval)
+                else:
+                    args = [retval]
                 returning_ack = dict(type='ack', ackId=pkt['id'],
                                      args=retval,
                                      endpoint=pkt.get('endpoint', ''))
