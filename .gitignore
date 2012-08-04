@@ -25,6 +25,7 @@ bin
 develop-eggs
 .installed.cfg
 .mr.developer.cfg
+external
 
 # Installer logs
 pip-log.txt

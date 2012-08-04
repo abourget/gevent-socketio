@@ -15,14 +15,13 @@ class BaseTransport(object):
             ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
             ("Access-Control-Max-Age", 3600),
         ]
-        self.headers_list = []
         self.handler = handler
 
     def write(self, data=""):
-        if 'Content-Length' not in self.handler.response_headers_list:
-            self.handler.response_headers.append(('Content-Length', len(data)))
-            self.handler.response_headers_list.append('Content-Length')
-
+        if self.handler.provided_content_length is None:
+            l = len(data)
+            self.handler.provided_content_length = l
+            self.handler.response_headers.append(('Content-Length', l))
         self.handler.write(data)
 
     def start_response(self, status, headers, **kwargs):
@@ -87,7 +86,7 @@ class XHRPollingTransport(BaseTransport):
         ``messages`` - List of raw messages to encode, if necessary
 
         """
-        if not messages:
+        if not messages or messages[0] is None:
             return ''
 
         if len(messages) == 1:
@@ -255,16 +254,38 @@ class HTMLFileTransport(XHRPollingTransport):
         self.content_type = ("Content-Type", "text/html")
 
     def write_packed(self, data):
-        self.write("<script>parent.s._('%s', document);</script>" % data)
+        self.write("<script>_('%s');</script>" % data)
+        
+    def write(self, data):
+        super(HTMLFileTransport, self).write("1024\r\n%s%s\r\n" % (data, " " * (1024 - len(data))))
+        
+    def connect(self, socket, request_method):
+        socket.connection_confirmed = True
+        return super(HTMLFileTransport, self).connect(socket, request_method)
 
-    def handle_get_response(self, socket):
+    def get(self, socket):
         self.start_response("200 OK", [
             ("Connection", "keep-alive"),
             ("Content-Type", "text/html"),
             ("Transfer-Encoding", "chunked"),
         ])
-        self.write("<html><body>" + " " * 244)
+        self.write("<html><body><script>var _ = function (msg) { parent.s._(msg, document); };</script>")
+        self.write_packed("1::")  # 'connect' packet
+        
 
-        payload = self.get_messages_payload(socket, timeout=5.0)
+        def chunk():
+            while True:
+                payload = self.get_messages_payload(socket)
 
-        self.write_packed(payload)
+                if not payload:
+                    # That would mean the call to Queue.get() returned Empty,
+                    # so it was in fact killed, since we pass no timeout=..
+                    socket.kill()
+                    break
+                else:
+                    try:
+                        self.write_packed(payload)
+                    except socket.error:
+                        socket.kill()
+                        break
+        return [gevent.spawn(chunk)]
