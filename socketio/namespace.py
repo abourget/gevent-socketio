@@ -178,17 +178,30 @@ class BaseNamespace(object):
         ``on_``-prefixed methods.  You could then implement your own dispatch.
         See the source code for inspiration.
 
-        To process events that have callbacks on the client side, you
-        must define your event with a single parameter: ``packet``.
-        In this case, it will be the full ``packet`` object and you
-        can inspect its ``ack`` and ``id`` keys to define if and how
-        you reply.  A correct reply to an event with a callback would
-        look like this:
+        There are two ways to deal with callbacks from the client side
+        (meaning, the browser has a callback waiting for data that this
+        server will be sending back):
+
+        The first one is simply to return an object.  If the incoming
+        packet requested has an 'ack' field set, meaning the browser is
+        waiting for callback data, it will automatically be packaged
+        and sent, associated with the 'ackId' from the browser. The
+        return value must be a *sequence* of elements, that will be
+        mapped to the positional parameters of the callback function
+        on the browser side.
+
+        If you want to *know* that you're dealing with a packet
+        that requires a return value, you can do those things manually
+        by inspecting the ``ack`` and ``id`` keys from the ``packet``
+        object.  Your callback will behave specially if the name of
+        the argument to your method is ``packet``.  It will fill it
+        with the unprocessed ``packet`` object for your inspection,
+        like this:
 
         .. code-block:: python
 
           def on_my_callback(self, packet):
-              if 'ack' in packet':
+              if 'ack' in packet:
                   self.emit('go_back', 'param1', id=packet['id'])
         """
         args = packet['args']

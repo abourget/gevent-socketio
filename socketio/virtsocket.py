@@ -17,6 +17,7 @@ from gevent.queue import Queue
 from gevent.event import Event
 
 from socketio import packet
+from socketio.defaultjson import default_json_loads, default_json_dumps
 
 
 def default_error_handler(socket, error_name, error_message, endpoint,
@@ -64,6 +65,9 @@ class Socket(object):
     GLOBAL_NS = ''
     """Use this to be explicit when specifying a Global Namespace (an endpoint
     with no name, not '/chat' or anything."""
+
+    json_loads = staticmethod(default_json_loads)
+    json_dumps = staticmethod(default_json_dumps)
 
     def __init__(self, server, error_handler=None):
         self.server = weakref.proxy(server)
@@ -115,6 +119,22 @@ class Socket(object):
         This is called by socketio_manage().
         """
         self.error_handler = error_handler
+
+    def _set_json_loads(self, json_loads):
+        """Change the default JSON decoder.
+
+        This should be a callable that accepts a single string, and returns
+        a well-formed object.
+        """
+        self.json_loads = json_loads
+
+    def _set_json_dumps(self, json_dumps):
+        """Change the default JSON decoder.
+
+        This should be a callable that accepts a single string, and returns
+        a well-formed object.
+        """
+        self.json_dumps = json_dumps
 
     def _get_next_msgid(self):
         """This retrieves the next value for the 'id' field when sending
@@ -296,7 +316,7 @@ class Socket(object):
     def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
         protocol"""
-        self.put_client_msg(packet.encode(pkt))
+        self.put_client_msg(packet.encode(pkt, self.json_dumps))
 
     def spawn(self, fn, *args, **kwargs):
         """Spawn a new Greenlet, attached to this Socket instance.
@@ -320,7 +340,7 @@ class Socket(object):
             if not rawdata:
                 continue  # or close the connection ?
             try:
-                pkt = packet.decode(rawdata)
+                pkt = packet.decode(rawdata, self.json_loads)
             except (ValueError, KeyError, Exception), e:
                 self.error('invalid_packet',
                     "There was a decoding error when dealing with packet "
