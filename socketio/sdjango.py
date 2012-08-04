@@ -16,7 +16,6 @@ class namespace(object):
 
 
 def socketio(request):
-    logging.getLogger("socketio").info(repr(SOCKETIO_NS))
     try:
         socketio_manage(request.environ, SOCKETIO_NS, request)
     except:

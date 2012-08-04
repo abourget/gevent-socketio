@@ -7,10 +7,6 @@ from django.shortcuts import get_object_or_404, render, redirect
 from chat.models import ChatRoom
 from chat.chat_socketio import ChatNamespace
 
-def socketio(request):
-    socketio_manage(request.environ, {'': ChatNamespace}, request)
-    return HttpResponse("")
-
 def rooms(request, template="rooms.html"):
     """
     Homepage - lists all rooms.

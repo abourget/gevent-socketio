@@ -1,5 +1,5 @@
 // socket.io specific code
-var socket = io.connect();
+var socket = io.connect("/chat");
 
 socket.on('connect', function () {
     $('#chat').addClass('connected');
