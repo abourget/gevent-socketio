@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room }}{% endblock %}
+
+{% block extra_js %}
+<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+<script src="http://ajax.microsoft.com/ajax/jquery.templates/beta1/jquery.tmpl.min.js"></script>
+<script src="{{ STATIC_URL|default:MEDIA_URL }}js/socket.io.js"></script>
+<script>WEB_SOCKET_SWF_LOCATION="{{ STATIC_URL }}flashsocket/WebSocketMain.swf"; window.room = "{{ room.id }}";</script>
+<script src="{{ STATIC_URL }}js/chat.js"></script>
+{% endblock %}
+
+{% block main %}
+<div id="chat">
+  <div id="nickname">
+    <form id="set-nickname" class="wrap">
+      <p>Please type in your nickname and press enter.</p>
+      <input id="nick">
+      <p id="nickname-err">Nickname already in use</p>
+  </form>
+  </div>
+  <div id="connecting">
+    <div class="wrap">Connecting to socket.io server</div>
+  </div>
+  <div id="messages">
+    <div id="nicknames"><span>Online:</span></div>
+    <div id="lines"></div>
+  </div>
+  <form id="send-message">
+    <input id="message">
+    <button>Send</button>
+  </form>
+</div>
+{% endblock %}

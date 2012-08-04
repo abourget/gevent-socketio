@@ -60,10 +60,10 @@ class SocketIOServer(WSGIServer):
                 sys.stderr.write('FAILED to start flash policy server.\n\n')
         super(SocketIOServer, self).start_accepting()
 
-    def kill(self):
+    def stop(self):
         if self.policy_server is not None:
-            self.policy_server.kill()
-        super(SocketIOServer, self).kill()
+            self.policy_server.stop()
+        super(SocketIOServer, self).stop()
 
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)
