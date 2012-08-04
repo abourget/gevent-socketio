@@ -18,10 +18,17 @@ class BaseTransport(object):
         self.handler = handler
 
     def write(self, data=""):
-        if self.handler.provided_content_length is None:
+        # Gevent v 0.13
+        if hasattr(self.handler, 'response_headers_list'):
+            if 'Content-Length' not in self.handler.response_headers_list:
+                self.handler.response_headers.append(('Content-Length', len(data)))
+                self.handler.response_headers_list.append('Content-Length')
+        elif self.handler.provided_content_length is None:
+            # Gevent bitbucket
             l = len(data)
             self.handler.provided_content_length = l
             self.handler.response_headers.append(('Content-Length', l))
+            
         self.handler.write(data)
 
     def start_response(self, status, headers, **kwargs):
