@@ -226,10 +226,10 @@ class Socket(object):
 
             if self.sessid in self.server.sockets:
                 self.server.sockets.pop(self.sessid)
-
-            # gevent.kill(self.wsgi_app_greenlet)
+                
+            gevent.killall(self.jobs)
         else:
-            pass  # Fail silently
+            raise Exception('Not connected')
 
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
@@ -441,7 +441,7 @@ class Socket(object):
 
         if self.timeout.wait(10.0):
             gevent.spawn(self._disconnect_timeout)
-        else:
+        elif self.connected:
             self.kill()
 
     def _spawn_heartbeat(self):

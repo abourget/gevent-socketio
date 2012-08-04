@@ -1,5 +1,6 @@
 import gevent
 import urllib
+import urlparse
 
 from gevent.queue import Empty
 
@@ -36,7 +37,6 @@ class BaseTransport(object):
             headers.append(self.content_type)
 
         headers.extend(self.headers)
-        #print headers
         self.handler.start_response(status, headers, **kwargs)
 
 
@@ -121,7 +121,6 @@ class XHRPollingTransport(BaseTransport):
         """
         payload = payload.decode('utf-8')
         if payload[0] == u"\ufffd":
-            #print "MULTIMSG FULL", payload
             ret = []
             while len(payload) != 0:
                 len_end = payload.find(u"\ufffd", 1)
@@ -129,7 +128,6 @@ class XHRPollingTransport(BaseTransport):
                 msg_start = len_end + 1
                 msg_end = length + msg_start
                 message = payload[msg_start:msg_end]
-                #print "MULTIMSG", length, message
                 ret.append(message)
                 payload = payload[msg_end:]
             return ret
@@ -164,8 +162,13 @@ class JSONPolling(XHRPollingTransport):
 
     def write(self, data):
         """Just quote out stuff before sending it out"""
+        args = urlparse.parse_qs(self.handler.environ.get("QUERY_STRING"))
+        if "i" in args:
+            i = args["i"]
+        else:
+            i = "0"
         # TODO: don't we need to quote this data in here ?
-        super(JSONPolling, self).write("io.j[0]('%s');" % data)
+        super(JSONPolling, self).write("io.j[%s]('%s');" % (i, data))
 
 
 class XHRMultipartTransport(XHRPollingTransport):
@@ -226,7 +229,6 @@ class WebsocketTransport(BaseTransport):
                 message = socket.get_client_msg()
 
                 if message is None:
-                    socket.kill()
                     break
 
                 websocket.send(message)
@@ -235,8 +237,7 @@ class WebsocketTransport(BaseTransport):
             while True:
                 message = websocket.receive()
 
-                if not message:
-                    socket.kill()
+                if message is None:
                     break
                 else:
                     if message is not None:

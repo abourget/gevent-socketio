@@ -65,7 +65,7 @@ class SocketIOHandler(WSGIHandler):
 
     def write_smart(self, data):
         args = urlparse.parse_qs(self.environ.get("QUERY_STRING"))
-
+        
         if "jsonp" in args:
             self.write_jsonp_result(data, args["jsonp"][0])
         else:
