@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+    <meta charset="utf-8">
+    <title>{% block title %}Chat{% endblock %}</title>
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/chat.css">
+    {% block extra_css %}{% endblock %}
+    <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+    <script>
+        var showForm = function() {
+            $('form').slideDown(function() {
+                $('form input[type="text"]').focus();
+            });
+        };
+    </script>
+    {% block extra_js %}{% endblock %}
+
+</head>
+<body>
+    <div id="main">{% block main %}{% endblock %}</div>
+    {% block form %}{% endblock %}
+</body>
