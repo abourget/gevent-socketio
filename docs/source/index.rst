@@ -156,6 +156,7 @@ The ``gevent-socketio`` holds several examples:
   * ``simple_chat`` is a bare-bone WSGI app with a minimal socketio integration
   * ``simple_pyramid_chat`` is a simple chat application built on Pyramid
   * ``live_cpu_graph`` is a simple realtime CPU graph (linux only)
+  * ``twitter_stream`` is a streaming feed of twitter updates
   * ``pyramid_backbone_redis_chat`` is a Pyramid app using backbone.js and redis for pubsub
   * ``pyramid_backbone_redis_chat_persistence`` is a Pyramid app using backbone.js, redis for pubsub and features persistence
   * ``testapp`` is the app we use to test the different features, so there are a couple of more advanced use-cases demonstrated there
