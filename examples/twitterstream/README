@@ -1,0 +1,11 @@
+Streaming twitter updates!
+
+The server grabs a stream of twitter updates via the twitter API and each connected client gets piped a stream from the server.
+
+To run:
+
+  python setup.py install
+  cd twitterstream
+  python serve.py
+
+then visit http://127.0.0.1:8080/

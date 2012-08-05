@@ -1,0 +1,25 @@
+body {
+  margin: 2em;
+  color: #333333;
+  font-size: 16px;
+  line-height: 18px;
+  font-family: "Helvetica Neue",Arial,sans-serif;
+  background-color: #e7e7e7;
+}
+
+#tweets {
+  width: auto;
+}
+
+#tweets p {
+  margin: 0;
+  margin-bottom: 0.7em;
+  background-color: white;
+  padding: 0.5em;
+  float: left;
+  clear: left;
+}
+
+#tweets p a {
+  color: #838383;
+}
