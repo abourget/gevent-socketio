@@ -156,9 +156,16 @@ class JSONPolling(XHRPollingTransport):
     def _request_body(self):
         data = super(JSONPolling, self)._request_body()
         # resolve %20%3F's, take out wrapping d="...", etc..
-        return urllib.unquote_plus(data)[3:-1] \
+        data = urllib.unquote_plus(data)[3:-1] \
                      .replace(r'\"', '"') \
                      .replace(r"\\", "\\")
+
+        # For some reason, in case of multiple messages passed in one
+        # query, IE7 sends it escaped, not utf-8 encoded. This dirty
+        # hack handled it
+        if data[0] == "\\":
+            data = data.decode("unicode_escape").encode("utf-8")
+        return data
 
     def write(self, data):
         """Just quote out stuff before sending it out"""
@@ -265,7 +272,8 @@ class HTMLFileTransport(XHRPollingTransport):
         self.write("<script>_('%s');</script>" % data)
         
     def write(self, data):
-        super(HTMLFileTransport, self).write("1024\r\n%s%s\r\n" % (data, " " * (1024 - len(data))))
+        l = 1024 * 5
+        super(HTMLFileTransport, self).write("%d\r\n%s%s\r\n" % (l, data, " " * (l - len(data))))
         
     def connect(self, socket, request_method):
         socket.connection_confirmed = True
