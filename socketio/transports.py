@@ -265,7 +265,8 @@ class HTMLFileTransport(XHRPollingTransport):
         self.write("<script>_('%s');</script>" % data)
         
     def write(self, data):
-        super(HTMLFileTransport, self).write("1024\r\n%s%s\r\n" % (data, " " * (1024 - len(data))))
+        l = 1024 * 5
+        super(HTMLFileTransport, self).write("%d\r\n%s%s\r\n" % (l, data, " " * (l - len(data))))
         
     def connect(self, socket, request_method):
         socket.connection_confirmed = True
