@@ -1,5 +1,6 @@
 import gevent
 import urllib
+import urlparse
 
 from gevent.queue import Empty
 
@@ -15,14 +16,20 @@ class BaseTransport(object):
             ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
             ("Access-Control-Max-Age", 3600),
         ]
-        self.headers_list = []
         self.handler = handler
 
     def write(self, data=""):
-        if 'Content-Length' not in self.handler.response_headers_list:
-            self.handler.response_headers.append(('Content-Length', len(data)))
-            self.handler.response_headers_list.append('Content-Length')
-
+        # Gevent v 0.13
+        if hasattr(self.handler, 'response_headers_list'):
+            if 'Content-Length' not in self.handler.response_headers_list:
+                self.handler.response_headers.append(('Content-Length', len(data)))
+                self.handler.response_headers_list.append('Content-Length')
+        elif self.handler.provided_content_length is None:
+            # Gevent bitbucket
+            l = len(data)
+            self.handler.provided_content_length = l
+            self.handler.response_headers.append(('Content-Length', l))
+            
         self.handler.write(data)
 
     def start_response(self, status, headers, **kwargs):
@@ -30,7 +37,6 @@ class BaseTransport(object):
             headers.append(self.content_type)
 
         headers.extend(self.headers)
-        #print headers
         self.handler.start_response(status, headers, **kwargs)
 
 
@@ -87,7 +93,7 @@ class XHRPollingTransport(BaseTransport):
         ``messages`` - List of raw messages to encode, if necessary
 
         """
-        if not messages:
+        if not messages or messages[0] is None:
             return ''
 
         if len(messages) == 1:
@@ -115,7 +121,6 @@ class XHRPollingTransport(BaseTransport):
         """
         payload = payload.decode('utf-8')
         if payload[0] == u"\ufffd":
-            #print "MULTIMSG FULL", payload
             ret = []
             while len(payload) != 0:
                 len_end = payload.find(u"\ufffd", 1)
@@ -123,7 +128,6 @@ class XHRPollingTransport(BaseTransport):
                 msg_start = len_end + 1
                 msg_end = length + msg_start
                 message = payload[msg_start:msg_end]
-                #print "MULTIMSG", length, message
                 ret.append(message)
                 payload = payload[msg_end:]
             return ret
@@ -158,8 +162,13 @@ class JSONPolling(XHRPollingTransport):
 
     def write(self, data):
         """Just quote out stuff before sending it out"""
+        args = urlparse.parse_qs(self.handler.environ.get("QUERY_STRING"))
+        if "i" in args:
+            i = args["i"]
+        else:
+            i = "0"
         # TODO: don't we need to quote this data in here ?
-        super(JSONPolling, self).write("io.j[0]('%s');" % data)
+        super(JSONPolling, self).write("io.j[%s]('%s');" % (i, data))
 
 
 class XHRMultipartTransport(XHRPollingTransport):
@@ -220,7 +229,6 @@ class WebsocketTransport(BaseTransport):
                 message = socket.get_client_msg()
 
                 if message is None:
-                    socket.kill()
                     break
 
                 websocket.send(message)
@@ -229,8 +237,7 @@ class WebsocketTransport(BaseTransport):
             while True:
                 message = websocket.receive()
 
-                if not message:
-                    socket.kill()
+                if message is None:
                     break
                 else:
                     if message is not None:
@@ -255,16 +262,38 @@ class HTMLFileTransport(XHRPollingTransport):
         self.content_type = ("Content-Type", "text/html")
 
     def write_packed(self, data):
-        self.write("<script>parent.s._('%s', document);</script>" % data)
+        self.write("<script>_('%s');</script>" % data)
+        
+    def write(self, data):
+        super(HTMLFileTransport, self).write("1024\r\n%s%s\r\n" % (data, " " * (1024 - len(data))))
+        
+    def connect(self, socket, request_method):
+        socket.connection_confirmed = True
+        return super(HTMLFileTransport, self).connect(socket, request_method)
 
-    def handle_get_response(self, socket):
+    def get(self, socket):
         self.start_response("200 OK", [
             ("Connection", "keep-alive"),
             ("Content-Type", "text/html"),
             ("Transfer-Encoding", "chunked"),
         ])
-        self.write("<html><body>" + " " * 244)
+        self.write("<html><body><script>var _ = function (msg) { parent.s._(msg, document); };</script>")
+        self.write_packed("1::")  # 'connect' packet
+        
 
-        payload = self.get_messages_payload(socket, timeout=5.0)
+        def chunk():
+            while True:
+                payload = self.get_messages_payload(socket)
 
-        self.write_packed(payload)
+                if not payload:
+                    # That would mean the call to Queue.get() returned Empty,
+                    # so it was in fact killed, since we pass no timeout=..
+                    socket.kill()
+                    break
+                else:
+                    try:
+                        self.write_packed(payload)
+                    except socket.error:
+                        socket.kill()
+                        break
+        return [gevent.spawn(chunk)]

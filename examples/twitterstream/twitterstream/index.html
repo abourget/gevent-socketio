@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link href="static/css/style.css" rel="stylesheet">
+    <script type="text/javascript" src="static/jquery-1.6.1.min.js"></script>
+    <script type="text/javascript" src="static/socket.io.js"></script>
+    <script>
+$(function() {
+
+WEB_SOCKET_SWF_LOCATION = "/static/WebSocketMain.swf";
+WEB_SOCKET_DEBUG = true;
+
+// Socket.io specific code
+var socket = io.connect('/tweets');
+
+// Each time we get a new tweet, add it to our list
+socket.on('tweet', function(data) {
+    if (!data.text) {
+        return;
+    }
+    $('#tweets').prepend(format_html(data));
+});
+
+function format_html(data) {
+    return '<p>' + 
+      data.text +
+      ' &mdash;<a href="http://twiter.com/' + data.user.screen_name + '">' + data.user.screen_name + '</a>' +
+    '</p>';
+};
+
+});
+  </script>
+  </head>
+
+<body>
+  <h1>Live twitter stream from our server</h1>
+  <div id="tweets"></div>
+</body>
+</html>

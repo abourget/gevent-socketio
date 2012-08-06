@@ -40,7 +40,11 @@ class SocketIOServer(WSGIServer):
         self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):
-            policylistener = kwargs.pop('policy_listener', (args[0][0], 10843))
+            try:
+                address = args[0][0]
+            except TypeError:
+                address = args[0].address[0]
+            policylistener = kwargs.pop('policy_listener', (address, 10843))
             self.policy_server = FlashPolicyServer(policylistener)
         else:
             self.policy_server = None
@@ -60,10 +64,10 @@ class SocketIOServer(WSGIServer):
                 sys.stderr.write('FAILED to start flash policy server.\n\n')
         super(SocketIOServer, self).start_accepting()
 
-    def kill(self):
+    def stop(self):
         if self.policy_server is not None:
-            self.policy_server.kill()
-        super(SocketIOServer, self).kill()
+            self.policy_server.stop()
+        super(SocketIOServer, self).stop()
 
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)

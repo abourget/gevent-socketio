@@ -17,6 +17,7 @@ from gevent.queue import Queue
 from gevent.event import Event
 
 from socketio import packet
+from socketio.defaultjson import default_json_loads, default_json_dumps
 
 
 def default_error_handler(socket, error_name, error_message, endpoint,
@@ -64,6 +65,9 @@ class Socket(object):
     GLOBAL_NS = ''
     """Use this to be explicit when specifying a Global Namespace (an endpoint
     with no name, not '/chat' or anything."""
+
+    json_loads = staticmethod(default_json_loads)
+    json_dumps = staticmethod(default_json_dumps)
 
     def __init__(self, server, error_handler=None):
         self.server = weakref.proxy(server)
@@ -115,6 +119,22 @@ class Socket(object):
         This is called by socketio_manage().
         """
         self.error_handler = error_handler
+
+    def _set_json_loads(self, json_loads):
+        """Change the default JSON decoder.
+
+        This should be a callable that accepts a single string, and returns
+        a well-formed object.
+        """
+        self.json_loads = json_loads
+
+    def _set_json_dumps(self, json_dumps):
+        """Change the default JSON decoder.
+
+        This should be a callable that accepts a single string, and returns
+        a well-formed object.
+        """
+        self.json_dumps = json_dumps
 
     def _get_next_msgid(self):
         """This retrieves the next value for the 'id' field when sending
@@ -206,10 +226,10 @@ class Socket(object):
 
             if self.sessid in self.server.sockets:
                 self.server.sockets.pop(self.sessid)
-
-            # gevent.kill(self.wsgi_app_greenlet)
+                
+            gevent.killall(self.jobs)
         else:
-            pass  # Fail silently
+            raise Exception('Not connected')
 
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
@@ -296,7 +316,7 @@ class Socket(object):
     def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
         protocol"""
-        self.put_client_msg(packet.encode(pkt))
+        self.put_client_msg(packet.encode(pkt, self.json_dumps))
 
     def spawn(self, fn, *args, **kwargs):
         """Spawn a new Greenlet, attached to this Socket instance.
@@ -320,7 +340,7 @@ class Socket(object):
             if not rawdata:
                 continue  # or close the connection ?
             try:
-                pkt = packet.decode(rawdata)
+                pkt = packet.decode(rawdata, self.json_loads)
             except (ValueError, KeyError, Exception), e:
                 self.error('invalid_packet',
                     "There was a decoding error when dealing with packet "
@@ -359,6 +379,10 @@ class Socket(object):
 
             # Has the client requested an 'ack' with the reply parameters ?
             if pkt.get('ack') == "data" and pkt.get('id'):
+                if type(retval) is tuple:
+                    args = list(retval)
+                else:
+                    args = [retval]
                 returning_ack = dict(type='ack', ackId=pkt['id'],
                                      args=retval,
                                      endpoint=pkt.get('endpoint', ''))
@@ -393,6 +417,7 @@ class Socket(object):
                 gevent.killall(self.jobs)
                 for ns_name, ns in list(self.active_ns.iteritems()):
                     ns.recv_disconnect()
+                break
 
     def _spawn_watcher(self):
         job = gevent.spawn(self._watcher)
@@ -416,7 +441,7 @@ class Socket(object):
 
         if self.timeout.wait(10.0):
             gevent.spawn(self._disconnect_timeout)
-        else:
+        elif self.connected:
             self.kill()
 
     def _spawn_heartbeat(self):
