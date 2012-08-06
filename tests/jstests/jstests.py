@@ -9,7 +9,7 @@ TestHtml = """
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <title>Gevent-socketio Tests</title>
   <link rel="stylesheet" href="/static/qunit.css">
   <script>WEB_SOCKET_SWF_LOCATION="/static/WebSocketMain.swf";</script>
