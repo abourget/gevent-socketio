@@ -55,7 +55,8 @@ class SocketIOServer(WSGIServer):
     def start_accepting(self):
         if self.policy_server is not None:
             try:
-                self.policy_server.start()
+                if not self.policy_server.started:
+                    self.policy_server.start()
             except error, ex:
                 sys.stderr.write(
                     'FAILED to start flash policy server: %s\n' % (ex, ))
