@@ -30,4 +30,8 @@ $(document).ready(function() {
 
         $("#chatbox").val("");
     });
+
+    $("#join").click(function(e) {
+      socket.emit('join', 'test')
+    })
 });
