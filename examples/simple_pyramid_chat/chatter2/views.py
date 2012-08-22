@@ -50,6 +50,10 @@ class ChatNamespace(BaseNamespace, NamedUsersRoomsMixin):
     def recv_disconnect(self):
         self.broadcast_event('user_disconnect')
         self.disconnect(silent=True)
+        
+    def on_join(self, channel):
+        self.join(channel)
+
 
 
 def socketio_service(request):
