@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>{% block title %}Flask | Chat Demo{% endblock title %}</title>
+        <link rel="stylesheet" href="/static/css/chat.css">
+        <script type="text/javascript">
+            var showForm = function() {
+                $('form').slideDown(function() {
+                    $('form input[type="text"]').focus();
+                });
+            };
+        </script>
+    </head>
+    <body>
+
+        <div id="main">
+        {% block content %}
+        {% endblock content %}
+        </div>
+
+        {% block form %}
+        {% endblock form %}
+
+        <script src="/static/js/jquery.min.js"></script>
+        <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+        <script src="http://ajax.microsoft.com/ajax/jquery.templates/beta1/jquery.tmpl.min.js"></script>
+        <script src="/static/js/socketio/socket.io.min.js"></script>
+
+        {% block extra_js %}
+        {% endblock extra_js %}
+
+    </body>
+</html>
