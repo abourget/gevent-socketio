@@ -1,0 +1,3 @@
+flask==0.9
+flask-sqlalchemy==0.7.8
+gevent-socketio==0.3.5-rc2
