@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block extra_js %}
+<script type="text/javascript">
+    $(showForm);
+</script>
+{% endblock %}
+
+{% block content %}
+    {% for room in rooms %}
+    <div class="room">
+        <h1><a href="{{ room.get_absolute_url() }}">{{ room }}</a></h1>
+        <ul>
+            {% for user in room.users.all() %}
+            <li>{{ user }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <p>There are currently no rooms! Add one below.</p>
+    {% endfor %}
+    <br clear="all">
+{% endblock content %}
+
+{% block form %}
+<form method="post" action="{{ url_for('create') }}">
+    <input type="text" id="name" name="name">
+    <input type="submit" id="submit" value="Add Room">
+</form>
+{% endblock %}
