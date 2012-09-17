@@ -1,7 +1,7 @@
 import gevent
 import urllib
 import urlparse
-
+from geventwebsocket import WebSocketError
 from gevent.queue import Empty
 
 
@@ -237,8 +237,10 @@ class WebsocketTransport(BaseTransport):
 
                 if message is None:
                     break
-
-                websocket.send(message)
+                try:
+                    websocket.send(message)
+                except WebSocketError:
+                    socket.disconnect()
 
         def read_from_ws():
             while True:

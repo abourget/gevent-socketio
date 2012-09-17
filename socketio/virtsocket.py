@@ -222,11 +222,12 @@ class Socket(object):
             self.state = self.STATE_DISCONNECTING
             self.server_queue.put_nowait(None)
             self.client_queue.put_nowait(None)
-            self.disconnect()
+            if len(self.active_ns) > 0:
+                self.disconnect()
 
             if self.sessid in self.server.sockets:
                 self.server.sockets.pop(self.sessid)
-                
+         
             gevent.killall(self.jobs)
         else:
             raise Exception('Not connected')
@@ -312,6 +313,9 @@ class Socket(object):
         """
         if namespace in self.active_ns:
             del self.active_ns[namespace]
+
+        if len(self.active_ns) == 0:
+            self.kill()
 
     def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
