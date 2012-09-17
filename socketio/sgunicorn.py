@@ -59,4 +59,4 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     # was a configuration option, will probably end up how this implemented,
     # for now this is just a proof of concept to make sure this will work
     resource = 'socket.io'
-    policy_server = False  # Don't run the flash policy server
+    policy_server = True  # Don't run the flash policy server
