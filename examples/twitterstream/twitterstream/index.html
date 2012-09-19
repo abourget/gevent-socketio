@@ -24,7 +24,7 @@ socket.on('tweet', function(data) {
 function format_html(data) {
     return '<p>' + 
       data.text +
-      ' &mdash;<a href="http://twiter.com/' + data.user.screen_name + '">' + data.user.screen_name + '</a>' +
+      ' &mdash;<a href="http://twitter.com/' + data.user.screen_name + '">' + data.user.screen_name + '</a>' +
     '</p>';
 };
 
