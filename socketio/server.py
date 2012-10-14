@@ -131,6 +131,5 @@ def serve_paste(app, global_conf, **kw):
     transports = websockets, xhr-multipart, xhr-longpolling, etc...
     policy_server = True
     """
-    print kw
     serve(app, **kw)
     return 0
