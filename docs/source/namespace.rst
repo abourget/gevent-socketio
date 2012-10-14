@@ -15,6 +15,47 @@ Namespace initialization
 
      .. automethod:: BaseNamespace.initialize
 
+Event flow
+----------
+
+This is an attempt at catching the gotchas of the Socket.IO protocol,
+which, for historical reasons, sometimes have weird event flow.
+
+The first function to fire is ``initialize()``, which will be called
+only if there is an incoming packet for the Namespace.  A successful
+javascript call to ``io.connect()`` **is not** sufficient for
+``gevent-socketio`` to trigger the creation of a Namespace object.
+Some event has to flow from the client to the server.  The connection
+will appear to have succeeded from the client's side, but that is
+because ``gevent-socketio`` maintains the virtual socket up and running
+before it hits your application.  This is why it is a good pratice to
+send a packet (often a ``login``, or ``subscribe`` or ``connect`` JSON
+event, with ``io.emit()`` in the browser).
+
+If you're using the GLOBAL_NS, the ``recv_connect()`` will not fire on
+your namespace, because when the connection is opened, there is no
+such packet sent.  The ``connect`` packet is only sent over (and
+explicitly sent) by the javascript client when it tries to communicate
+with some "non-global" namespaces.  That is why it is recommended to
+always use namespaces, to avoid having a different behavior for your
+different namespaces. It also makes things explicit in your
+application, when you have something such as ``/chat``, or
+``/live_data``.  Before a certain version of Socket.IO, there was only
+a global namespace, and so this behavior was kept for backwards
+compatibility.
+
+Then flows the normal events, back and forth as described elsewhere (elsewhere??).
+
+Upon disconnection, here is what happens: [INSERT HERE the details
+flow of disconnection handling, events fired, physical closing of the
+connection and ways to terminate a socket, when is the Namespace
+killed, the state of the spawn'd processes for each Namespace and each
+virtsocket. This really needs to be done, and I'd appreciate having
+people investigate this thoroughly]
+
+There you go :)
+
+
 Namespace instance properties
 -----------------------------
 
@@ -138,17 +179,17 @@ ACL system
      .. automethod:: BaseNamespace.reset_acl
 
      This function is used internally, but can be useful to the developer:
-     
+
      .. automethod:: is_method_allowed
 
 Low-level methods
 -----------------
 
      Packet dispatching methods. These functions are normally not overriden if
-     you are satisfied with the normal dispatch behavior:     
+     you are satisfied with the normal dispatch behavior:
 
      .. automethod:: BaseNamespace.process_packet
-     
+
      .. automethod:: BaseNamespace.call_method_with_acl
 
      .. automethod:: BaseNamespace.call_method
