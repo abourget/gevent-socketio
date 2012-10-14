@@ -52,7 +52,9 @@ to implement yourself the moment you need it.
 abstraction of the transport, that gives you real-time web support
 down to Internet Explorer 6.0, using long-polling methods.  It will
 also use native WebSockets when available to the browser, for even
-lower latencies.
+lower latencies.  Currently supported transports: ``websocket``,
+``flashsocket``, ``htmlfile``, ``xhr-multipart``, ``xhr-polling``,
+``jsonp-polling``.
 
 This implementation covers nearly all the features of the Socket.IO
 0.7+ (up to at least 0.9.1) protocol, with events, callbacks.  It adds

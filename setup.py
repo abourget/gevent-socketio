@@ -40,4 +40,10 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Intended Audience :: Developers",
     ],
+    entry_points="""
+
+    [paste.server_runner]
+    paster = socketio.server:serve_paste
+
+    """,
 )

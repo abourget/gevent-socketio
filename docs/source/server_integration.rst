@@ -16,8 +16,15 @@ integration all you have to do is include the :mod:`socketio.sgunicorn`
     gunicorn --worker-class socketio.sgunicorn.GeventSocketIOWorker module:app
 
 
-paster
-------
+paster / Pyramid's pserve
+-------------------------
+
+
+Through Gunicorn
+^^^^^^^^^^^^^^^^
+
+Gunicorn will handle workers for you and has other features.
+
 For paster, you just have to define the configuration like this:
 
 .. code-block:: ini
@@ -29,9 +36,40 @@ For paster, you just have to define the configuration like this:
     workers = 4
     worker_class = socketio.sgunicorn.GeventSocketIOWorker
 
-pyramid's pserve
-----------------
-Same as paster.
+Directly through gevent
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Straight gevent integration is the simplest and has no dependencies.
+
+In your .ini file:
+
+.. code-block:: ini
+
+  [server:main]
+  use = egg:gevent-socketio#paster
+  host = 0.0.0.0
+  port = 6543
+  resource = socket.io
+  transports = websocket, xhr-polling, xhr-multipart
+  policy_server = True
+  policy_listener_host = 0.0.0.0
+  policy_listener_port = 10843
+
+``policy_listener_host`` defaults to ``host``,
+``policy_listener_port`` defaults to ``10843``, ``transports``
+defaults to all transports, ``policy_server`` defaults to ``False`` in
+here, ``resource`` defaults to ``socket.io``.
+
+So you can have a slimmed-down version::
+
+.. code-block:: ini
+
+  [server:main]
+  use = egg:gevent-socketio#paster
+  host = 0.0.0.0
+  port = 6543
+
+
 
 django runserver
 ----------------
@@ -85,7 +123,7 @@ or you can use gevent directly:
 
     if __name__ == '__main__':
         print 'Listening on http://127.0.0.1:%s and on port 10843 (flash policy server)' % PORT
-        SocketIOServer(('', PORT), application, namespace="socket.io").serve_forever()
+        SocketIOServer(('', PORT), application, resource="socket.io").serve_forever()
 
 
 Databases
