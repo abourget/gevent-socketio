@@ -227,7 +227,7 @@ class Socket(object):
 
             if self.sessid in self.server.sockets:
                 self.server.sockets.pop(self.sessid)
-         
+
             gevent.killall(self.jobs)
         else:
             raise Exception('Not connected')
@@ -374,8 +374,12 @@ class Socket(object):
                 new_ns_class = self.namespaces[endpoint]
                 pkt_ns = new_ns_class(self.environ, endpoint,
                                         request=self.request)
-                pkt_ns.initialize()  # use this instead of __init__,
-                                     # for less confusion
+                # This calls initialize() on all the classes and mixins, etc..
+                # in the order of the MRO
+                for cls in type(pkt_ns).__mro__:
+                    if hasattr(cls, 'initialize'):
+                        cls.initialize(pkt_ns)  # use this instead of __init__,
+                                                # for less confusion
 
                 self.active_ns[endpoint] = pkt_ns
 
