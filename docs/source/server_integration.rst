@@ -100,7 +100,7 @@ or you can use gevent directly:
 
     #!/usr/bin/env python
     from gevent import monkey
-    from socketio import SocketIOServer
+    from socketio.server import SocketIOServer
     import django.core.handlers.wsgi
     import os
     import sys
