@@ -1,4 +1,13 @@
-New in 0.3.5 (since 0.3.5-rc2)
+New in 0.3.6 (since 0.3.5-rc3)
+-----------------------------
+
+    * initialize() on Namespace objects, as well as Mixins (and all
+      descendants) is now called by the framework, with ``self`` as a
+      parameter.
+    * xhr-longpoll fixed for compat with gevent 1.0bX
+    * added a paster server integration , use with: egg:gevent-socketio#paster
+
+New in 0.3.5-rc3 (since 0.3.5-rc2)
 -----------------------------
     * Compatibility with gevent 1.0
     * Configurable json serialization

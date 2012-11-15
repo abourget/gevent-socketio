@@ -50,18 +50,17 @@ class ChatNamespace(BaseNamespace, NamedUsersRoomsMixin):
     def recv_disconnect(self):
         self.broadcast_event('user_disconnect')
         self.disconnect(silent=True)
-        
+
     def on_join(self, channel):
         self.join(channel)
 
 
 
+from pyramid.response import Response
 def socketio_service(request):
-    retval = socketio_manage(request.environ,
-        {
-            '/chat': ChatNamespace,
-        }, request=request
-    )
+    socketio_manage(request.environ,
+                    {'/chat': ChatNamespace},
+                    request=request)
 
-    return retval
+    return Response('')
 

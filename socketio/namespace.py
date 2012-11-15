@@ -277,10 +277,14 @@ class BaseNamespace(object):
         :func:`~socketio.socketio_manage`) without clogging the
         memory.
 
-        If you override this method, you probably want to only
-        initialize the variables you're going to use in the events of
-        this namespace, say, with some default values, but not perform
-        any operation that assumes authentication/authorization.
+        If you override this method, you probably want to initialize
+        the variables you're going to use in the events handled by this
+        namespace, setup ACLs, etc..
+
+        This method is called on all base classes following the _`method resolution order <http://docs.python.org/library/stdtypes.html?highlight=mro#class.__mro__>`
+        so you don't need to call super() to initialize the mixins or
+        other derived classes.
+
         """
         pass
 
