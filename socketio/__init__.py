@@ -21,7 +21,7 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None,
     use Socket.GLOBAL_NS to be more explicit. So it would look like:
 
     .. code-block:: python
-    
+
       namespaces={'': GlobalNamespace,
                   '/chat': ChatNamespace}
 
@@ -51,7 +51,7 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None,
 
       def my_view(request):
           socketio_manage(request.environ, {'': GlobalNamespace}, request)
-    
+
     NOTE: You must understand that this function is going to be called
     *only once* per socket opening, *even though* you are using a long
     polling mechanism.  The subsequent calls (for long polling) will
@@ -80,9 +80,8 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None,
         socket._set_json_dumps(json_dumps)
 
     receiver_loop = socket._spawn_receiver_loop()
-    watcher = socket._spawn_watcher()
 
-    gevent.joinall([receiver_loop, watcher])
+    gevent.joinall([receiver_loop])
 
     # TODO: double check, what happens to the WSGI request here ? it vanishes ?
     return

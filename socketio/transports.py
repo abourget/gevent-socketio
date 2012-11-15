@@ -8,7 +8,14 @@ from gevent.queue import Empty
 class BaseTransport(object):
     """Base class for all transports. Mostly wraps handler class functions."""
 
-    def __init__(self, handler):
+    def __init__(self, handler, config, **kwargs):
+        """Base transport class.
+
+        :param config: dict Should contain the config keys, like
+          ``heartbeat_interval``, ``heartbeat_timeout`` and
+          ``close_timeout``.
+
+        """
         self.content_type = ("Content-Type", "text/plain; charset=UTF-8")
         self.headers = [
             ("Access-Control-Allow-Origin", "*"),
@@ -17,6 +24,7 @@ class BaseTransport(object):
             ("Access-Control-Max-Age", 3600),
         ]
         self.handler = handler
+        self.config = config
 
     def write(self, data=""):
         # Gevent v 0.13
@@ -29,7 +37,7 @@ class BaseTransport(object):
             l = len(data)
             self.handler.provided_content_length = l
             self.handler.response_headers.append(('Content-Length', l))
-            
+
         self.handler.write(data)
 
     def start_response(self, status, headers, **kwargs):
@@ -52,14 +60,13 @@ class XHRPollingTransport(BaseTransport):
     def get(self, socket):
         socket.heartbeat()
 
-        payload = self.get_messages_payload(socket, timeout=5.0)
+        heartbeat_interval = self.config['heartbeat_interval']
+        payload = self.get_messages_payload(socket, timeout=heartbeat_interval)
         if not payload:
             payload = "8::"  # NOOP
 
         self.start_response("200 OK", [])
         self.write(payload)
-
-        return []
 
     def _request_body(self):
         return self.handler.wsgi_input.readline()
@@ -73,8 +80,6 @@ class XHRPollingTransport(BaseTransport):
             ("Content-Type", "text/plain")
         ])
         self.write("1")
-
-        return []
 
     def get_messages_payload(self, socket, timeout=None):
         """This will fetch the messages from the Socket's queue, and if
@@ -99,8 +104,10 @@ class XHRPollingTransport(BaseTransport):
         if len(messages) == 1:
             return messages[0].encode('utf-8')
 
-        payload = u''.join(u'\ufffd%d\ufffd%s' % (len(p), p)
-                          for p in messages)
+        payload = u''.join([(u'\ufffd%d\ufffd%s' % (len(p), p))
+                            for p in messages if p is not None])
+        # FIXME: why is it so that we must filter None from here ?  How
+        #        is it even possible that a None gets in there ?
 
         return payload.encode('utf-8')
 
@@ -133,15 +140,14 @@ class XHRPollingTransport(BaseTransport):
             return ret
         return [payload]
 
-    def connect(self, socket, request_method):
-        if not socket.connection_confirmed:
-            socket.connection_confirmed = True
+    def do_exchange(self, socket, request_method):
+        if not socket.connection_established:
+            # Runs only the first time we get a Socket opening
             self.start_response("200 OK", [
                 ("Connection", "close"),
             ])
             self.write("1::")  # 'connect' packet
-
-            return []
+            return
         elif request_method in ("GET", "POST", "OPTIONS"):
             return getattr(self, request_method.lower())(socket)
         else:
@@ -186,11 +192,9 @@ class XHRMultipartTransport(XHRPollingTransport):
             "multipart/x-mixed-replace;boundary=\"socketio\""
         )
 
-    def connect(self, socket, request_method):
+    def do_exchange(self, socket, request_method):
         if request_method == "GET":
-            # TODO: double verify this, because we're not sure. look at git revs.
-            heartbeat = socket._spawn_heartbeat()
-            return [heartbeat] + self.get(socket)
+            return self.get(socket)
         elif request_method == "POST":
             return self.post(socket)
         else:
@@ -212,22 +216,28 @@ class XHRMultipartTransport(XHRPollingTransport):
                 if not payload:
                     # That would mean the call to Queue.get() returned Empty,
                     # so it was in fact killed, since we pass no timeout=..
-                    socket.kill()
-                    break
+                    return
+                    # See below
                 else:
                     try:
                         self.write_multipart(header)
                         self.write_multipart(payload)
                         self.write_multipart("--socketio\r\n")
                     except socket.error:
-                        socket.kill()
-                        break
+                        # The client might try to reconnect, even with a socket
+                        # error, so let's just let it go, and not kill the
+                        # socket completely.  Other processes will ensure
+                        # we kill everything if the user expires the timeouts.
+                        #
+                        # WARN: this means that this payload is LOST, unless we
+                        # decide to re-inject it into the queue.
+                        return
 
-        return [gevent.spawn(chunk)]
+        socket.spawn(chunk)
 
 
 class WebsocketTransport(BaseTransport):
-    def connect(self, socket, request_method):
+    def do_exchange(self, socket, request_method):
         websocket = self.handler.environ['wsgi.websocket']
         websocket.send("1::")  # 'connect' packet
 
@@ -252,11 +262,8 @@ class WebsocketTransport(BaseTransport):
                     if message is not None:
                         socket.put_server_msg(message)
 
-        gr1 = gevent.spawn(send_into_ws)
-        gr2 = gevent.spawn(read_from_ws)
-        heartbeat1, heartbeat2 = socket._spawn_heartbeat()
-
-        return [gr1, gr2, heartbeat1, heartbeat2]
+        socket.spawn(send_into_ws)
+        socket.spawn(read_from_ws)
 
 
 class FlashSocketTransport(WebsocketTransport):
@@ -272,14 +279,13 @@ class HTMLFileTransport(XHRPollingTransport):
 
     def write_packed(self, data):
         self.write("<script>_('%s');</script>" % data)
-        
+
     def write(self, data):
         l = 1024 * 5
         super(HTMLFileTransport, self).write("%d\r\n%s%s\r\n" % (l, data, " " * (l - len(data))))
-        
-    def connect(self, socket, request_method):
-        socket.connection_confirmed = True
-        return super(HTMLFileTransport, self).connect(socket, request_method)
+
+    def do_exchange(self, socket, request_method):
+        return super(HTMLFileTransport, self).do_exchange(socket, request_method)
 
     def get(self, socket):
         self.start_response("200 OK", [
@@ -289,7 +295,7 @@ class HTMLFileTransport(XHRPollingTransport):
         ])
         self.write("<html><body><script>var _ = function (msg) { parent.s._(msg, document); };</script>")
         self.write_packed("1::")  # 'connect' packet
-        
+
 
         def chunk():
             while True:
@@ -298,12 +304,12 @@ class HTMLFileTransport(XHRPollingTransport):
                 if not payload:
                     # That would mean the call to Queue.get() returned Empty,
                     # so it was in fact killed, since we pass no timeout=..
-                    socket.kill()
-                    break
+                    return
                 else:
                     try:
                         self.write_packed(payload)
                     except socket.error:
-                        socket.kill()
-                        break
-        return [gevent.spawn(chunk)]
+                        # See comments for XHRMultipart
+                        return
+
+        socket.spawn(chunk)

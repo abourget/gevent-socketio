@@ -73,7 +73,7 @@ class Socket(object):
     json_loads = staticmethod(default_json_loads)
     json_dumps = staticmethod(default_json_dumps)
 
-    def __init__(self, server, error_handler=None):
+    def __init__(self, server, config, error_handler=None):
         self.server = weakref.proxy(server)
         self.sessid = str(random.random())[2:]
         self.session = {}  # the session dict, for general developer usage
@@ -84,7 +84,7 @@ class Socket(object):
         self.timeout = Event()
         self.wsgi_app_greenlet = None
         self.state = "NEW"
-        self.connection_confirmed = False
+        self.connection_established = False
         self.ack_callbacks = {}
         self.ack_counter = 0
         self.request = None
@@ -93,6 +93,7 @@ class Socket(object):
         self.active_ns = {}  # Namespace sessions that were instantiated
         self.jobs = []
         self.error_handler = default_error_handler
+        self.config = config
         if error_handler is not None:
             self.error_handler = error_handler
 
@@ -199,9 +200,6 @@ class Socket(object):
     def incr_hits(self):
         self.hits += 1
 
-        if self.hits == 1:
-            self.state = self.STATE_CONNECTED
-
     def heartbeat(self):
         """This makes the heart beat for another X seconds.  Call this when
         you get a heartbeat packet in.
@@ -210,7 +208,7 @@ class Socket(object):
         """
         self.timeout.set()
 
-    def kill(self):
+    def kill(self, detach=False):
         """This function must/will be called when a socket is to be completely
         shut down, closed by connection timeout, connection error or explicit
         disconnection from the client.
@@ -230,13 +228,21 @@ class Socket(object):
                 log.debug("Calling disconnect() on %s" % self)
                 self.disconnect()
 
-            log.debug("Removing %s from server sockets" % self)
-            if self.sessid in self.server.sockets:
-                self.server.sockets.pop(self.sessid)
+        gevent.killall(self.jobs)
 
-            gevent.killall(self.jobs)
-        else:
-            raise Exception('Socket kill()ed before being connected')
+        if detach:
+            self.detach()
+
+    def detach(self):
+        """Detach this socket from the server. This should be done in
+        conjunction with kill(), once all the jobs are dead, detach the
+        socket for garbage collection."""
+
+        log.debug("Removing %s from server sockets" % self)
+        if self.sessid in self.server.sockets:
+            self.server.sockets.pop(self.sessid)
+
+
 
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
@@ -321,7 +327,7 @@ class Socket(object):
             del self.active_ns[namespace]
 
         if len(self.active_ns) == 0:
-            self.kill()
+            self.kill(detach=True)
 
     def send_packet(self, pkt):
         """Low-level interface to queue a packet on the wire (encoded as wire
@@ -334,7 +340,7 @@ class Socket(object):
         It will be monitored by the "watcher" method
         """
 
-        self.debug("Spawning sub-Socket Greenlet: %s" % fn.__name__)
+        log.debug("Spawning sub-Socket Greenlet: %s" % fn.__name__)
         job = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(job)
         return job
@@ -342,6 +348,13 @@ class Socket(object):
     def _receiver_loop(self):
         """This is the loop that takes messages from the queue for the server
         to consume, decodes them and dispatches them.
+
+        It is the main loop for a socket.  We join on this process before
+        returning control to the web framework.
+
+        This process is not tracked by the socket itself, it is not going
+        to be killed by the ``gevent.killall(socket.jobs)``, so it must
+        exit gracefully itself.
         """
 
         while True:
@@ -364,7 +377,7 @@ class Socket(object):
 
             if pkt['type'] == 'disconnect' and pkt['endpoint'] == '':
                 # On global namespace, we kill everything.
-                self.kill()
+                self.kill(detach=True)
                 continue
 
             endpoint = pkt['endpoint']
@@ -404,8 +417,9 @@ class Socket(object):
 
             # Now, are we still connected ?
             if not self.connected:
-                self.kill()  # ?? what,s the best clean-up when its not a
-                             # user-initiated disconnect
+                self.kill(detach=True)  # ?? what,s the best clean-up
+                                        # when its not a
+                                        # user-initiated disconnect
                 return
 
     def _spawn_receiver_loop(self):
@@ -417,50 +431,49 @@ class Socket(object):
         return job
 
     def _watcher(self):
-        """Watch if any of the greenlets for a request have died. If so, kill
-        the request and the socket.
-        """
-        # TODO: add that if any of the request.jobs die, kill them all and exit
-        gevent.sleep(5.0)
+        """Watch out if we've been disconnected, in that case, kill
+        all the jobs.
 
+        """
         while True:
             gevent.sleep(1.0)
-
             if not self.connected:
-                # Killing Socket-level jobs
-                gevent.killall(self.jobs)
                 for ns_name, ns in list(self.active_ns.iteritems()):
                     ns.recv_disconnect()
+                # Killing Socket-level jobs
+                gevent.killall(self.jobs)
                 break
 
     def _spawn_watcher(self):
+        """This one is not waited for with joinall(socket.jobs), as it
+        is an external watcher, to clean up when everything is done."""
         job = gevent.spawn(self._watcher)
         return job
 
     def _heartbeat(self):
         """Start the heartbeat Greenlet to check connection health."""
-        self.state = self.STATE_CONNECTED
-
+        interval = self.config['heartbeat_interval']
         while self.connected:
-            gevent.sleep(5.0)  # FIXME: make this a setting
+            gevent.sleep(interval)
             # TODO: this process could use a timeout object like the disconnect
             #       timeout thing, and ONLY send packets when none are sent!
             #       We would do that by calling timeout.set() for a "sending"
             #       timeout.  If we're sending 100 messages a second, there is
             #       no need to push some heartbeats in there also.
-            self.put_client_msg("2::")  # TODO: make it a heartbeat packet
+            self.put_client_msg("2::")
 
-    def _disconnect_timeout(self):
-        self.timeout.clear()
+    def _heartbeat_timeout(self):
+        timeout = self.config['heartbeat_timeout']
+        while True:
+            self.timeout.clear()
+            gevent.sleep(0)
+            if not self.timeout.wait(timeout=float(timeout)):
+                if self.connected:
+                    self.kill(detach=True)
+                return
 
-        if self.timeout.wait(10.0):
-            gevent.spawn(self._disconnect_timeout)
-        elif self.connected:
-            self.kill()
 
     def _spawn_heartbeat(self):
         """This functions returns a list of jobs"""
-        job_sender = gevent.spawn(self._heartbeat)
-        job_waiter = gevent.spawn(self._disconnect_timeout)
-        self.jobs.extend((job_sender, job_waiter))
-        return job_sender, job_waiter
+        self.spawn(self._heartbeat)
+        self.spawn(self._heartbeat_timeout)
