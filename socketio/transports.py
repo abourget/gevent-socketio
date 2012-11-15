@@ -239,7 +239,7 @@ class WebsocketTransport(BaseTransport):
                     break
                 try:
                     websocket.send(message)
-                except WebSocketError:
+                except (WebSocketError, TypeError):
                     socket.disconnect()
 
         def read_from_ws():
