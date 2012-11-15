@@ -11,6 +11,7 @@ in a different way
 """
 import random
 import weakref
+import logging
 
 import gevent
 from gevent.queue import Queue
@@ -18,6 +19,9 @@ from gevent.event import Event
 
 from socketio import packet
 from socketio.defaultjson import default_json_loads, default_json_dumps
+
+
+log = logging.getLogger(__name__)
 
 
 def default_error_handler(socket, error_name, error_message, endpoint,
@@ -223,14 +227,16 @@ class Socket(object):
             self.server_queue.put_nowait(None)
             self.client_queue.put_nowait(None)
             if len(self.active_ns) > 0:
+                log.debug("Calling disconnect() on %s" % self)
                 self.disconnect()
 
+            log.debug("Removing %s from server sockets" % self)
             if self.sessid in self.server.sockets:
                 self.server.sockets.pop(self.sessid)
 
             gevent.killall(self.jobs)
         else:
-            raise Exception('Not connected')
+            raise Exception('Socket kill()ed before being connected')
 
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
