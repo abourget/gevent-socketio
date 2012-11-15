@@ -8,12 +8,15 @@ from django.views.decorators.csrf import csrf_exempt
 
 SOCKETIO_NS = {}
 
+
 class namespace(object):
     def __init__(self, name=''):
         self.name = name
 
     def __call__(self, handler):
         SOCKETIO_NS[self.name] = handler
+        return handler
+
 
 @csrf_exempt
 def socketio(request):
