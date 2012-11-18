@@ -60,7 +60,7 @@ In your .ini file:
 defaults to all transports, ``policy_server`` defaults to ``False`` in
 here, ``resource`` defaults to ``socket.io``.
 
-So you can have a slimmed-down version::
+So you can have a slimmed-down version:
 
 .. code-block:: ini
 
