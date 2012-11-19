@@ -175,7 +175,7 @@ class SocketIOHandler(WSGIHandler):
 
     def handle_bad_request(self):
         self.close_connection = True
-        self.start_reponse("400 Bad Request", [
+        self.start_response("400 Bad Request", [
             ('Content-Type', 'text/plain'),
             ('Connection', 'close'),
             ('Content-Length', 0)
