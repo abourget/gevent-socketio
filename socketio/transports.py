@@ -155,8 +155,8 @@ class XHRPollingTransport(BaseTransport):
 
 
 class JSONPolling(XHRPollingTransport):
-    def __init__(self, handler):
-        super(JSONPolling, self).__init__(handler)
+    def __init__(self, handler, config):
+        super(JSONPolling, self).__init__(handler, config)
         self.content_type = ("Content-Type", "text/javascript; charset=UTF-8")
 
     def _request_body(self):
