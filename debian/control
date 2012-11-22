@@ -1,0 +1,18 @@
+Source: python-gevent-socketio
+Section: python
+Priority: extra
+Maintainer: Alexandre Bourget <alexandre.bourget@savoirfairelinux.com>
+Build-Depends: python-all, python-setuptools, python-gevent, python-greenlet, python-gevent-websocket, debhelper (>= 7)
+Standards-Version: 3.9.3
+Homepage: http://gevent-socketio.readthedocs.org/en/latest/
+
+Package: python-gevent-socketio
+Architecture: all
+Section: python
+Priority: extra
+Depends: ${python:Depends}
+Homepage: http://gevent-socketio.readthedocs.org/en/latest/
+Description: Python implementation of the Socket.IO server library
+ Socket.IO is a WebSocket-like abstraction that enables real-time communication
+ between a browser and a server. gevent-socketio is a Python implementation of
+ the protocol.
