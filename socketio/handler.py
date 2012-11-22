@@ -170,12 +170,10 @@ class SocketIOHandler(WSGIHandler):
             except:
                 self.handle_error(*sys.exc_info())
 
-        # wait here for all jobs to finished, when they are done
-        gevent.joinall(socket.jobs)
-
-        # clear our socket if its already closed
-        if self.socket.closed:
-            self.socket = None
+        # we need to keep the connection open if we are an open socket
+        if tokens['transport_id'] in ['flashsocket', 'websocket']:
+            # wait here for all jobs to finished, when they are done
+            gevent.joinall(socket.jobs)
 
     def handle_bad_request(self):
         self.close_connection = True
