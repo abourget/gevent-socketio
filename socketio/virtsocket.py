@@ -326,7 +326,7 @@ class Socket(object):
         if namespace in self.active_ns:
             del self.active_ns[namespace]
 
-        if len(self.active_ns) == 0:
+        if len(self.active_ns) == 0 and self.connected:
             self.kill(detach=True)
 
     def send_packet(self, pkt):

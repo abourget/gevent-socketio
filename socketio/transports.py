@@ -249,7 +249,7 @@ class WebsocketTransport(BaseTransport):
                     break
                 try:
                     websocket.send(message)
-                except WebSocketError:
+                except (WebSocketError, TypeError):
                     # We can't send a message on the socket
                     # it is dead, let the other sockets know
                     socket.disconnect()

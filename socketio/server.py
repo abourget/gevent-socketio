@@ -93,10 +93,10 @@ class SocketIOServer(WSGIServer):
                 sys.stderr.write('FAILED to start flash policy server.\n\n')
         super(SocketIOServer, self).start_accepting()
 
-    def stop(self):
+    def stop(self, timeout=None):
         if self.policy_server is not None:
             self.policy_server.stop()
-        super(SocketIOServer, self).stop()
+        super(SocketIOServer, self).stop(timeout=timeout)
 
     def handle(self, socket, address):
         # Pass in the config about timeouts, heartbeats, also...
