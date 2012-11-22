@@ -275,8 +275,8 @@ class FlashSocketTransport(WebsocketTransport):
 class HTMLFileTransport(XHRPollingTransport):
     """Not tested at all!"""
 
-    def __init__(self, handler):
-        super(HTMLFileTransport, self).__init__(handler)
+    def __init__(self, handler, config):
+        super(HTMLFileTransport, self).__init__(handler, config)
         self.content_type = ("Content-Type", "text/html")
 
     def write_packed(self, data):
