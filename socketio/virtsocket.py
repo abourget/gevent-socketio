@@ -228,10 +228,10 @@ class Socket(object):
                 log.debug("Calling disconnect() on %s" % self)
                 self.disconnect()
 
-        gevent.killall(self.jobs)
-
         if detach:
             self.detach()
+
+        gevent.killall(self.jobs)
 
     def detach(self):
         """Detach this socket from the server. This should be done in
@@ -242,8 +242,6 @@ class Socket(object):
         if self.sessid in self.server.sockets:
             self.server.sockets.pop(self.sessid)
 
-
-
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
         self.heartbeat()
@@ -251,7 +249,6 @@ class Socket(object):
 
     def put_client_msg(self, msg):
         """Writes to the client's pipe, to end up in the browser"""
-        self.heartbeat()
         self.client_queue.put_nowait(msg)
 
     def get_client_msg(self, **kwargs):
@@ -463,12 +460,14 @@ class Socket(object):
             self.put_client_msg("2::")
 
     def _heartbeat_timeout(self):
-        timeout = self.config['heartbeat_timeout']
+        timeout = float(self.config['heartbeat_timeout'])
         while True:
             self.timeout.clear()
             gevent.sleep(0)
-            if not self.timeout.wait(timeout=float(timeout)):
+            wait_res = self.timeout.wait(timeout=timeout)
+            if not wait_res:
                 if self.connected:
+                    log.debug("heartbeat timed out, killing socket")
                     self.kill(detach=True)
                 return
 
