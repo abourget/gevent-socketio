@@ -5,8 +5,6 @@ import urlparse
 
 from gevent.pywsgi import WSGIHandler
 from socketio import transports
-from geventwebsocket.handler import WebSocketHandler
-
 
 class SocketIOHandler(WSGIHandler):
     RE_REQUEST_URL = re.compile(r"""
@@ -136,7 +134,7 @@ class SocketIOHandler(WSGIHandler):
         # FIXME: fix this ugly class change
         if issubclass(transport, (transports.WebsocketTransport,
                                   transports.FlashSocketTransport)):
-            self.__class__ = WebSocketHandler
+            self.__class__ = self.server.ws_handler_class
             self.prevent_wsgi_call = True  # thank you
             # TODO: any errors, treat them ??
             self.handle_one_response()  # does the Websocket dance before we continue

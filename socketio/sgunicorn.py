@@ -1,5 +1,4 @@
 import os
-
 import gevent
 import time
 
@@ -7,11 +6,27 @@ from gevent.pool import Pool
 
 from gunicorn.workers.ggevent import GeventPyWSGIWorker
 from gunicorn.workers.ggevent import PyWSGIHandler
+from gunicorn.workers.ggevent import GeventResponse
 from socketio.server import SocketIOServer
 from socketio.handler import SocketIOHandler
 
+from geventwebsocket.handler import WebSocketHandler
+
+from datetime import datetime
+
 class GunicornWSGIHandler(PyWSGIHandler, SocketIOHandler):
     pass
+
+class GunicornWebSocketWSGIHandler(WebSocketHandler):
+    def log_request(self):
+            start = datetime.fromtimestamp(self.time_start)
+            finish = datetime.fromtimestamp(self.time_finish)
+            response_time = finish - start
+            resp = GeventResponse(self.status, [],
+                    self.response_length)
+            req_headers = [h.split(":", 1) for h in self.headers.headers]
+            self.server.log.access(resp, req_headers, self.environ, response_time)
+
 
 
 class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
@@ -30,6 +45,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
             , log=self.log
             , policy_server=self.policy_server
             , handler_class=self.wsgi_handler
+            , ws_handler_class=self.ws_wsgi_handler
         )
 
         server.start()
@@ -77,8 +93,9 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     """
     server_class = SocketIOServer
     wsgi_handler = GunicornWSGIHandler
+    ws_wsgi_handler = GunicornWebSocketWSGIHandler
     # We need to define a namespace for the server, it would be nice if this
     # was a configuration option, will probably end up how this implemented,
     # for now this is just a proof of concept to make sure this will work
     resource = 'socket.io'
-    policy_server = True
+    policy_server = False

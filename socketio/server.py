@@ -8,6 +8,7 @@ from gevent.pywsgi import WSGIServer
 from socketio.handler import SocketIOHandler
 from socketio.policyserver import FlashPolicyServer
 from socketio.virtsocket import Socket
+from geventwebsocket.handler import WebSocketHandler
 
 __all__ = ['SocketIOServer']
 
@@ -79,6 +80,12 @@ class SocketIOServer(WSGIServer):
 
         if not 'handler_class' in kwargs:
             kwargs['handler_class'] = SocketIOHandler
+
+
+        if not 'ws_handler_class' in kwargs:
+            self.ws_handler_class = WebSocketHandler
+        else:
+            self.ws_handler_class = kwargs.pop('ws_handler_class')
 
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
