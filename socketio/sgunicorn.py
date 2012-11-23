@@ -1,11 +1,17 @@
 import os
 
 import gevent
+import time
+
 from gevent.pool import Pool
 
 from gunicorn.workers.ggevent import GeventPyWSGIWorker
+from gunicorn.workers.ggevent import PyWSGIHandler
 from socketio.server import SocketIOServer
 from socketio.handler import SocketIOHandler
+
+class GunicornWSGIHandler(PyWSGIHandler, SocketIOHandler):
+    pass
 
 
 class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
@@ -18,19 +24,22 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
 
         server = self.server_class(
             self.socket
-            , self.wsgi
+            , application=self.wsgi
             , spawn=pool
             , resource=self.resource
-            , policy_server=self.policy_server
             , log=self.log
+            , policy_server=self.policy_server
+            , handler_class=self.wsgi_handler
         )
 
         server.start()
+        pid = os.getpid()
+
         try:
             while self.alive:
                 self.notify()
 
-                if self.ppid != os.getppid():
+                if  pid == os.getpid() and self.ppid != os.getppid():
                     self.log.info("Parent changed, shutting down: %s", self)
                     break
 
@@ -39,10 +48,22 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
         except KeyboardInterrupt:
             pass
 
-        # try to stop the connections
         try:
-            self.notify()
-            server.stop(timeout=self.timeout)
+            # Stop accepting requests
+            server.kill()
+
+            # Handle current requests until graceful_timeout
+            ts = time.time()
+            while time.time() - ts <= self.cfg.graceful_timeout:
+                if server.pool.free_count() == server.pool.size:
+                    return # all requests was handled
+
+                self.notify()
+                gevent.sleep(1.0)
+
+            # Force kill all active the handlers
+            self.log.warning("Worker graceful timeout (pid:%s)" % self.pid)
+            server.stop(timeout=1)
         except:
             pass
 
@@ -55,7 +76,7 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     being disabled.
     """
     server_class = SocketIOServer
-    wsgi_handler = SocketIOHandler
+    wsgi_handler = GunicornWSGIHandler
     # We need to define a namespace for the server, it would be nice if this
     # was a configuration option, will probably end up how this implemented,
     # for now this is just a proof of concept to make sure this will work

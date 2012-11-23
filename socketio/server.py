@@ -77,7 +77,9 @@ class SocketIOServer(WSGIServer):
             if f in kwargs:
                 self.config[f] = int(kwargs.pop(f))
 
-        kwargs['handler_class'] = SocketIOHandler
+        if not 'handler_class' in kwargs:
+            kwargs['handler_class'] = SocketIOHandler
+
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def start_accepting(self):
