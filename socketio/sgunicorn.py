@@ -22,6 +22,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
             , spawn=pool
             , resource=self.resource
             , policy_server=self.policy_server
+            , log=self.log
         )
 
         server.start()
