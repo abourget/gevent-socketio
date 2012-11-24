@@ -27,10 +27,17 @@ class GunicornWebSocketWSGIHandler(WebSocketHandler):
             req_headers = [h.split(":", 1) for h in self.headers.headers]
             self.server.log.access(resp, req_headers, self.environ, response_time)
 
-
-
 class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
     """ The base gunicorn worker class """
+    def __init__(self, age, ppid, socket, app, timeout, cfg, log):
+        if os.environ.get('POLICY_SERVER', None) is None:
+            if self.policy_server:
+                os.environ['POLICY_SERVER'] = 'true'
+        else:
+            self.policy_server = False
+
+        super(GeventSocketIOBaseWorker, self).__init__(age, ppid, socket, app, timeout, cfg, log)
+
     def run(self):
         self.socket.setblocking(1)
         pool = Pool(self.worker_connections)
@@ -98,4 +105,4 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     # was a configuration option, will probably end up how this implemented,
     # for now this is just a proof of concept to make sure this will work
     resource = 'socket.io'
-    policy_server = False
+    policy_server = True
