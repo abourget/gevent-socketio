@@ -43,9 +43,11 @@ class BaseNamespace(object):
         self.session = self.socket.session  # easily accessible session
         self.request = request
         self.ns_name = ns_name
-        self.allowed_methods = None  # be careful, None means all methods
-                                     # are allowed while an empty list
-                                     # means totally closed.
+        #: Store for ACL allowed methods.  Be careful as ``None`` means
+        #: that all methods are allowed, while an empty list means every
+        #: method is denied.  Value: list of strings or ``None``.  You
+        #: can and should use the various ``acl`` methods to tweak this.
+        self.allowed_methods = None
         self.jobs = []
 
         self.reset_acl()
@@ -113,6 +115,9 @@ class BaseNamespace(object):
 
         **Beware**, returning ``None`` leaves the namespace completely
         accessible.
+
+        The methods that are open are stored in the ``allowed_methods``
+        attribute of the ``Namespace`` instance.
         """
         return None
 
@@ -240,12 +245,16 @@ class BaseNamespace(object):
         Those are the two behaviors:
 
         * If there is only one parameter on the dispatched method and
-          it is equal to ``packet``, then pass in the packet as the
+          it is named ``packet``, then pass in the packet dict as the
           sole parameter.
 
         * Otherwise, pass in the arguments as specified by the
           different ``recv_*()`` methods args specs, or the
           :meth:`process_event` documentation.
+
+        This method will also consider the
+        ``exception_handler_decorator``
+
         """
         method = getattr(self, method_name, None)
         if method is None:

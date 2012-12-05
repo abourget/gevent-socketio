@@ -108,12 +108,6 @@ Sending data
 Dealing with incoming data
 --------------------------
 
-     .. automethod:: BaseNamespace.process_event
-
-     You should override this method only if you are not satisfied with the
-     automatic dispatching to ``on_``-prefixed methods.  You could then
-     implement your own dispatch.  See the source code for inspiration.
-
      .. automethod:: BaseNamespace.recv_connect
 
      .. automethod:: BaseNamespace.recv_message
@@ -123,6 +117,13 @@ Dealing with incoming data
      .. automethod:: BaseNamespace.recv_error
 
      .. automethod:: BaseNamespace.recv_disconnect
+
+     .. automethod:: BaseNamespace.process_event
+
+     You would override this method only if you are not completely
+     satisfied with the automatic dispatching to ``on_``-prefixed
+     methods.  You could then implement your own dispatch.  See the
+     source code for inspiration.
 
 
 Process management
@@ -181,6 +182,11 @@ ACL system
      This function is used internally, but can be useful to the developer:
 
      .. automethod:: is_method_allowed
+
+     This is the attribute where the allowed methods are stored, as a list of
+     strings, or a single ``None``::
+
+     .. autoattribute:: allowed_methods
 
 Low-level methods
 -----------------
