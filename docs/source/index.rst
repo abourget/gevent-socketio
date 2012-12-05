@@ -218,6 +218,10 @@ a basic example to secure one namespace would look like:
 API docs
 --------
 
+API documentation is where most of the juice/meat is.  Read through
+and you'll (hopefully) understand everything you need about
+``gevent-socketio``.
+
 The manager is the function you call from your framework.  It is in:
 
   :mod:`socketio`
