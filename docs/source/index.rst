@@ -313,10 +313,10 @@ The mailing list:
 
   https://groups.google.com/forum/#!forum/gevent-socketio
 
-The maintainer:
+The maintainers:
 
-  https://twitter.com/#!/bourgetalexndre
-  https://plus.google.com/109333785244622657612
+  https://twitter.com/bourgetalexndre
+  https://twitter.com/sontek
 
 
 Credits
@@ -327,7 +327,7 @@ Credits
 PyCon 2012 and the Sprints, for bringing this project up to version
 0.9 of the protocol.
 
-Current maintainer:
+Current maintainers:
 
  * Alexandre Bourget
  * John Anderson
