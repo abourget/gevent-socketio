@@ -6,7 +6,7 @@ python:
 before_install: "sudo apt-get install python-dev libevent-dev"
 
 # command to install dependencies
-install: python setup.py install
+install: pip install nosetests; python setup.py install
 
 # command to run tests
-script: python setup.py test
+script: nosetests

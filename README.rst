@@ -1,6 +1,8 @@
 Presentation
 ============
 
+.. image:: https://secure.travis-ci.org/abourget/gevent-socketio.png?branch=master
+
 ``gevent-socketio`` is a Python implementation of the Socket.IO
 protocol, developed originally for Node.js by LearnBoost and then
 ported to other languages.  Socket.IO enables real-time web
