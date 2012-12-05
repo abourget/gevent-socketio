@@ -253,7 +253,8 @@ class BaseNamespace(object):
           :meth:`process_event` documentation.
 
         This method will also consider the
-        ``exception_handler_decorator``
+        ``exception_handler_decorator``.  See Namespace documentation
+        for details and examples.
 
         """
         method = getattr(self, method_name, None)
@@ -269,6 +270,11 @@ class BaseNamespace(object):
                 "The server-side method is invalid, as it doesn't "
                 "have 'self' as its first argument")
             return
+
+        # Check if we need to decorate to handle exceptions
+        if hasattr(self, 'exception_handler_decorator'):
+            method = self.exception_handler_decorator(method)
+
         if len(func_args) == 2 and func_args[1] == 'packet':
             return method(packet)
         else:
@@ -458,8 +464,14 @@ class BaseNamespace(object):
         It will be monitored by the "watcher" process in the Socket. If the
         socket disconnects, all these greenlets are going to be killed, after
         calling BaseNamespace.disconnect()
+
+        This method uses the ``exception_handler_decorator``.  See
+        Namespace documentation for more information.
+
         """
         # self.log.debug("Spawning sub-Namespace Greenlet: %s" % fn.__name__)
+        if hasattr(self, 'exception_handler_decorator'):
+            fn = self.exception_handler_decorator(fn)
         new = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(new)
         return new
