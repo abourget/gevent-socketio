@@ -12,6 +12,10 @@ WEB_SOCKET_DEBUG = true;
 // socket.io specific code
 var socket = io.connect();
 
+$(window).bind("beforeunload", function() {
+    socket.disconnect();
+});
+
 socket.on('connect', function () {
     $('#chat').addClass('connected');
 });

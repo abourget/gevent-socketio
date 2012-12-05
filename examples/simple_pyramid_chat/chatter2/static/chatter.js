@@ -5,6 +5,10 @@ $(document).ready(function() {
     // connect to the websocket
     var socket = io.connect('/chat');
 
+    $(window).bind("beforeunload", function() {
+        socket.disconnect();
+    });
+
     // Listen for the event "chat" and add the content to the log
     socket.on("chat", function(e) {
         $("#chatlog").append(e + "<br />");
