@@ -3,6 +3,7 @@ import gevent
 import time
 
 from gevent.pool import Pool
+from gevent.server import StreamServer
 
 from gunicorn.workers.ggevent import GeventPyWSGIWorker
 from gunicorn.workers.ggevent import PyWSGIHandler
@@ -13,6 +14,7 @@ from socketio.handler import SocketIOHandler
 from geventwebsocket.handler import WebSocketHandler
 
 from datetime import datetime
+from functools import partial
 
 class GunicornWSGIHandler(PyWSGIHandler, SocketIOHandler):
     pass
@@ -39,25 +41,39 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
         super(GeventSocketIOBaseWorker, self).__init__(age, ppid, socket, app, timeout, cfg, log)
 
     def run(self):
-        self.socket.setblocking(1)
-        pool = Pool(self.worker_connections)
-        self.server_class.base_env['wsgi.multiprocess'] = \
-            self.cfg.workers > 1
+        servers = []
+        ssl_args = {}
 
-        server = self.server_class(
-            self.socket
-            , application=self.wsgi
-            , spawn=pool
-            , resource=self.resource
-            , log=self.log
-            , policy_server=self.policy_server
-            , handler_class=self.wsgi_handler
-            , ws_handler_class=self.ws_wsgi_handler
-        )
+        if self.cfg.is_ssl:
+            ssl_args = dict(server_side=True,
+                    do_handshake_on_connect=False, **self.cfg.ssl_options)
 
-        server.start()
+        for s in self.sockets:
+            s.setblocking(1)
+            pool = Pool(self.worker_connections)
+            if self.server_class is not None:
+                self.server_class.base_env['wsgi.multiprocess'] = \
+                    self.cfg.workers > 1
+
+                server = self.server_class(
+                    s
+                    , application=self.wsgi
+                    , spawn=pool
+                    , resource=self.resource
+                    , log=self.log
+                    , policy_server=self.policy_server
+                    , handler_class=self.wsgi_handler
+                    , ws_handler_class=self.ws_wsgi_handler
+                    , **ssl_args
+                )
+            else:
+                hfun = partial(self.handle, s)
+                server = StreamServer(s, handle=hfun, spawn=pool, **ssl_args)
+
+            server.start()
+            servers.append(server)
+
         pid = os.getpid()
-
         try:
             while self.alive:
                 self.notify()
@@ -73,13 +89,18 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
 
         try:
             # Stop accepting requests
-            server.kill()
+            [server.stop_accepting() for server in servers]
 
             # Handle current requests until graceful_timeout
             ts = time.time()
             while time.time() - ts <= self.cfg.graceful_timeout:
-                if server.pool.free_count() == server.pool.size:
-                    return # all requests was handled
+                accepting = 0
+                for server in servers:
+                    if server.pool.free_count() == server.pool.size:
+                        accepting += 1
+
+                if not accepting:
+                    return
 
                 self.notify()
                 gevent.sleep(1.0)
