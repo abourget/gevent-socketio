@@ -48,6 +48,10 @@ class SocketIOServer(WSGIServer):
             re open of the connection. This value is sent to the
             client after a successful handshake.
 
+        :param log_file: str The file in which you want the PyWSGI
+            server to write its access log.  If not specified, it
+            is sent to `stderr` (with gevent 0.13).
+
         """
         self.sockets = {}
         if 'namespace' in kwargs:
@@ -86,6 +90,10 @@ class SocketIOServer(WSGIServer):
             self.ws_handler_class = WebSocketHandler
         else:
             self.ws_handler_class = kwargs.pop('ws_handler_class')
+
+        log_file = kwargs.pop('log_file', None)
+        if log_file:
+            kwargs['log'] = open(log_file, 'a')
 
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
