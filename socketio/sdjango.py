@@ -5,7 +5,6 @@ from django.conf.urls import patterns, url, include
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.importlib import import_module
-import functools
 
 
 SOCKETIO_NS = {}
