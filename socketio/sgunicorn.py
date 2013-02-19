@@ -104,5 +104,5 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     # We need to define a namespace for the server, it would be nice if this
     # was a configuration option, will probably end up how this implemented,
     # for now this is just a proof of concept to make sure this will work
-    resource = 'socket.io'
+    resource = 'socketio'
     policy_server = True
