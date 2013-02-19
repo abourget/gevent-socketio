@@ -39,6 +39,8 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
         super(GeventSocketIOBaseWorker, self).__init__(age, ppid, socket, app, timeout, cfg, log)
 
     def run(self):
+        if not hasattr(self, 'socket'):
+            self.socket = self.sockets[0]
         self.socket.setblocking(1)
         pool = Pool(self.worker_connections)
         self.server_class.base_env['wsgi.multiprocess'] = \
