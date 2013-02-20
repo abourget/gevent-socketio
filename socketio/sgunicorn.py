@@ -45,14 +45,14 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
             self.cfg.workers > 1
 
         server = self.server_class(
-            self.socket
-            , application=self.wsgi
-            , spawn=pool
-            , resource=self.resource
-            , log=self.log
-            , policy_server=self.policy_server
-            , handler_class=self.wsgi_handler
-            , ws_handler_class=self.ws_wsgi_handler
+            self.socket,
+            application=self.wsgi,
+            spawn=pool,
+            resource=self.resource,
+            log=self.log,
+            policy_server=self.policy_server,
+            handler_class=self.wsgi_handler,
+            ws_handler_class=self.ws_wsgi_handler,
         )
 
         server.start()
