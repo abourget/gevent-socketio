@@ -65,6 +65,7 @@ class Socket(object):
     STATE_CONNECTED = "CONNECTED"
     STATE_DISCONNECTING = "DISCONNECTING"
     STATE_DISCONNECTED = "DISCONNECTED"
+    STATE_NEW = "NEW"
 
     GLOBAL_NS = ''
     """Use this to be explicit when specifying a Global Namespace (an endpoint
@@ -83,7 +84,7 @@ class Socket(object):
         self.heartbeats = 0
         self.timeout = Event()
         self.wsgi_app_greenlet = None
-        self.state = "NEW"
+        self.state = Socket.STATE_NEW
         self.connection_established = False
         self.ack_callbacks = {}
         self.ack_counter = 0
