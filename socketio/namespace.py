@@ -97,7 +97,7 @@ class BaseNamespace(object):
         access to all of the ``on_*()`` and ``recv_*()`` functions,
         etc.. methods.
 
-        Return something like: ``['on_connect', 'on_public_method']``
+        Return something like: ``set(['recv_connect', 'on_public_method'])``
 
         You can later modify this list dynamically (inside
         ``on_connect()`` for example) using:
