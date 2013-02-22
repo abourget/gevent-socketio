@@ -66,7 +66,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                         policy_server=self.policy_server,
                         handler_class=self.wsgi_handler,
                         ws_handler_class=self.ws_wsgi_handler,
-                        **ssl_args,
+                        **ssl_args
                     )
                 else:
                     hfun = partial(self.handle, s)
