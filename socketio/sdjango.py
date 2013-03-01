@@ -36,11 +36,11 @@ def autodiscover():
             continue
 
         try:
-            imp.find_module('sockets', app_path)
+            imp.find_module('socketio', app_path)
         except ImportError:
             continue
 
-        import_module("%s.sockets" % app)
+        import_module("%s.socketio" % app)
 
     LOADING_SOCKETIO = False
 
