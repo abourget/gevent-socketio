@@ -16,7 +16,7 @@ LOADING_SOCKETIO = False
         
 def autodiscover():
     """
-    Auto-discover INSTALLED_APPS socketio.py modules and fail silently when
+    Auto-discover INSTALLED_APPS sockets.py modules and fail silently when
     not present. NOTE: socketio_autodiscover was inspired/copied from
     django.contrib.admin autodiscover
     """
@@ -36,11 +36,11 @@ def autodiscover():
             continue
 
         try:
-            imp.find_module('socketio', app_path)
+            imp.find_module('sockets', app_path)
         except ImportError:
             continue
 
-        import_module("%s.socketio" % app)
+        import_module("%s.sockets" % app)
 
     LOADING_SOCKETIO = False
 
