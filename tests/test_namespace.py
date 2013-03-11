@@ -50,7 +50,7 @@ class TestBaseNamespace(TestCase):
     def setUp(self):
         server = MockSocketIOServer()
         self.environ = {}
-        socket = MockSocket(server)
+        socket = MockSocket(server, {})
         socket.error = MagicMock()
         self.environ['socketio'] = socket
         self.ns = GlobalNamespace(self.environ, '/woot')
@@ -253,7 +253,7 @@ class TestChatNamespace(TestCase):
     def setUp(self):
         server = MockSocketIOServer()
         self.environ = {}
-        socket = MockSocket(server)
+        socket = MockSocket(server, {})
         socket.error = MagicMock()
         self.environ['socketio'] = socket
         self.ns = ChatNamespace(

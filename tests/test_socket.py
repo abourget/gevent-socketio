@@ -29,7 +29,7 @@ class TestSocketAPI(TestCase):
 
     def setUp(self):
         self.server = MockSocketIOServer()
-        self.virtsocket = Socket(self.server)
+        self.virtsocket = Socket(self.server, {})
 
     def test__set_namespaces(self):
         namespaces = {'/': MockNamespace}
@@ -55,6 +55,9 @@ class TestSocketAPI(TestCase):
         self.assertTrue(self.virtsocket.connected)
 
     def test_incr_hist(self):
+        self.virtsocket.state = "CONNECTED"
+
+        # cause a hit
         self.virtsocket.incr_hits()
         self.assertEqual(self.virtsocket.hits, 1)
         self.assertEqual(self.virtsocket.state, self.virtsocket.STATE_CONNECTED)
@@ -64,7 +67,7 @@ class TestSocketAPI(TestCase):
         self.virtsocket.state = "CONNECTED"
         self.virtsocket.active_ns = {'test' : MockNamespace({'socketio': self.virtsocket}, 'test')}
         self.virtsocket.disconnect()
-        self.assertEqual(self.virtsocket.state, "CONNECTED")
+        self.assertEqual(self.virtsocket.state, "DISCONNECTING")
         self.assertEqual(self.virtsocket.active_ns, {})
 
     def test_kill(self):
