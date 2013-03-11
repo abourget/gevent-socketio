@@ -29,7 +29,7 @@ class TestSocketAPI(TestCase):
 
     def setUp(self):
         self.server = MockSocketIOServer()
-        self.virtsocket = Socket(self.server)
+        self.virtsocket = Socket(self.server, {})
 
     def test__set_namespaces(self):
         namespaces = {'/': MockNamespace}
