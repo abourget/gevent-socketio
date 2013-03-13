@@ -80,7 +80,7 @@ class TestEncodeMessage(TestCase):
                                   'id': 1,
                                   'ack': 'data',
                                   'endpoint': '',
-                                  'data': {'a' : decimal.Decimal(0.5)}
+                                  'data': {'a' : decimal.Decimal('%f' % (0.5))}
                                   })
         self.assertEqual(encoded_message, '4:1+::{"a":0.5}')
 
