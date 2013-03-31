@@ -8,12 +8,12 @@ from socketio import transports
 
 class SocketIOHandler(WSGIHandler):
     RE_REQUEST_URL = re.compile(r"""
-        ^/(?P<resource>[^/]+)
+        ^/(?P<resource>.+?)
          /(?P<protocol_version>[^/]+)
          /(?P<transport_id>[^/]+)
          /(?P<sessid>[^/]+)/?$
          """, re.X)
-    RE_HANDSHAKE_URL = re.compile(r"^/(?P<resource>[^/]+)/1/$", re.X)
+    RE_HANDSHAKE_URL = re.compile(r"^/(?P<resource>.+?)/1/$", re.X)
 
     handler_types = {
         'websocket': transports.WebsocketTransport,
