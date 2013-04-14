@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import get_object_or_404, render, redirect
 
 from chat.models import ChatRoom
-from chat.chat_socketio import ChatNamespace
+from chat.sockets import ChatNamespace
 
 def rooms(request, template="rooms.html"):
     """
