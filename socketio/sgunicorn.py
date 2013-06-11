@@ -98,7 +98,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 while time.time() - ts <= self.cfg.graceful_timeout:
                     accepting = 0
                     for server in servers:
-                        if server.pool.free_count() == server.pool.size:
+                        if server.pool.free_count() != server.pool.size:
                             accepting += 1
 
                     if not accepting:
@@ -109,7 +109,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
 
                 # Force kill all active the handlers
                 self.log.warning("Worker graceful timeout (pid:%s)" % self.pid)
-                server.stop(timeout=1)
+                [server.stop(timeout=1) for server in servers]
             except:
                 pass
         else:
