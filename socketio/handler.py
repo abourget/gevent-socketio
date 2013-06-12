@@ -144,7 +144,8 @@ class SocketIOHandler(WSGIHandler):
             # have a `disconnect` query string
             # https://github.com/LearnBoost/socket.io-spec#forced-socket-disconnection
             socket.disconnect()
-            return
+            self.handle_disconnect_request()
+            return []
 
         # Setup transport
         transport = self.handler_types.get(tokens["transport_id"])
@@ -195,6 +196,15 @@ class SocketIOHandler(WSGIHandler):
     def handle_bad_request(self):
         self.close_connection = True
         self.start_response("400 Bad Request", [
+            ('Content-Type', 'text/plain'),
+            ('Connection', 'close'),
+            ('Content-Length', 0)
+        ])
+
+
+    def handle_disconnect_request(self):
+        self.close_connection = True
+        self.start_response("200 OK", [
             ('Content-Type', 'text/plain'),
             ('Connection', 'close'),
             ('Content-Length', 0)
