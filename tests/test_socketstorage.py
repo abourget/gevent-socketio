@@ -30,6 +30,14 @@ class TestRedis(TestCase):
         del self.storage[key]
         self.assertEqual(len(self.storage), 0)
 
+    def test_pop(self):
+        key = "a"
+
+        self.storage[key] = "b"
+        self.assertEqual(len(self.storage), 1)
+        self.storage.pop(key)
+        self.assertEqual(len(self.storage), 0)
+
     def test_loop(self):
         values = {
             "foo": "bar",
