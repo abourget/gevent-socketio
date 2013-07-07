@@ -53,7 +53,13 @@ class SocketIOServer(WSGIServer):
             is sent to `stderr` (with gevent 0.13).
 
         """
-        self.sockets = {}
+        storage = dict
+
+        if "socket_storage" in kwargs:
+            storage = self.init_socket_storage(kwargs['socket_storage'])
+            del kwargs['socket_storage']
+
+        self.sockets = storage
         if 'namespace' in kwargs:
             print("DEPRECATION WARNING: use resource instead of namespace")
             self.resource = kwargs.pop('namespace', 'socket.io')
@@ -99,6 +105,11 @@ class SocketIOServer(WSGIServer):
             kwargs['log'] = open(log_file, 'a')
 
         super(SocketIOServer, self).__init__(*args, **kwargs)
+
+    def init_socket_storage(self, storage_definition):
+        cls = storage_definition['module']
+        kwargs = storage_definition['kwargs']
+        return cls(**kwargs)
 
     def start_accepting(self):
         if self.policy_server is not None:

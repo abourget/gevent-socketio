@@ -4,6 +4,7 @@ import time
 
 from gevent.pool import Pool
 from gevent.server import StreamServer
+from socketio import socketstorage
 
 from gunicorn.workers.ggevent import GeventPyWSGIWorker
 from gunicorn.workers.ggevent import PyWSGIHandler
@@ -50,6 +51,10 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 ssl_args = dict(server_side=True,
                         do_handshake_on_connect=False, **self.cfg.ssl_options)
 
+            socket_storage = getattr(self, "socket_storage", None)
+            if socket_storage is None:
+                socket_storage = dict
+
             for s in self.sockets:
                 s.setblocking(1)
                 pool = Pool(self.worker_connections)
@@ -66,6 +71,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                         policy_server=self.policy_server,
                         handler_class=self.wsgi_handler,
                         ws_handler_class=self.ws_wsgi_handler,
+                        socket_storage=socket_storage,
                         **ssl_args
                     )
                 else:
@@ -127,6 +133,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 policy_server=self.policy_server,
                 handler_class=self.wsgi_handler,
                 ws_handler_class=self.ws_wsgi_handler,
+                socket_storage=socket_storage
             )
 
             server.start()
@@ -180,3 +187,23 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     # for now this is just a proof of concept to make sure this will work
     resource = 'socket.io'
     policy_server = True
+
+
+class GeventSocketIOWorkerRedisStorage(GeventSocketIOBaseWorker):
+    server_class = SocketIOServer
+    wsgi_handler = GunicornWSGIHandler
+    ws_wsgi_handler = GunicornWebSocketWSGIHandler
+    # We need to define a namespace for the server, it would be nice if this
+    # was a configuration option, will probably end up how this implemented,
+    # for now this is just a proof of concept to make sure this will work
+    resource = 'socket.io'
+    policy_server = True
+    socket_storage = {
+        'module': socketstorage.Redis,
+
+        'kwargs': {
+            'host': 'localhost',
+            'port': 6379,
+            'db': 1,
+        }
+    }
