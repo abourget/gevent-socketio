@@ -40,6 +40,17 @@ testTransport = function(transports)
         start();
     });
   });
+
+  asyncTest(prefix + "Emit with ack one return value", function() {
+    expect(2);
+    test = connect(transports);
+    test.emit('requestackonevalue', 1, function (val1) {
+        equal(val1, 1);
+      	test.disconnect();
+      	test.socket.disconnect();
+        start();
+    });
+  });
 }
 
 transports = [io.transports];

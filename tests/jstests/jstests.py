@@ -27,6 +27,9 @@ class TestNamespace(BaseNamespace):
     def on_requestack(self, val):
         return val, "ack"
 
+    def on_requestackonevalue(self, val):
+        return val
+
 class Application(object):
     def __init__(self):
         self.buffer = []
