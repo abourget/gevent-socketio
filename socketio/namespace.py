@@ -492,8 +492,12 @@ class BaseNamespace(object):
             packet = {"type": "disconnect",
                       "endpoint": self.ns_name}
             self.socket.send_packet(packet)
-        self.socket.remove_namespace(self.ns_name)
-        self.kill_local_jobs()
+        # remove_namespace might throw GreenletExit so
+        # kill_local_jobs must be in finally
+        try:
+            self.socket.remove_namespace(self.ns_name)
+        finally:
+            self.kill_local_jobs()
 
     def kill_local_jobs(self):
         """Kills all the jobs spawned with BaseNamespace.spawn() on a namespace
