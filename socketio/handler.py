@@ -9,7 +9,7 @@ from socketio import transports
 class SocketIOHandler(WSGIHandler):
     RE_REQUEST_URL = re.compile(r"""
         ^/(?P<resource>.+?)
-         /(?P<protocol_version>[^/]+)
+         /1
          /(?P<transport_id>[^/]+)
          /(?P<sessid>[^/]+)/?$
          """, re.X)
@@ -92,7 +92,7 @@ class SocketIOHandler(WSGIHandler):
         path = self.environ.get('PATH_INFO')
 
         # Kick non-socket.io requests to our superclass
-        if not path.lstrip('/').startswith(self.server.resource):
+        if not path.lstrip('/').startswith(self.server.resource + '/'):
             return super(SocketIOHandler, self).handle_one_response()
 
         self.status = None
