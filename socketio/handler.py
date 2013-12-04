@@ -14,6 +14,14 @@ class SocketIOHandler(WSGIHandler):
          /(?P<sessid>[^/]+)/?$
          """, re.X)
     RE_HANDSHAKE_URL = re.compile(r"^/(?P<resource>.+?)/1/$", re.X)
+    # new socket.io versions (> 0.9.8) call an obscure url with two slashes
+    # instead of a transport when disconnecting
+    # https://github.com/LearnBoost/socket.io-client/blob/0.9.16/lib/socket.js#L361
+    RE_DISCONNECT_URL = re.compile(r"""
+        ^/(?P<resource>.+?)
+         /(?P<protocol_version>[^/]+)
+         //(?P<sessid>[^/]+)/?$
+         """, re.X)
 
     handler_types = {
         'websocket': transports.WebsocketTransport,
@@ -106,11 +114,15 @@ class SocketIOHandler(WSGIHandler):
         request_method = self.environ.get("REQUEST_METHOD")
         request_tokens = self.RE_REQUEST_URL.match(path)
         handshake_tokens = self.RE_HANDSHAKE_URL.match(path)
+        disconnect_tokens = self.RE_DISCONNECT_URL.match(path)
 
         if handshake_tokens:
             # Deal with first handshake here, create the Socket and push
             # the config up.
             return self._do_handshake(handshake_tokens.groupdict())
+        elif disconnect_tokens:
+            # it's a disconnect request via XHR
+            tokens = disconnect_tokens.groupdict()
         elif request_tokens:
             tokens = request_tokens.groupdict()
             # and continue...
@@ -125,6 +137,14 @@ class SocketIOHandler(WSGIHandler):
             self.handle_bad_request()
             return []  # Do not say the session is not found, just bad request
                        # so they don't start brute forcing to find open sessions
+
+        if self.environ['QUERY_STRING'].startswith('disconnect'):
+            # according to socket.io specs disconnect requests
+            # have a `disconnect` query string
+            # https://github.com/LearnBoost/socket.io-spec#forced-socket-disconnection
+            socket.disconnect()
+            self.handle_disconnect_request()
+            return []
 
         # Setup transport
         transport = self.handler_types.get(tokens["transport_id"])
@@ -189,6 +209,15 @@ class SocketIOHandler(WSGIHandler):
     def handle_bad_request(self):
         self.close_connection = True
         self.start_response("400 Bad Request", [
+            ('Content-Type', 'text/plain'),
+            ('Connection', 'close'),
+            ('Content-Length', 0)
+        ])
+
+
+    def handle_disconnect_request(self):
+        self.close_connection = True
+        self.start_response("200 OK", [
             ('Content-Type', 'text/plain'),
             ('Connection', 'close'),
             ('Content-Length', 0)
