@@ -32,6 +32,9 @@ class GunicornWebSocketWSGIHandler(WebSocketHandler):
 
 class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
     """ The base gunicorn worker class """
+
+    transports = None
+
     def __init__(self, age, ppid, socket, app, timeout, cfg, log):
         if os.environ.get('POLICY_SERVER', None) is None:
             if self.policy_server:
@@ -180,3 +183,13 @@ class GeventSocketIOWorker(GeventSocketIOBaseWorker):
     # for now this is just a proof of concept to make sure this will work
     resource = 'socket.io'
     policy_server = True
+
+
+class NginxGeventSocketIOWorker(GeventSocketIOWorker):
+    """
+    Worker which will not attempt to connect via websocket transport
+
+    Nginx is not compatible with websockets and therefore will not add the
+    wsgi.websocket key to the wsgi environment.
+    """
+    transports = ['xhr-polling']
