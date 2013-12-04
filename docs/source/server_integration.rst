@@ -164,8 +164,34 @@ want to have a look at your web server's status on the subject.
 FORWARDING]
 
 nginx status
+----------------
 
-  [gather references to the latest nginx-websocket integration layers]
+Nginx added the ability to support websockets with version 1.3.13 but it requires a bit of explicit configuration.
+
+See: http://nginx.org/en/docs/http/websocket.html
+
+Assuming your config is setup to proxy to your gevent server via something like this:
+
+.. code-block:: nginx
+
+        location / {
+            proxy_pass         http://127.0.0.1:7000;
+            proxy_redirect off;
+        }
+
+You'll just need to add this additional location section. Note in this example we're using ``/socket.io`` as the entry point (you might have to change it)
+
+.. code-block:: nginx
+
+        location /socket.io {
+            proxy_pass          http://127.0.0.1:7000/socket.io;
+            proxy_redirect off;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+
+Make sure you're running the latest version of Nginx (or atleast >= 1.3.13). Older versions don't support websockets, and the client will have to fallback to long polling.
 
 Apache
 
