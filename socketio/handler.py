@@ -44,7 +44,6 @@ class SocketIOHandler(WSGIHandler):
                 raise ValueError("transports should be elements of: %s" %
                     (self.handler_types.keys()))
 
-
     def _do_handshake(self, tokens):
         if tokens["resource"] != self.server.resource:
             self.log_error("socket.io URL mismatch")
@@ -132,8 +131,10 @@ class SocketIOHandler(WSGIHandler):
 
         # In case this is WebSocket request, switch to the WebSocketHandler
         # FIXME: fix this ugly class change
+        old_class = None
         if issubclass(transport, (transports.WebsocketTransport,
                                   transports.FlashSocketTransport)):
+            old_class = self.__class__
             self.__class__ = self.server.ws_handler_class
             self.prevent_wsgi_call = True  # thank you
             # TODO: any errors, treat them ??
@@ -172,6 +173,18 @@ class SocketIOHandler(WSGIHandler):
         if tokens['transport_id'] in ['flashsocket', 'websocket']:
             # wait here for all jobs to finished, when they are done
             gevent.joinall(socket.jobs)
+
+        # Switch back to the old class so references to this don't use the
+        # incorrect class. Useful for debugging.
+        if old_class:
+            self.__class__ = old_class
+
+        # Clean up circular references so they can be garbage collected.
+        if hasattr(self, 'websocket') and self.websocket:
+            del self.websocket.environ
+            del self.websocket
+        if self.environ:
+            del self.environ
 
     def handle_bad_request(self):
         self.close_connection = True
