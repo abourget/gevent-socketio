@@ -201,7 +201,8 @@ class SocketIOHandler(WSGIHandler):
 
         # Clean up circular references so they can be garbage collected.
         if hasattr(self, 'websocket') and self.websocket:
-            del self.websocket.environ
+            if self.websocket.environ:
+                del self.websocket.environ
             del self.websocket
         if self.environ:
             del self.environ
