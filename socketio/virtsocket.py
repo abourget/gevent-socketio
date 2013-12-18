@@ -47,7 +47,7 @@ def default_error_handler(socket, error_name, error_message, endpoint,
         socket.send_packet(pkt)
         
     # Log that error somewhere for debugging...
-    log.error(u"default_error_handler: %s, %s (endpoint=%s, msg_id=%s)".format(
+    log.error(u"default_error_handler: {}, {} (endpoint={}, msg_id={})".format(
         error_name, error_message, endpoint, msg_id
     ))
 
