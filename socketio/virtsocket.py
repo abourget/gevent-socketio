@@ -45,10 +45,11 @@ def default_error_handler(socket, error_name, error_message, endpoint,
     # Send an error event through the Socket
     if not quiet:
         socket.send_packet(pkt)
-
+        
     # Log that error somewhere for debugging...
-    #print "default_error_handler: %s, %s (endpoint=%s, msg_id=%s)" % (
-    #    error_name, error_message, endpoint, msg_id)
+    log.error(u"default_error_handler: %s, %s (endpoint=%s, msg_id=%s)".format(
+        error_name, error_message, endpoint, msg_id
+    ))
 
 
 class Socket(object):
