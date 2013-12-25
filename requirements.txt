@@ -1,0 +1,3 @@
+gevent==1.0
+gevent-websocket==0.9
+greenlet==0.4.1
