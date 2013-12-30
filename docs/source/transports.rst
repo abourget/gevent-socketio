@@ -1,7 +1,7 @@
 .. _transports_module:
 
 :mod:`socketio.transports`
-======================
+==========================
 
 This is largely an internal module, responsible for translating the
 different fallback mechanisms to one abstracted Socket, dealing with
