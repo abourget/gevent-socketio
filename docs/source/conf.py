@@ -17,7 +17,7 @@ import datetime
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 here = os.path.dirname(__file__)
-socketio_path = os.path.abspath(os.path.join(here, '../../socketio'))
+socketio_path = os.path.abspath(os.path.join(here, '../..'))
 sys.path.insert(0, socketio_path)
 # -- General configuration -----------------------------------------------------
 
