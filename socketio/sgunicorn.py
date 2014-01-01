@@ -17,8 +17,10 @@ from geventwebsocket.handler import WebSocketHandler
 from datetime import datetime
 from functools import partial
 
+
 class GunicornWSGIHandler(PyWSGIHandler, SocketIOHandler):
     pass
+
 
 class GunicornWebSocketWSGIHandler(WebSocketHandler):
     def log_request(self):
@@ -26,9 +28,11 @@ class GunicornWebSocketWSGIHandler(WebSocketHandler):
             finish = datetime.fromtimestamp(self.time_finish)
             response_time = finish - start
             resp = GeventResponse(self.status, [],
-                    self.response_length)
+                                  self.response_length)
             req_headers = [h.split(":", 1) for h in self.headers.headers]
-            self.server.log.access(resp, req_headers, self.environ, response_time)
+            self.server.log.access(
+                resp, req_headers, self.environ, response_time)
+
 
 class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
     """ The base gunicorn worker class """
@@ -42,7 +46,8 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
         else:
             self.policy_server = False
 
-        super(GeventSocketIOBaseWorker, self).__init__(age, ppid, socket, app, timeout, cfg, log)
+        super(GeventSocketIOBaseWorker, self).__init__(
+            age, ppid, socket, app, timeout, cfg, log)
 
     def run(self):
         if gunicorn_version >= (0, 17, 0):
@@ -50,8 +55,11 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
             ssl_args = {}
 
             if self.cfg.is_ssl:
-                ssl_args = dict(server_side=True,
-                        do_handshake_on_connect=False, **self.cfg.ssl_options)
+                ssl_args = dict(
+                    server_side=True,
+                    do_handshake_on_connect=False,
+                    **self.cfg.ssl_options
+                )
 
             for s in self.sockets:
                 s.setblocking(1)
@@ -73,7 +81,8 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                     )
                 else:
                     hfun = partial(self.handle, s)
-                    server = StreamServer(s, handle=hfun, spawn=pool, **ssl_args)
+                    server = StreamServer(
+                        s, handle=hfun, spawn=pool, **ssl_args)
 
                 server.start()
                 servers.append(server)
@@ -83,8 +92,9 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 while self.alive:
                     self.notify()
 
-                    if  pid == os.getpid() and self.ppid != os.getppid():
-                        self.log.info("Parent changed, shutting down: %s", self)
+                    if pid == os.getpid() and self.ppid != os.getppid():
+                        self.log.info(
+                            "Parent changed, shutting down: %s", self)
                         break
 
                     gevent.sleep(1.0)
@@ -139,8 +149,9 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 while self.alive:
                     self.notify()
 
-                    if  pid == os.getpid() and self.ppid != os.getppid():
-                        self.log.info("Parent changed, shutting down: %s", self)
+                    if pid == os.getpid() and self.ppid != os.getppid():
+                        self.log.info(
+                            "Parent changed, shutting down: %s", self)
                         break
 
                     gevent.sleep(1.0)
@@ -156,7 +167,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 ts = time.time()
                 while time.time() - ts <= self.cfg.graceful_timeout:
                     if server.pool.free_count() == server.pool.size:
-                        return # all requests was handled
+                        return  # all requests was handled
 
                     self.notify()
                     gevent.sleep(1.0)
