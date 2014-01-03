@@ -38,7 +38,7 @@ class BaseTransport(object):
             self.handler.provided_content_length = l
             self.handler.response_headers.append(('Content-Length', l))
 
-        self.handler.write(data)
+        self.handler.write_smart(data)
 
     def start_response(self, status, headers, **kwargs):
         if "Content-Type" not in [x[0] for x in headers]:
