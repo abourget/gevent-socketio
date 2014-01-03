@@ -26,7 +26,7 @@ class BaseNamespace(object):
 
       def on_my_second_event(self, whatever):
           print "This holds the first arg that was passed", whatever
-T
+
     Handlers are automatically dispatched based on the name of the incoming
     event. For example, a 'user message' event will be handled by
     ``on_user_message()``. To change this, override :meth:`process_event`.
