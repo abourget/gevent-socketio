@@ -26,7 +26,7 @@ class BaseNamespace(object):
 
       def on_my_second_event(self, whatever):
           print "This holds the first arg that was passed", whatever
-
+T
     Handlers are automatically dispatched based on the name of the incoming
     event. For example, a 'user message' event will be handled by
     ``on_user_message()``. To change this, override :meth:`process_event`.
@@ -169,10 +169,7 @@ class BaseNamespace(object):
             if not callback:
                 print "ERROR: No such callback for ackId %s" % packet['ackId']
                 return
-            try:
-                return callback(*(packet['args']))
-            except TypeError, e:
-                print "ERROR: Call to callback function failed", packet
+            return callback(*(packet['args']))
         elif packet_type == 'disconnect':
             # Force a disconnect on the namespace.
             return self.call_method_with_acl('recv_disconnect', packet)
