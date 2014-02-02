@@ -409,7 +409,7 @@ class Socket(object):
                 else:
                     args = [retval]
                 returning_ack = dict(type='ack', ackId=pkt['id'],
-                                     args=retval,
+                                     args=args,
                                      endpoint=pkt.get('endpoint', ''))
                 self.send_packet(returning_ack)
 
