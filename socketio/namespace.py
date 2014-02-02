@@ -169,10 +169,7 @@ class BaseNamespace(object):
             if not callback:
                 print "ERROR: No such callback for ackId %s" % packet['ackId']
                 return
-            try:
-                return callback(*(packet['args']))
-            except TypeError, e:
-                print "ERROR: Call to callback function failed", packet
+            return callback(*(packet['args']))
         elif packet_type == 'disconnect':
             # Force a disconnect on the namespace.
             return self.call_method_with_acl('recv_disconnect', packet)
