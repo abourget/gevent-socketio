@@ -1,24 +1,20 @@
-"""Virtual Socket implementation, unifies all the Transports into one
-single interface, and abstracts the work of the long-polling methods.
+"""Virtual Socket re-implementation using Redis
 
-This module also has the ``default_error_handler`` implementation.
-You can define your own so that the error messages are logged or sent
-in a different way
-
-:copyright: 2012, Alexandre Bourget <alexandre.bourget@savoirfairelinux.com>
-:moduleauthor: Alexandre Bourget <alexandre.bourget@savoirfairelinux.com>
+:copyright: 2014, Plamen Dragozov <plamen@dragozov.com>
+:moduleauthor: Plamen Dragozov <plamen@dragozov.com>
 
 """
+import random
 import weakref
 import logging
 
 import gevent
 from gevent.event import Event
 
-from socketio import packet
-from socketio.defaultjson import default_json_loads, default_json_dumps
+from ... import packet
+from ...defaultjson import default_json_loads, default_json_dumps
 
-
+from .queue import RedisQueue 
 log = logging.getLogger(__name__)
 
 
@@ -66,18 +62,26 @@ class Socket(object):
     STATE_DISCONNECTED = "DISCONNECTED"
 
     GLOBAL_NS = ''
+    
     """Use this to be explicit when specifying a Global Namespace (an endpoint
     with no name, not '/chat' or anything."""
 
     json_loads = staticmethod(default_json_loads)
     json_dumps = staticmethod(default_json_dumps)
-
-    def __init__(self, sessid, server, config,  error_handler=None):
+    
+    def __init__(self, server, config, error_handler=None, sessid = None, *args, **kwargs):
+        
         self.server = weakref.proxy(server)
-        self.sessid = sessid
-        self.session = self.server.make_session(sessid)  # the session dict, for general developer usage
-        self.client_queue = self.server.make_queue(sessid, 'client_messages') # queue for messages to client
-        self.server_queue = self.server.make_queue(sessid, 'server_messages')  # queue for messages to server
+        if sessid:
+            self.session = server.get_session(sessid)
+            self.sessid = sessid
+        else:
+            self.session = server.start_session() # the session dict, for general developer usage
+            self.sessid = self.session.sessid#str(random.random())[2:]
+        self.key_prefix = "socketio.socket:%s"%self.sessid
+        #self.session = {}  # the session dict, for general developer usage
+        self.client_queue = RedisQueue("%s:%s"%(self.key_prefix, "client_queue"))  # queue for messages to client
+        self.server_queue = RedisQueue("%s:%s"%(self.key_prefix, "server_queue"))  # queue for messages to server
         self.hits = 0
         self.heartbeats = 0
         self.timeout = Event()
@@ -264,11 +268,9 @@ class Socket(object):
         XHR-polling methods, on which we can pack more than one message if the
         rate is high, and encode the payload for the HTTP channel."""
         client_queue = self.client_queue
-        msg = client_queue.get(**kwargs)
-        msgs = [msg]
-        if msg is not None:
-            while client_queue.qsize():
-                msgs.append(client_queue.get())
+        msgs = [client_queue.get(**kwargs)]
+        while client_queue.qsize():
+            msgs.append(client_queue.get())
         return msgs
 
     def error(self, error_name, error_message, endpoint=None, msg_id=None,
@@ -469,7 +471,7 @@ class Socket(object):
             if not wait_res:
                 if self.connected:
                     log.debug("heartbeat timed out, killing socket")
-                    self.server.kill_socket(self.sessid)
+                    self.kill(detach=True)
                 return
 
 
