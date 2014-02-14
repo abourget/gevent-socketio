@@ -58,7 +58,7 @@ class XHRPollingTransport(BaseTransport):
         return []
 
     def get(self, socket):
-        socket.heartbeat()
+        socket.manager.heartbeat_received(socket.sessid)
 
         heartbeat_interval = self.config['heartbeat_interval']
         payload = self.get_messages_payload(socket, timeout=heartbeat_interval)

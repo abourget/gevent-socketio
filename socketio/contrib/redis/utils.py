@@ -1,6 +1,8 @@
 import json
 import collections
 
+from gevent.queue import Empty
+        
 class RedisQueue(object):
     """Simple queue on top of Redis following the ``gevent.Queue`` interface."""
     
@@ -49,8 +51,9 @@ class RedisQueue(object):
             item = self.redis.lpop(self.key)
 
         if item:
-            item = item[1]
-        return item
+            return item[1]
+        else:
+            raise Empty
 
     def get_nowait(self):
         """Remove and return an item from the queue without blocking.
@@ -58,6 +61,16 @@ class RedisQueue(object):
         Only get an item if one is immediately available. Otherwise return None.
         """
         return self.get(False)
+    
+    def get_all(self):
+        """Remove and return all items currently in the queue.
+        """
+        pipe = self.redis.pipeline()
+        ret = pipe.lrange(0, -1).ltrim(0, -1).execute()
+        ret = ret[0]
+        if not ret:
+            raise Empty
+        return ret
     
     def peek(self, block=True, timeout=None):
         """Return an item from the queue without removing it.
@@ -76,19 +89,26 @@ class RedisQueue(object):
             item = self.get(block, timeout)
             if item:
                 self.redis.lpush(self.name, item)
+                return item
+            else:
+                raise Empty
     
     def peek_nowait(self):
         """Return an item from the queue without removing it and without blocking."""
-        return self.redis.lindex(self.name, 0)
+        ret = self.redis.lindex(self.name, 0)
+        if ret:
+            return ret
+        else:
+            raise Empty
     
     def __iter__(self):
         return self
 
     def next(self):
-        ret = self.get()
-        if ret is None:
+        try:
+            return self.get_nowait()
+        except Empty:
             raise StopIteration
-        return ret
     
 class RedisMapping(collections.MutableMapping):
     """A map-like object backed by Redis. 
