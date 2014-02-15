@@ -145,8 +145,8 @@ class SessionContextManager(object):
 class SocketManager(BaseSocketManager):
     """The default, non-distributed manager.
     """
-    def __init__(self, config):
-        super(SocketManager, self).__init__(config)
+    def __init__(self, *args, **kwargs):
+        super(SocketManager, self).__init__(*args, **kwargs)
         self.alive_sessions = set()
         self.ns_registry = defaultdict(set)
     

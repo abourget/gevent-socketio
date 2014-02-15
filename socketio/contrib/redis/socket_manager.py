@@ -94,10 +94,10 @@ class Locks(dict):
           
 class RedisSocketManager(BaseSocketManager):
     
-    def __init__(self, config):
-        super(RedisSocketManager, self).__init__(config)
+    def __init__(self, *args, **kwargs):
+        super(RedisSocketManager, self).__init__(*args, **kwargs)
         
-        self.options = config.get("socket_manager", {})
+        self.settings = self.config.get("socket_manager", {})
         self.prefix = self.options.get("namespace_prefix", "socketio.socket:")
 
         self.alive_key = "%s:alive" % self.prefix
@@ -111,7 +111,11 @@ class RedisSocketManager(BaseSocketManager):
                               }
         
     def start(self):
-        redis_cfg = self.options.get("redis", {})
+        redis_cfg = {}
+        for k, v in self.settings.items():
+            if k.startswith('redis_'):
+                redis_cfg[k.replace("redis_", "", 1)] = v
+                
         self.redis = Redis(**redis_cfg)
         self.pubsub = Redis(**redis_cfg).pubsub()
         
