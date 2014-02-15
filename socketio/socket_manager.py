@@ -1,7 +1,8 @@
 import logging
 import random
-import weakref
+from collections import defaultdict
 from abc import abstractmethod, ABCMeta
+
 from gevent.queue import Queue
 
 from .virtsocket import Socket
@@ -17,6 +18,10 @@ class BaseSocketManager(object):
     """
     __metaclass__ = ABCMeta
     
+    def __init__(self, config):
+        self.config = config
+        self.sockets = {}
+    
     def next_socket_id(self):
         """The rule for generating a new session id for the socket.
         """
@@ -28,6 +33,35 @@ class BaseSocketManager(object):
     def stop(self):
         pass
       
+    def get_socket(self, sessid):
+        """Returns a socket if the session exists (i.e. was handshaken) or None.
+        """
+        return self.sockets.get(sessid)
+    
+    def detach(self, sessid):
+        try:
+            del self.sockets[sessid]
+        except KeyError:
+            pass
+        
+    @abstractmethod
+    def activate_endpoint(self, sessid, endpoint):
+        """Add a namespace endpoint to the active ones for this session.
+        """
+        return
+    
+    @abstractmethod
+    def deactivate_endpoint(self, sessid, endpoint):
+        """Remove the endpoint from the active ones for this session.
+        """
+        return None
+    
+    @abstractmethod
+    def active_endpoints(self, sessid):
+        """Check if there are any active namespaces across all sockets for the given session.
+        """
+        return None
+        
     @abstractmethod
     def make_queue(self, sessid, name):
         """Returns an object to be used as the message queue of the given ``name`` in the socket session with the given ``sessid``.
@@ -51,8 +85,8 @@ class BaseSocketManager(object):
         return None
     
     @abstractmethod
-    def lock_session(self, sessid):
-        """Lock the session to a socket for the duration of a ``with`` (PEP 343) block.
+    def lock_socket(self, sessid):
+        """Lock the session to the local socket for the duration of a ``with`` (PEP 343) block.
         
         Entering the context (i.e. the ``with`` block) will return a new or existing socket holding the 
         lock for the session with the given ``sessid``.
@@ -60,7 +94,7 @@ class BaseSocketManager(object):
         
         Example:
         
-            with manager.lock_session('12345678') as socket:
+            with manager.lock_socket('12345678') as socket:
                 if socket:
                     socket.do_something()
                 else:
@@ -72,25 +106,30 @@ class BaseSocketManager(object):
         return None
     
     @abstractmethod
-    def get_socket(self, sessid):
-        """Returns a socket if the session exists (i.e. was handshaken) or None.
-        """
-        return None
-    
-    @abstractmethod
     def handshake(self, sessid):
+        """Mark the session as handshaken/alive.
+        """
         return
     
-    @abstractmethod
-    def kill_session(self, sessid):
-        return
     
     @abstractmethod
     def heartbeat_sent(self, sessid):
+        """Notifies the manager that a heartbeat was sent by the session's socket.
+        
+        The manager should notify any other distributed socket managers, to avoid multiple heartbeats for the same session.
+        """
         return
     
     @abstractmethod
     def heartbeat_received(self, sessid):
+        return
+    
+    @abstractmethod
+    def disconnect(self, sessid):
+        pass
+    
+    @abstractmethod
+    def kill(self, sessid):
         return
     
 class SessionContextManager(object):
@@ -107,12 +146,12 @@ class SocketManager(BaseSocketManager):
     """The default, non-distributed manager.
     """
     def __init__(self, config):
-        self.config = config
+        super(SocketManager, self).__init__(config)
         self.alive_sessions = set()
-        self.sockets = {}
+        self.ns_registry = defaultdict(set)
     
     def get_socket(self, sessid):
-        ret = self.sockets.get(sessid)
+        ret = super(SocketManager, self).get_socket(sessid)
         if (not ret) and sessid in self.alive_sessions:
             self.sockets[sessid] = ret = Socket(sessid, self, self.config)
         ret.incr_hits()
@@ -134,7 +173,7 @@ class SocketManager(BaseSocketManager):
         """
         return {}
             
-    def lock_session(self, sessid):
+    def lock_socket(self, sessid):
         """Creates a dummy lock (i.e. nothing is locked), just makes it all work with a ``with`` block."""
         return SessionContextManager(self, self.get_socket(sessid))
     
@@ -143,14 +182,6 @@ class SocketManager(BaseSocketManager):
         """
         self.alive_sessions.add(sessid)
         
-    def kill_session(self, sessid):
-        if not sessid:
-            return
-        socket = self.sockets.get(sessid)
-        if socket:
-            socket.kill(detach = True)
-        self.alive_sessions.remove(sessid)
-            
     def heartbeat_received(self, sessid):
         socket = self.sockets.get(sessid)
         if socket:
@@ -158,3 +189,16 @@ class SocketManager(BaseSocketManager):
             
     def heartbeat_sent(self, sessid):
         return        
+    
+    def activate_endpoint(self, sessid, endpoint):
+        self.ns_registry[sessid].add(endpoint)
+    
+    def deactivate_endpoint(self, sessid, endpoint):
+        try:
+            self.ns_registry[sessid].remove(endpoint)
+            return True
+        except KeyError:
+            return False
+    
+    def active_endpoints(self, sessid):
+        return self.ns_registry[sessid]

@@ -187,12 +187,17 @@ class Socket(object):
         ACLs, etc..) with:
 
           adminnamespace.socket['/chat'].add_acl_method('kick-ban')
+          
+        @todo This will be tough to do with distributed sockets, need to think it through carefully
 
         """
         return self.active_ns[key]
 
     def __hasitem__(self, key):
-        """Verifies if the namespace is active (was initialized)"""
+        """Verifies if the namespace is active (was initialized)
+        
+        @todo This will be tough to do right with distributed sockets, need to think it through carefully
+        """
         return key in self.active_ns
 
     @property
@@ -240,18 +245,9 @@ class Socket(object):
                 self.disconnect()
 
         if detach:
-            self.detach()
+            self.manager.detach(self.sessid)
 
         gevent.killall(self.jobs)
-
-    def detach(self):
-        """Detach this socket from the server. This should be done in
-        conjunction with kill(), once all the jobs are dead, detach the
-        socket for garbage collection."""
-
-        log.debug("Removing %s from server sockets" % self)
-        if self.sessid in self.server.sockets:
-            self.server.sockets.pop(self.sessid)
 
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
@@ -330,8 +326,9 @@ class Socket(object):
         """
         if namespace in self.active_ns:
             del self.active_ns[namespace]
+            self.manager.deactivate_endpoint(self.sessid, namespace)
 
-        if len(self.active_ns) == 0 and self.connected:
+        if self.connected and not self.manager.active_endpoints(self.sessid):
             self.kill(detach=True)
 
     def send_packet(self, pkt):
@@ -384,30 +381,31 @@ class Socket(object):
                 # On global namespace, we kill everything.
                 self.kill(detach=True)
                 continue
+            
+            with self.manager.lock_socket(self.sessid):
+                endpoint = pkt['endpoint']
     
-            endpoint = pkt['endpoint']
-
-            if endpoint not in self.namespaces:
-                self.error("no_such_namespace",
-                    "The endpoint you tried to connect to "
-                    "doesn't exist: %s" % endpoint, endpoint=endpoint)
-                continue
-            elif endpoint in self.active_ns:
-                pkt_ns = self.active_ns[endpoint]
-            else:
-                new_ns_class = self.namespaces[endpoint]
-                pkt_ns = new_ns_class(self.environ, endpoint,
-                                        request=self.request)
-                # This calls initialize() on all the classes and mixins, etc..
-                # in the order of the MRO
-                for cls in type(pkt_ns).__mro__:
-                    if hasattr(cls, 'initialize'):
-                        cls.initialize(pkt_ns)  # use this instead of __init__,
-                                                # for less confusion
-
-                self.active_ns[endpoint] = pkt_ns
-                
-            with self.manager.lock_session(self.sessid):
+                if endpoint not in self.namespaces:
+                    self.error("no_such_namespace",
+                        "The endpoint you tried to connect to "
+                        "doesn't exist: %s" % endpoint, endpoint=endpoint)
+                    continue
+                elif endpoint in self.active_ns:
+                    pkt_ns = self.active_ns[endpoint]
+                else:
+                    new_ns_class = self.namespaces[endpoint]
+                    pkt_ns = new_ns_class(self.environ, endpoint,
+                                            request=self.request)
+                    # This calls initialize() on all the classes and mixins, etc..
+                    # in the order of the MRO
+                    for cls in type(pkt_ns).__mro__:
+                        if hasattr(cls, 'initialize'):
+                            cls.initialize(pkt_ns)  # use this instead of __init__,
+                                                    # for less confusion
+    
+                    self.active_ns[endpoint] = pkt_ns
+                    self.manager.activate_endpoint(self.sessid, endpoint)
+                    
                 retval = pkt_ns.process_packet(pkt)
     
                 # Has the client requested an 'ack' with the reply parameters ?

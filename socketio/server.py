@@ -53,7 +53,6 @@ class SocketIOServer(WSGIServer):
             is sent to `stderr` (with gevent 0.13).
 
         """
-        self.sockets = {}
         if 'namespace' in kwargs:
             print("DEPRECATION WARNING: use resource instead of namespace")
             self.resource = kwargs.pop('namespace', 'socket.io')
@@ -122,21 +121,6 @@ class SocketIOServer(WSGIServer):
         # Pass in the config about timeouts, heartbeats, also...
         handler = self.handler_class(self.config, socket, address, self)
         handler.handle()
-
-    def get_socket(self, sessid=''):
-        """Return an existing or new client Socket."""
-
-        socket = self.sockets.get(sessid)
-
-        if sessid and not socket:
-            return None  # you ask for a session that doesn't exist!
-        if socket is None:
-            socket = Socket(self, self.config)
-            self.sockets[socket.sessid] = socket
-        else:
-            socket.incr_hits()
-
-        return socket
 
 
 def serve(app, **kw):

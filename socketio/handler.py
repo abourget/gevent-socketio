@@ -137,7 +137,7 @@ class SocketIOHandler(WSGIHandler):
         # Setup socket
         sessid = tokens["sessid"]
         manager = self.server.socket_manager
-        with manager.lock_session(sessid) as socket:
+        with manager.lock_socket(sessid) as socket:
             if not socket:
                 self.handle_bad_request()
                 return []  # Do not say the session is not found, just bad request
