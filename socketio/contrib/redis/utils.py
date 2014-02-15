@@ -1,6 +1,8 @@
 import json
 import collections
+import time
 
+import gevent
 from gevent.queue import Empty
         
 class RedisQueue(object):
@@ -148,3 +150,55 @@ class RedisMapping(collections.MutableMapping):
 
     def __len__(self):
         return self.redis.hlen(self.name)
+    
+class GroupLock(object):
+    """
+    A shared, distributed lock backed by Redis.
+    
+    The Lock can be held by a group of 'holders' and is only released once all holders have released it.
+    """
+
+    def __init__(self, redis, name, sleep=0.1):
+        """
+        Create a new Lock instance named ``name`` using the Redis client
+        supplied by ``redis``.
+
+        ``sleep`` indicates the amount of time to sleep per loop iteration
+        when other group of holders are currently holding the lock.
+        """
+        self.redis = redis
+        self.name = name
+        self.acquired = False
+        self.sleep = sleep
+        self.holders = set()
+
+    def acquire(self, holder):
+        """
+        Adds the new holder to this instance's holders group.
+        This method blocks indefinitely until the group holds the lock and returns immediately after.
+        """
+        while 1:
+            if self.acquired:
+                self.holders.add(holder)
+                return True
+            
+            if self.redis.setnx(self.name, int(time.time())):
+                self.acquired = True
+                self.holders.add(holder)
+                return True
+            gevent.sleep(self.sleep)
+
+    def release(self, holder, callback = None):
+        """Removes the given holder from the group and releases the lock if it's the last holder.
+        
+        If the lock is going to be released calls ``callback`` before releasing.
+        """
+        if not self.acquired:
+            raise ValueError("Cannot release an unlocked lock")
+        self.holders.remove(holder)
+        if len(self.holders) < 1:
+            #release the lock 
+            if callback:
+                callback()
+            self.redis.delete(self.name)
+            self.acquired = None

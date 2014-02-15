@@ -7,9 +7,9 @@ from gevent.pywsgi import WSGIServer
 
 from geventwebsocket.handler import WebSocketHandler
 
-from .handler import SocketIOHandler
-from .policyserver import FlashPolicyServer
-from .socket_manager import SocketManager
+from socketio.handler import SocketIOHandler
+from socketio.policyserver import FlashPolicyServer
+from socketio.socket_manager import SocketManager
 
 __all__ = ['SocketIOServer']
 
