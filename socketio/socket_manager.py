@@ -167,7 +167,7 @@ class SocketManager(BaseSocketManager):
             
     def lock_socket(self, sessid):
         """Creates a dummy lock (i.e. nothing is locked), just makes it all work with a ``with`` block."""
-        return SessionContextManager(self, self.get_socket(sessid))
+        return SessionContextManager(self.get_socket(sessid))
     
     def handshake(self, sessid):
         """Don't create the socket yet, just mark the session as existing.
