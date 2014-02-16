@@ -59,7 +59,7 @@ class SocketIOHandler(WSGIHandler):
             self.log_error("socket.io URL mismatch")
         else:
             manager = self.server.socket_manager
-            sessid = manager.next_socked_id()
+            sessid = manager.next_socket_id()
             manager.handshake(sessid)
             data = "%s:%s:%s:%s" % (sessid,
                                     self.config['heartbeat_timeout'] or '',

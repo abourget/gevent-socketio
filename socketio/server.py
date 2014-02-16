@@ -104,7 +104,15 @@ class SocketIOServer(WSGIServer):
 
         self.config['socket_manager'] = socket_manager_config
             
-        socket_manager_class = socket_manager_config.get("class", SocketManager)
+        socket_manager_class = socket_manager_config.get("class", None)
+        if not socket_manager_class:
+            socket_manager_class = SocketManager
+        else:
+            #dynamically import the manager class (must be absolute class path!)
+            module_name, class_name = socket_manager_class.rsplit('.', 1)
+            mod = __import__(module_name, fromlist=[class_name])
+            socket_manager_class = getattr(mod, class_name)
+            
         self.socket_manager = socket_manager_class(self.config)
         
         super(SocketIOServer, self).__init__(*args, **kwargs)

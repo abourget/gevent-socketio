@@ -4,7 +4,7 @@ import gevent
 from gevent.queue import Empty
 from redis.client import Redis
 
-from socketio.contrib.redis.utils import RedisQueue, RedisMapping, GroupLock
+from socketio.contrib.redis.utils import RedisQueue, RedisMapping, GroupLock, DefaultDict
 from socketio.socket_manager import BaseSocketManager
 from socketio.virtsocket import Socket
 import uuid
@@ -19,25 +19,19 @@ class SessionContextManager(object):
         self.manager = manager
         
     def __enter__(self): 
-        lock = self.manager.locks.get(self.sessid)
+        lock = self.manager.locks[self.sessid]
         #register as a lock holder
-        lock.aquire(self) #blocks if necessary
+        lock.acquire(self) #blocks if necessary
         return self.manager.get_socket(self.sessid)
 
     def __exit__(self, *args, **kwargs):
-        lock = self.manager.locks.get(self.sessid)
+        lock = self.manager.locks[self.sessid]
         #unregister as a lock holder and release the lock if necessary
         #the socket is saved to Redis at release time
         lock.release(self, self.on_lock_release)
           
     def on_lock_release(self):
         self.manager.save_socket(self.sessid)
-
-class Locks(dict):
-    def __init__(self, manager):
-        self.manager = manager
-    def __missing__(self, sessid):
-        return GroupLock(self.manager.redis, self.manager.make_session_key(sessid, "lock"))
           
 class RedisSocketManager(BaseSocketManager):
     
@@ -45,11 +39,13 @@ class RedisSocketManager(BaseSocketManager):
         super(RedisSocketManager, self).__init__(*args, **kwargs)
         
         self.settings = self.config.get("socket_manager", {})
-        self.prefix = self.options.get("namespace_prefix", "socketio.socket:")
+        self.prefix = "socketio.socket:"
 
         self.alive_key = "%s:alive" % self.prefix
         self.hits_key = "%s:hits" % self.prefix
-        self.locks = Locks(self)
+        
+        lock_factory = lambda sessid: GroupLock(self.redis, self.make_session_key(sessid, "lock"))
+        self.locks = DefaultDict(lock_factory)
         self.uuid = str(uuid.uuid1())
         
         self.sync_handlers = {
@@ -66,12 +62,10 @@ class RedisSocketManager(BaseSocketManager):
         self.redis = Redis(**redis_cfg)
         self.pubsub = Redis(**redis_cfg).pubsub()
         
-        self.live = True
         #start listening for syncing messages from other managers
         self.sync_job = gevent.spawn(self.sync_listener)
     
     def stop(self):
-        self.live = False
         self.sync_job.kill()
         
     def make_session_key(self, sessid, suffix):
@@ -179,8 +173,7 @@ class RedisSocketManager(BaseSocketManager):
         """Listens to a Redis PubSub for heartbeat messages."""
         self.pubsub.psubscribe(['heartbeat.*', "endpoint.*"])
         
-        while self.live:
-            msg = self.pubsub.listen()
+        for msg in self.pubsub.listen():
             handler = self.sync_handlers.get(msg.get('pattern'))
             if handler:
                 handler(msg)
@@ -195,7 +188,7 @@ class RedisSocketManager(BaseSocketManager):
     
     def on_heartbeat_sync(self, message):
         channel = message.get('channel')
-        uuid, sessid =  message.split(":", 1)
+        uuid, sessid =  message.get('data').split(":", 1)
         if channel == "hearbeat.received":
             if uuid != self.uuid:
                 socket = self.sockets.get(sessid)
@@ -211,7 +204,7 @@ class RedisSocketManager(BaseSocketManager):
         channel = message.get('channel')
         if channel == "endpoint.deactivated":
             #disconnect the namespace
-            uuid, sessid, endpoint =  message.split(":", 2)
+            uuid, sessid, endpoint =  message.get('data').split(":", 2)
             if uuid != self.uuid:
                 socket = self.sockets.get(sessid)
                 if socket:

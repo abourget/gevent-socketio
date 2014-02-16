@@ -252,7 +252,7 @@ class WebsocketTransport(BaseTransport):
                 except (WebSocketError, TypeError):
                     # We can't send a message on the socket
                     # it is dead, let the other sockets know
-                    socket.manager.disconnect(socket.sessid)
+                    socket.disconnect()
 
         def read_from_ws():
             while True:

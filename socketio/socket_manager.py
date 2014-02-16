@@ -124,14 +124,6 @@ class BaseSocketManager(object):
     def heartbeat_received(self, sessid):
         return
     
-    @abstractmethod
-    def disconnect(self, sessid):
-        pass
-    
-    @abstractmethod
-    def kill(self, sessid):
-        return
-    
 class SessionContextManager(object):
     def __init__(self, socket):
         self.socket = socket

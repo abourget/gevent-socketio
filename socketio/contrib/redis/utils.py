@@ -5,6 +5,18 @@ import time
 import gevent
 from gevent.queue import Empty
         
+class DefaultDict(dict):
+    """Like collections.defaultdict, but the factory takes the ``key`` as an argument.
+    """
+    def __init__(self, factory):
+        self.factory = factory
+        
+    def __missing__(self, key):
+        ret = self.factory(key)
+        if ret:
+            self.__setattr__(key, ret)
+        return ret
+    
 class RedisQueue(object):
     """Simple queue on top of Redis following the ``gevent.Queue`` interface."""
     
@@ -48,9 +60,9 @@ class RedisQueue(object):
         (``timeout`` is ignored in that case).
         """
         if block:
-            item = self.redis.blpop(self.key, timeout=timeout)
+            item = self.redis.blpop(self.name, timeout=timeout)
         else:
-            item = self.redis.lpop(self.key)
+            item = self.redis.lpop(self.name)
 
         if item:
             return item[1]

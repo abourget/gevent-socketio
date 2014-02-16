@@ -474,7 +474,7 @@ class Socket(object):
             if not wait_res:
                 if self.connected:
                     log.debug("heartbeat timed out, killing socket")
-                    self.server.kill_socket(self.sessid)
+                    self.kill(detach = True)
                 return
             else:
                 self.heartbeats += 1
