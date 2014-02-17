@@ -146,14 +146,14 @@ class RedisSocketManager(BaseSocketManager):
     def activate_endpoint(self, sessid, endpoint):
         key = self.make_session_key(sessid, "endpoints")
         self.redis.sadd(key, endpoint)
-        self.redis.publish("endpoint.activated", self.make_namespace_message(sessid, endpoint))
+        self.redis.publish("endpoint.activated", self.make_endpoint_message(sessid, endpoint))
     
     def deactivate_endpoint(self, sessid, endpoint):
         key = self.make_session_key(sessid, "endpoints")
         
         ret = self.redis.srem(key, endpoint) > 0
         if ret:#only notify if the endpoint was still in Redis (this prevents an infinite loop)
-            self.redis.publish("endpoint.deactivated", self.make_namespace_message(sessid, endpoint))
+            self.redis.publish("endpoint.deactivated", self.make_endpoint_message(sessid, endpoint))
         return ret
     
     def active_endpoints(self, sessid):
@@ -183,7 +183,7 @@ class RedisSocketManager(BaseSocketManager):
     def make_heartbeat_message(self, sessid):
         return "%s:%s"%(self.uuid, sessid)
     
-    def make_namsepace_message(self, sessid, endpoint):
+    def make_endpoint_message(self, sessid, endpoint):
         return "%s:%s:%s"%(self.uuid, sessid, endpoint)
     
     def on_heartbeat_sync(self, message):

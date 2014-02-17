@@ -14,7 +14,7 @@ class DefaultDict(dict):
     def __missing__(self, key):
         ret = self.factory(key)
         if ret:
-            self.__setattr__(key, ret)
+            self.__setitem__(key, ret)
         return ret
     
 class RedisQueue(object):
@@ -213,4 +213,4 @@ class GroupLock(object):
             if callback:
                 callback()
             self.redis.delete(self.name)
-            self.acquired = None
+            self.acquired = False
