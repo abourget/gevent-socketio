@@ -51,7 +51,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
 
     def run(self):
         socket_manager_config = {}
-        for k, v in self.cfg.env.items():
+        for k, v in self.cfg.env.iteritems():
             if k.startswith("SOCKET_MANAGER_"):
                 k = k.replace("SOCKET_MANAGER_", "", 1).lower()
                 socket_manager_config[k] = v
@@ -85,6 +85,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                         handler_class=self.wsgi_handler,
                         ws_handler_class=self.ws_wsgi_handler,
                         socket_manager_config = socket_manager_config,
+                        transports = self.transports,
                         **ssl_args
                     )
                 else:
@@ -148,7 +149,8 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 policy_server=self.policy_server,
                 handler_class=self.wsgi_handler,
                 ws_handler_class=self.ws_wsgi_handler,
-                socket_manager_config = socket_manager_config
+                socket_manager_config = socket_manager_config,
+                transports = self.transports
             )
 
             server.start()

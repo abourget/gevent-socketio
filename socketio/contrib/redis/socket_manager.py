@@ -8,6 +8,7 @@ from socketio.contrib.redis.utils import RedisQueue, RedisMapping, GroupLock, De
 from socketio.socket_manager import BaseSocketManager
 from socketio.virtsocket import Socket
 import uuid
+import json
 
 logger = logging.getLogger(__name__)
        
@@ -40,6 +41,12 @@ class RedisSocketManager(BaseSocketManager):
         
         self.settings = self.config.get("socket_manager", {})
         self.prefix = "socketio.socket:"
+        
+        redis_settings = {}
+        for k, v in self.settings.items():
+            if k.startswith('redis_'):
+                redis_settings[k.replace("redis_", "", 1)] = v
+        self.redis_settings = redis_settings
 
         self.alive_key = "%s:alive" % self.prefix
         self.hits_key = "%s:hits" % self.prefix
@@ -54,13 +61,7 @@ class RedisSocketManager(BaseSocketManager):
                               }
         
     def start(self):
-        redis_cfg = {}
-        for k, v in self.settings.items():
-            if k.startswith('redis_'):
-                redis_cfg[k.replace("redis_", "", 1)] = v
-                
-        self.redis = Redis(**redis_cfg)
-        self.pubsub = Redis(**redis_cfg).pubsub()
+        self.redis = Redis(**self.redis_settings)
         
         #start listening for syncing messages from other managers
         self.sync_job = gevent.spawn(self.sync_listener)
@@ -160,10 +161,11 @@ class RedisSocketManager(BaseSocketManager):
         key = self.make_session_key(sessid, "endpoints")
         return self.redis.smembers(key)
     
+    def emit_to_endpoint(self, endpoint, sessid, event, *args, **kwargs):
+        self.redis.publish("endpoint.event", self.make_endpoint_message(sessid, endpoint, event=event, args=args, kwargs = kwargs))
+        
     def heartbeat_received(self, sessid):
-        socket = self.sockets.get(sessid)
-        if socket:
-            socket.heartbeat()
+        super(RedisSocketManager, self).heartbeat_received(sessid)
         self.redis.publish("heartbeat.received", self.make_heartbeat_message(sessid))
                     
     def heartbeat_sent(self, sessid):
@@ -171,9 +173,10 @@ class RedisSocketManager(BaseSocketManager):
     
     def sync_listener(self):
         """Listens to a Redis PubSub for heartbeat messages."""
-        self.pubsub.psubscribe(['heartbeat.*', "endpoint.*"])
+        pubsub = self.redis.pubsub()
+        pubsub.psubscribe(['heartbeat.*', "endpoint.*"])
         
-        for msg in self.pubsub.listen():
+        for msg in pubsub.listen():
             handler = self.sync_handlers.get(msg.get('pattern'))
             if handler:
                 handler(msg)
@@ -183,17 +186,17 @@ class RedisSocketManager(BaseSocketManager):
     def make_heartbeat_message(self, sessid):
         return "%s:%s"%(self.uuid, sessid)
     
-    def make_endpoint_message(self, sessid, endpoint):
-        return "%s:%s:%s"%(self.uuid, sessid, endpoint)
-    
+    def make_endpoint_message(self, sessid, endpoint, **kwargs):
+        ret = dict(uuid = self.uuid, sessid = sessid, endpoint = endpoint, **kwargs)
+            
+        return json.dumps(ret)
+        
     def on_heartbeat_sync(self, message):
         channel = message.get('channel')
         uuid, sessid =  message.get('data').split(":", 1)
         if channel == "hearbeat.received":
             if uuid != self.uuid:
-                socket = self.sockets.get(sessid)
-                if socket:
-                    socket.heartbeat()
+                super(RedisSocketManager, self).heartbeat_received(sessid)
         elif channel == "hearbeat.sent":
             if uuid != self.uuid:
                 socket = self.sockets.get(sessid)
@@ -204,12 +207,20 @@ class RedisSocketManager(BaseSocketManager):
         channel = message.get('channel')
         if channel == "endpoint.deactivated":
             #disconnect the namespace
-            uuid, sessid, endpoint =  message.get('data').split(":", 2)
-            if uuid != self.uuid:
-                socket = self.sockets.get(sessid)
+            msg = json.loads(message.get('data'))
+            if msg.get('uuid') != self.uuid:
+                socket = self.sockets.get(msg.get('sessid'))
                 if socket:
-                    ns = socket.active_ns.get(endpoint)
+                    ns = socket.active_ns.get(msg.get('endpoint'))
                     if ns:
                         #the sync sender should have sent a disconnect message to the client, so we keep it quiet
                         ns.disconnect(True)
-        
+        elif channel == "endpoint.event":
+            msg = json.loads(message.get('data'))
+            endpoint = msg.get('endpoint')
+            sessid = msg.get('sessid')
+            event = msg.get('event')
+            args = msg.get('args')
+            kwargs = msg.get('args')
+            #use the non-distributed version
+            super(RedisSocketManager, self).emit_to_endpoint(endpoint, sessid, event, *args, **kwargs)

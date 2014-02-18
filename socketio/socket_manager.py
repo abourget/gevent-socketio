@@ -33,16 +33,37 @@ class BaseSocketManager(object):
     def stop(self):
         pass
       
-    def get_socket(self, sessid):
-        """Returns a socket if the session exists (i.e. was handshaken) or None.
-        """
-        return self.sockets.get(sessid)
-    
     def detach(self, sessid):
         try:
             del self.sockets[sessid]
         except KeyError:
             pass
+    
+    def heartbeat_received(self, sessid):
+        socket = self.sockets.get(sessid)
+        if socket:
+            socket.heartbeat()
+            
+    def heartbeat_sent(self, sessid):
+        """Notifies the manager that a heartbeat was sent by the session's socket.
+        
+        The manager should notify any other distributed socket managers, to avoid multiple heartbeats for the same session.
+        """
+        return
+        
+    def emit_to_endpoint(self, endpoint, sessid, event, *args, **kwargs):
+        """
+        Sends an event for all sockets with a given endpoint.
+        """
+        for socket in self.sockets.itervalues():
+            ns = socket.active_ns.get(endpoint)
+            if ns and (not hasattr(ns, "emit_filter") or ns.emit_filter(sessid, event, *args, **kwargs)):
+                ns.emit(event, sessid = sessid, *args)
+     
+    def get_socket(self, sessid):
+        """Returns a socket if the session exists (i.e. was handshaken) or None.
+        """
+        return self.sockets.get(sessid)
         
     @abstractmethod
     def activate_endpoint(self, sessid, endpoint):
@@ -112,18 +133,6 @@ class BaseSocketManager(object):
         return
     
     
-    @abstractmethod
-    def heartbeat_sent(self, sessid):
-        """Notifies the manager that a heartbeat was sent by the session's socket.
-        
-        The manager should notify any other distributed socket managers, to avoid multiple heartbeats for the same session.
-        """
-        return
-    
-    @abstractmethod
-    def heartbeat_received(self, sessid):
-        return
-    
 class SessionContextManager(object):
     def __init__(self, socket):
         self.socket = socket
@@ -173,14 +182,7 @@ class SocketManager(BaseSocketManager):
         """Don't create the socket yet, just mark the session as existing.
         """
         self.alive_sessions.add(sessid)
-        
-    def heartbeat_received(self, sessid):
-        socket = self.sockets.get(sessid)
-        if socket:
-            socket.heartbeat()
-            
-    def heartbeat_sent(self, sessid):
-        return        
+                
     
     def activate_endpoint(self, sessid, endpoint):
         self.ns_registry[sessid].add(endpoint)

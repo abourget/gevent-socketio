@@ -1,4 +1,4 @@
-import json
+import pickle
 import collections
 import time
 
@@ -18,7 +18,10 @@ class DefaultDict(dict):
         return ret
     
 class RedisQueue(object):
-    """Simple queue on top of Redis following the ``gevent.Queue`` interface."""
+    """Simple queue on top of Redis following the ``gevent.Queue`` interface.
+    
+    @todo Extend it to use local memory and autosave when a referenced object is changed!
+    """
     
     def __init__(self, redis, name):
         self.redis = redis
@@ -80,7 +83,7 @@ class RedisQueue(object):
         """Remove and return all items currently in the queue.
         """
         pipe = self.redis.pipeline()
-        ret = pipe.lrange(0, -1).ltrim(0, -1).execute()
+        ret = pipe.lrange(self.name, 0, -1).ltrim(self.name, 0, -1).execute()
         ret = ret[0]
         if not ret:
             raise Empty
@@ -127,7 +130,7 @@ class RedisQueue(object):
 class RedisMapping(collections.MutableMapping):
     """A map-like object backed by Redis. 
     
-    Uses the ``json`` module to serialize the stored values to a string.
+    Uses the ``pickle`` module to serialize the stored values to a string!
     """
     def __init__(self, redis, name):
         self.redis = redis
@@ -137,7 +140,7 @@ class RedisMapping(collections.MutableMapping):
         if not key:
             return None
 
-        self.redis.hset(self.name, key, json.dumps(value))
+        self.redis.hset(self.name, key, pickle.dumps(value))
 
     def __delitem__(self, key):
         if not key:
@@ -151,7 +154,7 @@ class RedisMapping(collections.MutableMapping):
 
         ret = self.redis.hget(self.name, key)
         if ret:
-            ret = json.loads(ret)
+            ret = pickle.loads(ret)
         return ret
 
     def __iter__(self):
@@ -213,4 +216,4 @@ class GroupLock(object):
             if callback:
                 callback()
             self.redis.delete(self.name)
-            self.acquired = False
+            self.acquired = False   

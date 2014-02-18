@@ -12,27 +12,36 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
         self.logger = logging.getLogger("socketio.chat")
         self.log("Socketio session started")
         
+        
     def log(self, message):
         self.logger.info("[{0}] {1}".format(self.socket.sessid, message))
     
     def on_join(self, room):
-        self.room = room
         self.join(room)
         return True
         
     def on_nickname(self, nickname):
         self.log('Nickname: {0}'.format(nickname))
-        self.nicknames.append(nickname)
-        self.socket.session['nickname'] = nickname
+        self.session['nickname'] = nickname
+        nicknames = self.session.get('nicknames', None)#WTH is 'nicknames'?!! 
+        if nicknames is None:
+            nicknames = set()
+        nicknames.add(nickname)
+        self.session['nicknames'] = nicknames
+        
         self.broadcast_event('announcement', '%s has connected' % nickname)
-        self.broadcast_event('nicknames', self.nicknames)
+        self.broadcast_event('nicknames', nicknames)
         return True, nickname
 
     def recv_disconnect(self):
         # Remove nickname from the list.
         self.log('Disconnected')
-        nickname = self.socket.session['nickname']
-        self.nicknames.remove(nickname)
+        nickname = self.session.get('nickname')
+        if nickname:
+            nicknames = self.session.get('nicknames', None)
+            if nicknames:
+                nicknames.remove(nickname)
+            self.session['nicknames'] = nicknames
         self.broadcast_event('announcement', '%s has disconnected' % nickname)
         self.broadcast_event('nicknames', self.nicknames)
         self.disconnect(silent=True)
@@ -40,6 +49,5 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
 
     def on_user_message(self, msg):
         self.log('User message: {0}'.format(msg))
-        self.emit_to_room(self.room, 'msg_to_room',
-            self.socket.session['nickname'], msg)
+        self.emit_to_room(self.room, 'msg_to_room', self.session['nickname'], msg)
         return True
