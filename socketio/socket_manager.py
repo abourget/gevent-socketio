@@ -63,7 +63,17 @@ class BaseSocketManager(object):
     def get_socket(self, sessid):
         """Returns a socket if the session exists (i.e. was handshaken) or None.
         """
-        return self.sockets.get(sessid)
+        socket = self.sockets.get(sessid)
+        if (not socket) and self.is_handshaken(sessid):
+            socket = Socket(sessid, self, self.config)
+            self.sockets[sessid] = socket
+        if socket:
+            socket = self.load_socket(socket) 
+        return socket
+        
+    def load_socket(self, socket):
+        socket.incr_hits()
+        return socket
         
     @abstractmethod
     def activate_endpoint(self, sessid, endpoint):
@@ -132,6 +142,10 @@ class BaseSocketManager(object):
         """
         return
     
+    @abstractmethod
+    def is_handshaken(self, sessid):
+        return False
+    
     
 class SessionContextManager(object):
     def __init__(self, socket):
@@ -150,13 +164,6 @@ class SocketManager(BaseSocketManager):
         super(SocketManager, self).__init__(*args, **kwargs)
         self.alive_sessions = set()
         self.ns_registry = defaultdict(set)
-    
-    def get_socket(self, sessid):
-        ret = super(SocketManager, self).get_socket(sessid)
-        if (not ret) and sessid in self.alive_sessions:
-            self.sockets[sessid] = ret = Socket(sessid, self, self.config)
-        ret.incr_hits()
-        return ret
     
     def make_queue(self, sessid, name):
         """Returns a gevent.queue based message queue.
@@ -182,7 +189,9 @@ class SocketManager(BaseSocketManager):
         """Don't create the socket yet, just mark the session as existing.
         """
         self.alive_sessions.add(sessid)
-                
+         
+    def is_handshaken(self, sessid):
+        return sessid in self.alive_sessions       
     
     def activate_endpoint(self, sessid, endpoint):
         self.ns_registry[sessid].add(endpoint)

@@ -4,7 +4,26 @@ generally useful for most simple projects, e.g. Rooms, Broadcast.
 
 You'll likely want to create your own Mixins.
 """
-class RoomsMixin(object):
+class FilterMixin(object):
+    def emit_filter(self, sessid, event, *args, **kwargs):
+        """Return True if the event should be emitted or False to skip it.
+        
+        To implement cooperative filtering, i.e. emit only if all ``emit_filter`` calls of all mixin classes return True, the 
+        extending classes should return the result of calling ``super(...).emit_filter`` if they are not filtering the event.
+        
+        Example:
+            class Filter(FilterMixin):
+                def emit_filter(self, sessid, event, *args, **kwargs):
+                    if not self.check(event):
+                        return False
+                    return super(Filter, self).emit_filter(self, sessid, event, *args, **kwargs)
+        """
+        try:
+            return super(FilterMixin, self).emit_filter(self, sessid, event, *args, **kwargs)
+        except AttributeError:#not implemented by any super classes
+            return True
+    
+class RoomsMixin(FilterMixin):
 
     def join(self, room):
         """Lets a user join a room on a specific Namespace."""
@@ -29,17 +48,18 @@ class RoomsMixin(object):
         self.socket.manager.emit_to_endpoint(self.ns_name, self.socket.sessid, event, *args, room = room)
         
     def emit_filter(self, sessid, event, *args, **kwargs):
-        if self.socket.sessid == sessid or 'rooms' not in self.session:
-            return False
+        room = kwargs.get('room', None)
+        if room is not None:
+            if self.socket.sessid == sessid or 'rooms' not in self.session:
+                return False
+            
+            room_name = self._get_room_name(room)
+            if room_name not in self.session['rooms']:
+                return False
         
-        room = kwargs.get('room', "")
-        room_name = self._get_room_name(room)
-        if room_name not in self.session['rooms']:
-            return False
-        
-        return True
+        return super(RoomsMixin, self).emit_filter(self, sessid, event, *args, **kwargs)
 
-class BroadcastMixin(object):
+class BroadcastMixin(FilterMixin):
     """Mix in this class with your Namespace to have a broadcast event method.
 
     Use it like this:
@@ -65,4 +85,4 @@ class BroadcastMixin(object):
         not_me = kwargs.get('not_me', False)
         if not_me and sessid == self.socket.sessid:
             return False
-        return True
+        return super(BroadcastMixin, self).emit_filter(self, sessid, event, *args, **kwargs)

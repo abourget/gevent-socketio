@@ -72,18 +72,6 @@ class RedisSocketManager(BaseSocketManager):
     def make_session_key(self, sessid, suffix):
         return "%s%s:%s"%(self.prefix, sessid, suffix)
     
-    def get_socket(self, sessid):
-        socket = super(RedisSocketManager, self).get_socket(sessid)
-        if not socket:
-            #check if handshaken
-            if self.redis.hget(self.alive_key, sessid):
-                socket = Socket(sessid, self, self.config)
-                self.sockets[sessid] = socket
-                
-        if socket:
-            self.load_socket(socket)
-        return socket
-    
     def make_queue(self, sessid, name):
         """Returns a Redis based message queue.
         """
@@ -133,11 +121,15 @@ class RedisSocketManager(BaseSocketManager):
         """
         self.redis.hset(self.alive_key, sessid, "1")
         
+    def is_handshaken(self, sessid):
+        return bool(self.redis.hget(self.alive_key, sessid))
+    
     def load_socket(self, socket):
         """Reads from Redis and sets any internal state of the socket that must 
         be shared between all sockets in the same session.
         """
         socket.hits = self.redis.hincrby(self.hits_key, socket.sessid, 1)
+        return socket
                 
     def save_socket(self, sessid):
         """Stores into Redis any internal state that must be shared between all sockets in the same session.
