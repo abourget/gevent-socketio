@@ -58,7 +58,7 @@ class BaseSocketManager(object):
         for socket in self.sockets.itervalues():
             ns = socket.active_ns.get(endpoint)
             if ns and (not hasattr(ns, "emit_filter") or ns.emit_filter(sessid, event, *args, **kwargs)):
-                ns.emit(event, sessid = sessid, *args)
+                ns.emit(event, *args)
      
     def get_socket(self, sessid):
         """Returns a socket if the session exists (i.e. was handshaken) or None.

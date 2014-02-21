@@ -68,7 +68,10 @@ class RedisQueue(object):
             item = self.redis.lpop(self.name)
 
         if item:
-            return item[1]
+            item = item[1]
+            if item == 'None':#@todo Is there a better way?
+                item = None
+            return item
         else:
             raise Empty
 
@@ -82,12 +85,12 @@ class RedisQueue(object):
     def get_all(self):
         """Remove and return all items currently in the queue.
         """
-        pipe = self.redis.pipeline()
-        ret = pipe.lrange(self.name, 0, -1).ltrim(self.name, 0, -1).execute()
-        ret = ret[0]
-        if not ret:
-            raise Empty
-        return ret
+        with self.redis.pipeline() as pipe:
+            ret = pipe.lrange(self.name, 0, -1).ltrim(self.name, 0, -1).execute()
+            ret = ret[0]
+            if not ret:
+                raise Empty
+            return ret
     
     def peek(self, block=True, timeout=None):
         """Return an item from the queue without removing it.

@@ -6,7 +6,6 @@ from redis.client import Redis
 
 from socketio.contrib.redis.utils import RedisQueue, RedisMapping, GroupLock, DefaultDict
 from socketio.socket_manager import BaseSocketManager
-from socketio.virtsocket import Socket
 import uuid
 import json
 
@@ -45,7 +44,11 @@ class RedisSocketManager(BaseSocketManager):
         redis_settings = {}
         for k, v in self.settings.items():
             if k.startswith('redis_'):
-                redis_settings[k.replace("redis_", "", 1)] = v
+                k = k.replace("redis_", "", 1)
+                if k == 'port':
+                    v = int(v)
+                redis_settings[k] = v
+                
         self.redis_settings = redis_settings
 
         self.alive_key = "%s:alive" % self.prefix
@@ -68,6 +71,13 @@ class RedisSocketManager(BaseSocketManager):
     
     def stop(self):
         self.sync_job.kill()
+        self.redis = None
+        
+    def detach(self, sessid):
+        #delete the session
+        self.redis.delete(self.make_session_key(sessid, "session"))
+        self.redis.hdel(self.alive_key, sessid)
+        super(RedisSocketManager, self).detach(sessid)
         
     def make_session_key(self, sessid, suffix):
         return "%s%s:%s"%(self.prefix, sessid, suffix)

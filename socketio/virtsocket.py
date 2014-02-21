@@ -36,6 +36,10 @@ def default_error_handler(socket, error_name, error_message, endpoint,
     :param quiet: if quiet, this handler will not send a packet to the
                   user, but only log for the server developer.
     """
+    
+    if endpoint is None:
+        endpoint = ''
+        
     pkt = dict(type='event', name='error',
                args=[error_name, error_message],
                endpoint=endpoint)
