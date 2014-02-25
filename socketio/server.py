@@ -117,6 +117,10 @@ class SocketIOServer(WSGIServer):
         
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
+    def start(self):
+        self.socket_manager.start()
+        super(SocketIOServer, self).start()
+        
     def start_accepting(self):
         if self.policy_server is not None:
             try:
@@ -129,8 +133,6 @@ class SocketIOServer(WSGIServer):
                 traceback.print_exc()
                 sys.stderr.write('FAILED to start flash policy server.\n\n')
                 
-        self.socket_manager.start()
-        
         super(SocketIOServer, self).start_accepting()
 
     def stop(self, timeout=None):

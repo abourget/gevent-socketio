@@ -5,7 +5,7 @@ from abc import abstractmethod, ABCMeta
 
 from gevent.queue import Queue
 
-from .virtsocket import Socket
+from socketio.virtsocket import Socket
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,54 @@ class BaseSocketManager(object):
     def __init__(self, config):
         self.config = config
         self.sockets = {}
-    
+        self.socket_listeners = defaultdict(lambda : defaultdict(list))
+        self.endpoint_listeners = defaultdict(lambda : defaultdict(list))
+        
+    def add_socket_listener(self, sessid, event, listener):
+        """Add a callable to be notified for when socket ``sessid`` triggers ``event``.
+        
+        The callable's signature should be:
+        fn(socket_manager, sessid, event, *args, **kwargs) 
+        where *args and **kwargs are the arguments with which the ``notify`` method was called
+        """
+        self.socket_listeners[sessid][event].append(listener)
+        
+    def remove_socket_listener(self, sessid, event, listener):
+        """Removes ``listener`` for the given ``sessid`` and ``event`` combination.
+        
+        Raises ValueError if ``listener`` was not registered for ``sessid`` / ``event``.
+        """
+        self.socket_listeners[sessid][event].remove(listener)
+        
+    def notify_socket(self, sessid, event, *args, **kwargs):
+        """Notify all listeners of socket ``sessid`` with ``event``.
+        """
+        for l in self.socket_listeners[sessid][event]:
+            l(self, sessid, event, *args, **kwargs)
+            
+    def add_endpoint_listener(self, endpoint, event, listener):
+        """Add a callable to be notified when namespace ``endpoint`` triggers ``event``.
+        
+        The callable's signature should be:
+        fn(socket_manager, endpoint_name, event, *args, **kwargs) 
+        where *args and **kwargs are the arguments with which the ``notify`` method was called
+        """
+        self.endpoint_listeners[endpoint][event].append(listener)
+        
+    def remove_endpoint_listener(self, endpoint, event, listener):
+        """Removes ``listener`` for the given ``endpoint`` / ``event`` combination.
+        
+        Raises ValueError if ``listener`` was not registered for ``endpoint`` / ``event``.
+        """
+        self.endpoint_listeners[endpoint][event].remove(listener)
+        
+    def notify_endpoint(self, endpoint, event, *args, **kwargs):
+        """
+        Trigger ``event`` for all listeners of namespace ``endpoint``.
+        """
+        for l in self.endpoint_listeners[endpoint][event]:
+            l(self, endpoint, event, *args, **kwargs)
+        
     def next_socket_id(self):
         """The rule for generating a new session id for the socket.
         """
@@ -42,6 +89,7 @@ class BaseSocketManager(object):
     def heartbeat_received(self, sessid):
         socket = self.sockets.get(sessid)
         if socket:
+            self.notify_socket(sessid, 'heartbeat_received')
             socket.heartbeat()
             
     def heartbeat_sent(self, sessid):
@@ -49,16 +97,7 @@ class BaseSocketManager(object):
         
         The manager should notify any other distributed socket managers, to avoid multiple heartbeats for the same session.
         """
-        return
-        
-    def emit_to_endpoint(self, endpoint, sessid, event, *args, **kwargs):
-        """
-        Sends an event for all sockets with a given endpoint.
-        """
-        for socket in self.sockets.itervalues():
-            ns = socket.active_ns.get(endpoint)
-            if ns and (not hasattr(ns, "emit_filter") or ns.emit_filter(sessid, event, *args, **kwargs)):
-                ns.emit(event, *args)
+        self.notify_socket(sessid, 'heartbeat_sent')
      
     def get_socket(self, sessid):
         """Returns a socket if the session exists (i.e. was handshaken) or None.
@@ -74,6 +113,15 @@ class BaseSocketManager(object):
     def load_socket(self, socket):
         socket.incr_hits()
         return socket
+    
+    def init_connection(self, socket, *args, **kwargs):
+        # This is executed only on the *first* packet of the establishment
+        # of the virtual Socket connection.
+        socket.connection_established = True
+        socket.state = socket.STATE_CONNECTED
+        socket._spawn_heartbeat()
+        socket._spawn_watcher()
+        
         
     @abstractmethod
     def activate_endpoint(self, sessid, endpoint):

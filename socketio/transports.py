@@ -72,8 +72,9 @@ class XHRPollingTransport(BaseTransport):
         return self.handler.wsgi_input.readline()
 
     def post(self, socket):
-        for message in self.decode_payload(self._request_body()):
-            socket.put_server_msg(message)
+        with socket.manager.lock_socket(socket.sessid):
+            for message in self.decode_payload(self._request_body()):
+                socket.put_server_msg(message)
 
         self.start_response("200 OK", [
             ("Connection", "close"),
@@ -262,7 +263,8 @@ class WebsocketTransport(BaseTransport):
                     break
                 else:
                     if message is not None:
-                        socket.put_server_msg(message)
+                        with socket.manager.lock_socket(socket.sessid):
+                            socket.put_server_msg(message)
 
         socket.spawn(send_into_ws)
         socket.spawn(read_from_ws)
