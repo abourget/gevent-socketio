@@ -82,3 +82,6 @@ LOGGING = {
     },
 }
 
+SOCKET_MANAGER = {
+                  "class": "socketio.socket_manager.SocketManager"
+                  }

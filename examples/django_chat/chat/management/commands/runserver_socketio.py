@@ -51,7 +51,15 @@ class Command(BaseCommand):
             print "SocketIOServer running on %s:%s" % bind
             print
             handler = self.get_handler(*args, **options)
-            server = SocketIOServer(bind, handler, resource="socket.io", policy_server=True)
+            manager_conf = getattr(settings, "SOCKET_MANAGER", None)
+            kw = {
+                  "resource":"socket.io", 
+                  "policy_server":True
+            }
+            if manager_conf:
+                kw["socket_manager_config"] = manager_conf
+                print "SocketManager settings %s" % manager_conf
+            server = SocketIOServer(bind, handler, **kw)
             server.serve_forever()
         except KeyboardInterrupt:
             if RELOAD:

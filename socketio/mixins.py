@@ -27,7 +27,7 @@ class RoomsMixin(object):
     def make_room_name(self, room):
         return self.ns_name + '_' + room
 
-    def emit_to_room(self, ns, room, event, *args):
+    def emit_to_room(self, room, event, *args):
         """This is sent to all in the room (in this particular Namespace)"""
         self.socket.manager.notify_endpoint(self.ns_name, 'room_emit', self.socket.sessid, room, event, *args)     
         
@@ -35,6 +35,7 @@ class RoomsMixin(object):
         #@todo This is slow
         rooms = self.session.get('rooms')
         if rooms and self.socket.sessid != sender_sessid:
+            
             room_name = self.make_room_name(room)
             if room_name in rooms:
                 self.emit(room_event, *args)   

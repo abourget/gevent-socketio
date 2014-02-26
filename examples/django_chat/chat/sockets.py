@@ -30,7 +30,7 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
         self.session['nicknames'] = nicknames
         
         self.broadcast_event('announcement', '%s has connected' % nickname)
-        self.broadcast_event('nicknames', nicknames)
+        self.broadcast_event('nicknames', list(nicknames))
         return True, nickname
 
     def recv_disconnect(self):
@@ -43,11 +43,11 @@ class ChatNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
                 nicknames.remove(nickname)
             self.session['nicknames'] = nicknames
         self.broadcast_event('announcement', '%s has disconnected' % nickname)
-        self.broadcast_event('nicknames', self.nicknames)
+        self.broadcast_event('nicknames', list(self.nicknames))
         self.disconnect(silent=True)
         return True
 
-    def on_user_message(self, msg):
+    def on_user_message(self, room, msg):
         self.log('User message: {0}'.format(msg))
-        self.emit_to_room(self.room, 'msg_to_room', self.session['nickname'], msg)
+        self.emit_to_room(room, 'msg_to_room', self.session['nickname'], msg)
         return True
