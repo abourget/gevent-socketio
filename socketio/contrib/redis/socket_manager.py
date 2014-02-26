@@ -75,9 +75,12 @@ class RedisSocketManager(BaseSocketManager):
         self.redis = None
         
     def detach(self, sessid):
-        #delete the session
-        self.redis.delete(self.make_session_key(sessid, "session"))
-        self.redis.hdel(self.alive_key, sessid)
+        #delete the session data from Redis
+        self.redis.pipeline().delete(self.make_session_key(sessid, "session")).hdel(self.alive_key, sessid).execute()
+        try:
+            del self.locks[sessid]
+        except KeyError:
+            pass
         super(RedisSocketManager, self).detach(sessid)
         
     def make_session_key(self, sessid, suffix):

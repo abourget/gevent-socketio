@@ -10,10 +10,10 @@ from socketio.virtsocket import Socket
 logger = logging.getLogger(__name__)
 
 class BaseSocketManager(object):
-    """A layer of abstraction between the server and the virtsocket.
+    """A layer of abstraction between the ``server`` and the ``virtsocket``.
     
     
-     Allows for plugable socket distribution and lifecycle management on top of various backends. 
+     Allows for pluggable socket distribution and lifecycle management on top of various backends. 
      
     """
     __metaclass__ = ABCMeta
@@ -75,18 +75,31 @@ class BaseSocketManager(object):
         return str(random.random())[2:]
       
     def start(self):
+        """Called when starting the owning server.
+        """
         pass
     
     def stop(self):
+        """Called when stopping the owning server.
+        """
         pass
       
     def detach(self, sessid):
+        """Detaches the socket from the manager and cleans up any socket-specific data.
+        """
         try:
             del self.sockets[sessid]
         except KeyError:
             pass
+        
+        try:
+            del self.socket_listeners[sessid]
+        except KeyError:
+            pass
     
     def heartbeat_received(self, sessid):
+        """Called when a heartbeat for the given socket arrives.
+        """
         socket = self.sockets.get(sessid)
         if socket:
             self.notify_socket(sessid, 'heartbeat_received')
@@ -111,12 +124,17 @@ class BaseSocketManager(object):
         return socket
         
     def load_socket(self, socket):
+        """Called by ``get_socket`` to updates the socket's internal state in a backend specific way before returning it to the caller.
+        """
         socket.incr_hits()
         return socket
     
     def init_connection(self, socket, *args, **kwargs):
-        # This is executed only on the *first* packet of the establishment
-        # of the virtual Socket connection.
+        """Setup the socket in a connected state.
+        
+        This is executed on the *first* packet of the establishment of the virtual Socket connection or 
+        when a new instance of an already connected distributed socket is created by a different socket manager (i.e. worker).
+        """
         socket.connection_established = True
         socket.state = socket.STATE_CONNECTED
         socket._spawn_heartbeat()
@@ -196,6 +214,8 @@ class BaseSocketManager(object):
     
     
 class SessionContextManager(object):
+    """Returned by the default SocketManager.lock_socket to 'fake' a locked session to be used with a ``with`` block
+    """
     def __init__(self, socket):
         self.socket = socket
         
@@ -219,6 +239,8 @@ class SocketManager(BaseSocketManager):
         return Queue()
     
     def read_queue(self, queue, **kwargs):
+        """Reads all available messages in the queue (blocks if ``block``=True was set)
+        """
         ret = [queue.get(**kwargs)]
         while queue.qsize():
             ret.append(queue.get())

@@ -211,12 +211,20 @@ class GroupLock(object):
         
         If the lock is going to be released calls ``callback`` before releasing.
         """
-        if not self.acquired:
-            raise ValueError("Cannot release an unlocked lock")
-        self.holders.remove(holder)
-        if len(self.holders) < 1:
-            #release the lock 
-            if callback:
-                callback()
+        if self.acquired:
+            self.holders.remove(holder)
+            if len(self.holders) < 1:
+                #release the lock 
+                if callback:
+                    callback()
+                self.redis.delete(self.name)
+                self.acquired = False   
+            
+    def __del__(self):
+        """Cleanup after yourself.
+        """
+        try:
             self.redis.delete(self.name)
-            self.acquired = False   
+            self.holders = None
+        except:
+            pass
