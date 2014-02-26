@@ -320,6 +320,21 @@ class Socket(object):
         """
         for ns_name, ns in list(self.active_ns.iteritems()):
             ns.recv_disconnect()
+            
+    def add_namespace(self, namespace):
+        new_ns_class = self.namespaces[namespace]
+        ns = new_ns_class(self.environ, namespace,
+                                request=self.request)
+        # This calls initialize() on all the classes and mixins, etc..
+        # in the order of the MRO
+        for cls in type(ns).__mro__:
+            if hasattr(cls, 'initialize'):
+                cls.initialize(ns)  # use this instead of __init__,
+                                        # for less confusion
+
+        self.active_ns[namespace] = ns
+        self.manager.activate_endpoint(self.sessid, namespace)
+        return ns
 
     def remove_namespace(self, namespace):
         """This removes a Namespace object from the socket.
@@ -397,18 +412,7 @@ class Socket(object):
                 elif endpoint in self.active_ns:
                     pkt_ns = self.active_ns[endpoint]
                 else:
-                    new_ns_class = self.namespaces[endpoint]
-                    pkt_ns = new_ns_class(self.environ, endpoint,
-                                            request=self.request)
-                    # This calls initialize() on all the classes and mixins, etc..
-                    # in the order of the MRO
-                    for cls in type(pkt_ns).__mro__:
-                        if hasattr(cls, 'initialize'):
-                            cls.initialize(pkt_ns)  # use this instead of __init__,
-                                                    # for less confusion
-    
-                    self.active_ns[endpoint] = pkt_ns
-                    self.manager.activate_endpoint(self.sessid, endpoint)
+                    pkt_ns = self.add_namespace(endpoint)
                     
                 retval = pkt_ns.process_packet(pkt)
     

@@ -275,3 +275,17 @@ class SocketManager(BaseSocketManager):
     
     def active_endpoints(self, sessid):
         return self.ns_registry[sessid]
+    
+    def detach(self, sessid):
+        """Detaches the socket from the manager and cleans up any socket-specific data.
+        """
+        super(SocketManager, self).detach(sessid)
+        try:
+            del self.ns_registry[sessid]
+        except KeyError:
+            pass
+        
+        try:
+            self.alive_sessions.remove(sessid)
+        except KeyError:
+            pass
