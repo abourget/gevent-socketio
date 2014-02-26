@@ -1,23 +1,45 @@
 from unittest import TestCase, main
 
+from collections import defaultdict
+
 from socketio.namespace import BaseNamespace
 from socketio.virtsocket import Socket
+from gevent.queue import Queue
 
+class MockSocketManager(object):
+    """Mock a SocketIO manager
+    """
+    def __init__(self, *args, **kwargs):
+        self.sockets = {}
+        self.ns_registry = defaultdict(set)
 
+    def make_session(self, sessid):
+        return {}
+    
+    def make_queue(self, sessid, name):
+        return Queue()
+    
+    def deactivate_endpoint(self, sessid, endpoint):
+        self.ns_registry[sessid].remove(endpoint)
+    
+    def activate_endpoint(self, sessid, endpoint):
+        self.ns_registry[sessid].add(endpoint)
+        
+    def active_endpoints(self, sessid):
+        return self.ns_registry[sessid]
+
+    def detach(self, sessid):
+        pass
+    
 class MockSocketIOServer(object):
     """Mock a SocketIO server"""
     def __init__(self, *args, **kwargs):
-        self.sockets = {}
-
-    def get_socket(self, socket_id=''):
-        return self.sockets.get(socket_id)
-
+        self.manager = MockSocketManager()
 
 class MockSocketIOhandler(object):
     """Mock a SocketIO handler"""
     def __init__(self, *args, **kwargs):
         self.server = MockSocketIOServer()
-
 
 class MockNamespace(BaseNamespace):
     """Mock a Namespace from the namespace module"""
@@ -29,7 +51,8 @@ class TestSocketAPI(TestCase):
 
     def setUp(self):
         self.server = MockSocketIOServer()
-        self.virtsocket = Socket(self.server, {})
+        sessid = '12345678'
+        self.virtsocket = Socket(sessid, self.server.manager, {})
 
     def test__set_namespaces(self):
         namespaces = {'/': MockNamespace}
@@ -54,7 +77,7 @@ class TestSocketAPI(TestCase):
         self.virtsocket.state = "CONNECTED"
         self.assertTrue(self.virtsocket.connected)
 
-    def test_incr_hist(self):
+    def test_incr_hits(self):
         self.virtsocket.state = "CONNECTED"
 
         # cause a hit
@@ -64,16 +87,27 @@ class TestSocketAPI(TestCase):
 
     def test_disconnect(self):
         # kill connected socket
+        namespaces = {'test': MockNamespace}
+        self.virtsocket._set_namespaces(namespaces)
+        environ = {'socketio': self.virtsocket}
+        self.virtsocket._set_environ(environ)
+        
         self.virtsocket.state = "CONNECTED"
-        self.virtsocket.active_ns = {'test' : MockNamespace({'socketio': self.virtsocket}, 'test')}
+        self.virtsocket.add_namespace('test')
         self.virtsocket.disconnect()
         self.assertEqual(self.virtsocket.state, "DISCONNECTING")
         self.assertEqual(self.virtsocket.active_ns, {})
+        self.assertEqual(self.virtsocket.manager.active_endpoints(self.virtsocket.sessid), set())
 
     def test_kill(self):
         # kill connected socket
+        namespaces = {'test': MockNamespace}
+        self.virtsocket._set_namespaces(namespaces)
+        environ = {'socketio': self.virtsocket}
+        self.virtsocket._set_environ(environ)
+        
         self.virtsocket.state = "CONNECTED"
-        self.virtsocket.active_ns = {'test' : MockNamespace({'socketio': self.virtsocket}, 'test')}
+        self.virtsocket.add_namespace('test')
         self.virtsocket.kill()
         self.assertEqual(self.virtsocket.state, "DISCONNECTING")
 

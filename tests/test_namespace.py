@@ -3,15 +3,19 @@ from unittest import TestCase, main
 from socketio.namespace import BaseNamespace
 from socketio.virtsocket import Socket
 from mock import MagicMock
-
-class MockSocketIOServer(object):
-    """Mock a SocketIO server"""
+from gevent.queue import Queue
+    
+class MockSocketManager(object):
+    """Mock a SocketIO manager
+    """
     def __init__(self, *args, **kwargs):
         self.sockets = {}
-
-    def get_socket(self, socket_id=''):
-        return self.sockets.get(socket_id)
-
+    
+    def make_session(self, sessid):
+        return {}
+    
+    def make_queue(self, sessid, name):
+        return Queue()
 
 class MockSocket(Socket):
     pass
@@ -48,9 +52,11 @@ class GlobalNamespace(BaseNamespace):
 
 class TestBaseNamespace(TestCase):
     def setUp(self):
-        server = MockSocketIOServer()
+        manager = MockSocketManager()
         self.environ = {}
-        socket = MockSocket(server, {})
+        sessid = "12345678"
+        socket = MockSocket(sessid, manager, {})
+        manager.sockets[sessid] = socket
         socket.error = MagicMock()
         self.environ['socketio'] = socket
         self.ns = GlobalNamespace(self.environ, '/woot')
@@ -251,9 +257,12 @@ class TestBaseNamespace(TestCase):
 
 class TestChatNamespace(TestCase):
     def setUp(self):
-        server = MockSocketIOServer()
+        manager = MockSocketManager()
         self.environ = {}
-        socket = MockSocket(server, {})
+        sessid = "12345678"
+        socket = MockSocket(sessid, manager, {})
+        socket.sessid = sessid
+        manager.sockets[sessid] = socket
         socket.error = MagicMock()
         self.environ['socketio'] = socket
         self.ns = ChatNamespace(
