@@ -10,7 +10,7 @@ preload_app = True
 
 raw_env=[
          "SOCKET_MANAGER_CLASS=socketio.contrib.redis.socket_manager.RedisSocketManager",
-         "SOCKET_MANAGER_REDIS_HOST=0.0.0.0",
+         "SOCKET_MANAGER_REDIS_HOST=127.0.0.1",
          "SOCKET_MANAGER_REDIS_PORT=6379",
          "SOCKET_MANAGER_REDIS_DB=0"
          ]
