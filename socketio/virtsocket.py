@@ -56,6 +56,8 @@ def default_error_handler(socket, error_name, error_message, endpoint,
     ))
 
 
+QUEUE_NAMES = ('client_queue', 'server_queue')
+
 class Socket(object):
     """
     Virtual Socket implementation, checks heartbeats, writes to local queues
@@ -83,8 +85,8 @@ class Socket(object):
         self.sessid = sessid
         
         self.session = manager.make_session(sessid)  # the session dict, for general developer usage
-        self.client_queue = manager.make_queue(sessid, 'client_messages') # queue for messages to client
-        self.server_queue = manager.make_queue(sessid, 'server_messages')  # queue for messages to server
+        for qname in QUEUE_NAMES:
+            setattr(self, qname, manager.make_queue(sessid, qname))
         self.hits = 0
         self.heartbeats = 0
         self.hb_check_timeout = Event()

@@ -72,7 +72,7 @@ class BaseSocketManager(object):
     def next_socket_id(self):
         """The rule for generating a new session id for the socket.
         """
-        return str(random.random())[2:]
+        return str(random.random())[2:].ljust(12, "0")#keep all sessid of same size
       
     def start(self):
         """Called when starting the owning server.

@@ -129,7 +129,7 @@ class RedisQueue(object):
             return self.get_nowait()
         except Empty:
             raise StopIteration
-    
+        
 class RedisMapping(collections.MutableMapping):
     """A map-like object backed by Redis. 
     
