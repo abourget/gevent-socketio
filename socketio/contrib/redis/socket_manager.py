@@ -349,7 +349,7 @@ class RedisSocketManager(BaseSocketManager):
         disconnected properly, the most obvious case being a server crash.
         
         The algorithm is to poke randomly around the socket buckets, small batches at a time, and clean up whatever is found.
-        This not a replacement for proper heartbeat and disconnect cleanup logic.
+        This is not a replacement for proper heartbeat and disconnect cleanup logic.
         """
         timeout = float(self.config['heartbeat_timeout'])
         lock_timeout = 5 #Should finish in less than 5 sec (hopefully much, much faster) or lock gets released
@@ -359,6 +359,7 @@ class RedisSocketManager(BaseSocketManager):
         batch_size = int(float(self.settings.get('orphan_cleaner_batch', 0.1)) * self.buckets_count)
         limit = int(self.settings.get('orphan_cleaner_limit', 100))#max number of orphans to cleanup at once
         while True:
+            next_interval = interval
             with self.redis.lock(lock_name, timeout = lock_timeout):#one check at a time across all workers
                 #get a random subset of buckets
                 buckets = self.redis.srandmember(self.make_buckets_type('alive'), batch_size)
@@ -366,10 +367,11 @@ class RedisSocketManager(BaseSocketManager):
                     delta = int(time.time()) - timeout - 1
                     orphans = self.script_bucket_filter_lt(keys = buckets, args = [delta, limit])
                     if orphans:
+                        next_interval = 0#there are orphans, so don't wait until it all looks clean again
                         logger.warning('Cleaning up %s orphaned sockets...' % len(orphans))
                         with self.redis.pipeline() as pipe:
                             for sessid in orphans:
                                 self.clean_redis(sessid, pipe)
                                 self.notify_socket(sessid, 'orphaned')
                             pipe.execute()
-            gevent.sleep(interval)
+            gevent.sleep(next_interval)
