@@ -372,6 +372,7 @@ class RedisSocketManager(BaseSocketManager):
                         with self.redis.pipeline() as pipe:
                             for sessid in orphans:
                                 self.clean_redis(sessid, pipe)
-                                self.notify_socket(sessid, 'orphaned')
                             pipe.execute()
+                        for sessid in orphans:
+                            self.notify_socket(sessid, 'dead')
             gevent.sleep(next_interval)
