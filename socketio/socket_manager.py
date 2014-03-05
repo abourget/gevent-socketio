@@ -38,7 +38,10 @@ class BaseSocketManager(object):
         
         Raises ValueError if ``listener`` was not registered for ``sessid`` / ``event``.
         """
-        self.socket_listeners[sessid][event].remove(listener)
+        try:
+            self.socket_listeners[sessid][event].remove(listener)
+        except ValueError:
+            pass
         
     def notify_socket(self, sessid, event, *args, **kwargs):
         """Notify all listeners of socket ``sessid`` with ``event``.
@@ -60,7 +63,10 @@ class BaseSocketManager(object):
         
         Raises ValueError if ``listener`` was not registered for ``endpoint`` / ``event``.
         """
-        self.endpoint_listeners[endpoint][event].remove(listener)
+        try:
+            self.endpoint_listeners[endpoint][event].remove(listener)
+        except ValueError:
+            pass
         
     def notify_endpoint(self, endpoint, event, *args, **kwargs):
         """
