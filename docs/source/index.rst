@@ -326,7 +326,7 @@ The maintainers:
 Credits
 -------
 
-**Jeffrey Gellens** for starting and polishing this project over the years.
+**Jeffrey Gelens** for starting and polishing this project over the years.
 
 PyCon 2012 and the Sprints, for bringing this project up to version
 0.9 of the protocol.
