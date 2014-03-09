@@ -105,12 +105,12 @@ class RedisSocketManager(BaseSocketManager):
             client.execute()
             
     def detach(self, sessid):
+        super(RedisSocketManager, self).detach(sessid)
         self.clean_redis(sessid)
         try:
             del self.locks[sessid]
         except KeyError:
             pass
-        super(RedisSocketManager, self).detach(sessid)
        
     def make_buckets_type(self, name):
         return "%s:buckets:%s" % (self.prefix, name)

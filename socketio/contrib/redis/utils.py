@@ -130,6 +130,14 @@ class RedisQueue(object):
         except Empty:
             raise StopIteration
         
+    def __del__(self):
+        """Cleanup after yourself.
+        """
+        try:
+            self.redis.delete(self.name)
+        except:
+            pass
+        
 class RedisMapping(collections.MutableMapping):
     """A map-like object backed by Redis. 
     
@@ -168,6 +176,14 @@ class RedisMapping(collections.MutableMapping):
 
     def __len__(self):
         return self.redis.hlen(self.name)
+    
+    def __del__(self):
+        """Cleanup after yourself.
+        """
+        try:
+            self.redis.delete(self.name)
+        except:
+            pass
     
 class GroupLock(object):
     """
