@@ -301,7 +301,7 @@ class RedisSocketManager(BaseSocketManager):
         while True:
             with self.redis.lock(lock_name, timeout = lock_timeout):#one check at a time across all workers
                 old = int(time.time()) - timeout - 1
-                orphans = self.redis.zrangebyscore(self.sockets_key, '-inf', old)#get all timeouted sockets from the sorted set˙Closing 'dead' client
+                orphans = self.redis.zrangebyscore(self.sockets_key, '-inf', str(old))#get all timeouted sockets from the sorted set
                 if orphans:
                     logger.warning('Cleaning up %s orphaned sockets...' % len(orphans))
                     with self.redis.pipeline() as pipe:
