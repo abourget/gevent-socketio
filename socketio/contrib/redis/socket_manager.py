@@ -11,10 +11,9 @@ from redis.client import Redis
 from socketio import virtsocket
 from socketio.socket_manager import BaseSocketManager
 from socketio.contrib.redis.utils import RedisQueue, RedisMapping, GroupLock, DefaultDict
-from socketio.contrib.redis import lua_scripts
 
 logger = logging.getLogger(__name__)
-       
+     
 class SessionContextManager(object):
     """
     """
@@ -58,6 +57,7 @@ class RedisSocketManager(BaseSocketManager):
         self.redis_settings = redis_settings
         
         self.connected_key = "%s:connected" % self.prefix
+        self.sockets_key = "%s:sockets" % self.prefix
         
         lock_factory = lambda sessid: GroupLock(self.redis, self.make_session_key(sessid, "lock"))
         self.locks = DefaultDict(lock_factory)
@@ -78,9 +78,6 @@ class RedisSocketManager(BaseSocketManager):
     def start(self):
         self.redis = Redis(**self.redis_settings)
         
-        self.script_bucket_hdel = self.redis.register_script(lua_scripts.LUA_BUCKET_HDEL)
-        self.script_bucket_filter_lt = self.redis.register_script(lua_scripts.LUA_BUCKETS_FILTER_LT)
-            
         self.spawn(self._redis_listener)
         self.spawn(self._orphan_cleaner)
     
@@ -98,8 +95,9 @@ class RedisSocketManager(BaseSocketManager):
         for qname in virtsocket.QUEUE_NAMES:
             client.delete(self.make_session_key(sessid, "queue:%s" % qname))
         
-        self.bucket_hdel("alive", sessid, client = client)
-        self.bucket_hdel('hits', sessid, client = client)
+        client.zrem(self.sockets_key, sessid)
+        client.hdel(self.make_bucket_name('hits', sessid), sessid)
+        
         client.srem(self.connected_key, sessid)
         if single:
             client.execute()
@@ -112,9 +110,6 @@ class RedisSocketManager(BaseSocketManager):
         except KeyError:
             pass
        
-    def make_buckets_type(self, name):
-        return "%s:buckets:%s" % (self.prefix, name)
-        
     def make_bucket_name(self, key, sessid):
         return "%s:%s:b%s" % (self.prefix, key, self.bucket_id(sessid))
     
@@ -134,58 +129,6 @@ class RedisSocketManager(BaseSocketManager):
         """
         nid = int(sessid.lstrip("0") or 0)
         return str(nid % self.buckets_count)
-    
-    def bucket_hset(self, key, sessid, value, client = None):
-        """Set the value in the corresponding bucket hash and (atomically) register the bucket.
-        
-        If `client` is given and `client` is a pipeline it's the responsibility of the caller
-        to call execute()!
-        """
-        single = client is None
-        if client is None:
-            client = self.redis.pipeline()
-        bname = self.make_bucket_name(key, sessid)
-        client.hset(bname, sessid, value) 
-        btype = self.make_buckets_type(key)
-        client.sadd(btype, bname)
-        if single:
-            client.execute()
-            
-    def bucket_hincrby(self, key, sessid, value, client = None):
-        """Increment the value in the corresponding bucket and (atomically) register the bucket.
-        
-        If `client` is given and `client` is a pipeline it's the responsibility of the caller
-        to call execute()!
-        """
-        single = client is None
-        if client is None:
-            client = self.redis.pipeline()
-        bname = self.make_bucket_name(key, sessid)
-        client.hincrby(bname, sessid, value) 
-        btype = self.make_buckets_type(key)
-        client.sadd(btype, bname)
-        if single:
-            client.execute()
-            
-    def bucket_hget(self, key, sessid, client = None):
-        """Returns the value from the bucket corresponding to the given socket.
-        """
-        if client is None:
-            client = self.redis
-        bname = self.make_bucket_name(key, sessid)
-        return client.hget(bname, sessid)
-        
-    def bucket_hdel(self, key, sessid, client = None):
-        """Delete a value for the given socket from the corresponding bucket and (atomically) unregister the bucket if it's empty.
-        """
-        single = client is None
-        if client is None:
-            client = self.redis.pipeline()
-        bname = self.make_bucket_name(key, sessid)
-        btype = self.make_buckets_type(key)
-        self.script_bucket_hdel(keys = [bname, btype], args = [sessid], client = client)
-        if single:
-            client.execute()
     
     def read_queue(self, queue, **kwargs):
         """Optimized for faster bulk read from Redis, while still supporting ``block`` and ``timeout`` for the first read.
@@ -234,22 +177,24 @@ class RedisSocketManager(BaseSocketManager):
         """
         socket = self.sockets.get(sessid)
         if socket:
-            self.bucket_hset("alive", sessid, str(time.time()))
+            self.redis.zadd(self.sockets_key, sessid, str(time.time()))
         super(RedisSocketManager, self).heartbeat_received(sessid)
             
     def handshake(self, sessid):
         """Don't create the socket yet, just mark the session as existing.
         """
-        self.bucket_hset("alive", sessid, str(time.time()))
+        #Socket ids are kept in a sorted set, with score the latest heartbeat
+        self.redis.zadd(self.sockets_key, sessid, str(time.time()))
         
     def is_handshaken(self, sessid):
-        return bool(self.bucket_hget("alive", sessid))
+        return bool(self.redis.zscore(self.sockets_key, sessid))
     
     def load_socket(self, socket):
         """Reads from Redis and sets any internal state of the socket that must 
         be shared between all sockets in the same session.
         """
-        socket.hits = self.bucket_hincrby("hits", socket.sessid, 1)
+        socket.hits = self.redis.hincrby(self.make_bucket_name("hits", socket.sessid), socket.sessid, 1) 
+        
         if not socket.connection_established:
             connected = self.redis.sismember(self.connected_key, socket.sessid)
             if connected:
@@ -347,32 +292,22 @@ class RedisSocketManager(BaseSocketManager):
     def _orphan_cleaner(self):
         """This will check and cleanup sockets' data that is left orphaned in Redis due to sockets somehow not being 
         disconnected properly, the most obvious case being a server crash.
-        
-        The algorithm is to poke randomly around the socket buckets, small batches at a time, and clean up whatever is found.
-        This is not a replacement for proper heartbeat and disconnect cleanup logic.
         """
         timeout = float(self.config['heartbeat_timeout'])
         lock_timeout = 5 #Should finish in less than 5 sec (hopefully much, much faster) or lock gets released
-        interval = float(self.settings.get('orphan_cleaner_interval', 1.2 * timeout))
-        interval *= (0.9 + 0.2 * random.random()) #between 90% and 110% so not all managers check at the same time
+        interval = float(self.settings.get('orphan_cleaner_interval', timeout))
+        interval *= (1 + 0.2 * random.random()) #between 100% and 120% so not all managers check at the same time
         lock_name = "%s:orphan.cleaner" % self.prefix
-        batch_size = int(float(self.settings.get('orphan_cleaner_batch', 0.1)) * self.buckets_count)
-        limit = int(self.settings.get('orphan_cleaner_limit', 100))#max number of orphans to cleanup at once
         while True:
-            next_interval = interval
             with self.redis.lock(lock_name, timeout = lock_timeout):#one check at a time across all workers
-                #get a random subset of buckets
-                buckets = self.redis.srandmember(self.make_buckets_type('alive'), batch_size)
-                if buckets:
-                    delta = int(time.time()) - timeout - 1
-                    orphans = self.script_bucket_filter_lt(keys = buckets, args = [delta, limit])
-                    if orphans:
-                        next_interval = 0#there are orphans, so don't wait until it all looks clean again
-                        logger.warning('Cleaning up %s orphaned sockets...' % len(orphans))
-                        with self.redis.pipeline() as pipe:
-                            for sessid in orphans:
-                                self.clean_redis(sessid, pipe)
-                            pipe.execute()
+                old = int(time.time()) - timeout - 1
+                orphans = self.redis.zrangebyscore(self.sockets_key, '-inf', old)#get all timeouted sockets from the sorted set˙Closing 'dead' client
+                if orphans:
+                    logger.warning('Cleaning up %s orphaned sockets...' % len(orphans))
+                    with self.redis.pipeline() as pipe:
                         for sessid in orphans:
-                            self.notify_socket(sessid, 'dead')
-            gevent.sleep(next_interval)
+                            self.clean_redis(sessid, pipe)
+                        pipe.execute()
+                    for sessid in orphans:
+                        self.notify_socket(sessid, 'dead')
+            gevent.sleep(interval)
