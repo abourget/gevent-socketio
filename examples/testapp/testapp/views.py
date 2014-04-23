@@ -108,7 +108,7 @@ class ChatIONamespace(BaseNamespace, RoomsMixin):
         print("In on_mymessage")
         self.send("little message back")
         self.send({'blah': 'blah'}, json=True)
-        for x in xrange(2):
+        for x in range(2):
             self.emit("pack", {'the': 'more', 'you': 'can'})
 
     def on_my_callback(self, packet):
