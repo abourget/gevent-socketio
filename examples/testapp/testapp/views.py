@@ -83,11 +83,11 @@ arguments to the saved callback on the client side:
 class GlobalIONamespace(BaseNamespace, BroadcastMixin):
     def on_chat(self, *args):
         self.emit("bob", {'hello': 'world'})
-        print "Received chat message", args
+        print("Received chat message", args)
         self.broadcast_event_not_me('chat', *args)
     
     def recv_connect(self):
-        print "CONNNNNNNN"
+        print("CONNNNNNNN")
         self.emit("you_just_connected", {'bravo': 'kid'})
         self.spawn(self.cpu_checker_process)
 
@@ -105,7 +105,7 @@ class GlobalIONamespace(BaseNamespace, BroadcastMixin):
 
 class ChatIONamespace(BaseNamespace, RoomsMixin):
     def on_mymessage(self, msg):
-        print "In on_mymessage"
+        print("In on_mymessage")
         self.send("little message back")
         self.send({'blah': 'blah'}, json=True)
         for x in xrange(2):
@@ -116,17 +116,17 @@ class ChatIONamespace(BaseNamespace, RoomsMixin):
 
     def on_trigger_server_callback(self, superbob):
         def cb():
-            print "OK, WE WERE CALLED BACK BY THE ACK! THANKS :)"
+            print("OK, WE WERE CALLED BACK BY THE ACK! THANKS :)")
         self.emit('callmeback', 'this is a first param',
                   'this is the last param', callback=cb)
 
         def cb2(param1, param2):
-            print "OK, GOT THOSE VALUES BACK BY CB", param1, param2
+            print("OK, GOT THOSE VALUES BACK BY CB", param1, param2)
         self.emit('callmeback', 'this is a first param',
                   'this is the last param', callback=cb2)
 
     def on_rtc_invite(self, sdp):
-        print "Got an RTC invite, now pushing to others..."
+        print("Got an RTC invite, now pushing to others...")
         self.emit_to_room('room1', 'rtc_invite', self.session['nickname'],
                           sdp)
         
@@ -135,11 +135,11 @@ class ChatIONamespace(BaseNamespace, RoomsMixin):
         self.join('room1')
 
     def recv_message(self, data):
-        print "Received a 'message' with data:", data
+        print("Received a 'message' with data:", data)
         
         
     def on_disconnect_me(self, data):
-        print "Disconnecting you buddy", data
+        print("Disconnecting you buddy", data)
         self.disconnect()
 
 

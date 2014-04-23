@@ -68,7 +68,7 @@ def not_found(start_response):
 
 if __name__ == '__main__':
     user, password = get_credentials()
-    print 'Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)'
+    print('Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)')
     server = SocketIOServer(('0.0.0.0', 8080), Application(),
         resource="socket.io", policy_server=True,
         policy_listener=('0.0.0.0', 10843))
