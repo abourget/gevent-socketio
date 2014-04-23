@@ -1,6 +1,9 @@
 import gevent
-import urllib
-import urlparse
+try:
+    from urllib.parse import unquote_plus, parse_qs
+except ImportError:
+    from urllib.parse import unquote_plus
+    from urlparse import parse_qs
 from geventwebsocket import WebSocketError
 from gevent.queue import Empty
 
@@ -162,9 +165,9 @@ class JSONPolling(XHRPollingTransport):
     def _request_body(self):
         data = super(JSONPolling, self)._request_body()
         # resolve %20%3F's, take out wrapping d="...", etc..
-        data = urllib.unquote_plus(data)[3:-1] \
-                     .replace(r'\"', '"') \
-                     .replace(r"\\", "\\")
+        data = unquote_plus(data)[3:-1] \
+            .replace(r'\"', '"') \
+            .replace(r"\\", "\\")
 
         # For some reason, in case of multiple messages passed in one
         # query, IE7 sends it escaped, not utf-8 encoded. This dirty
@@ -175,7 +178,7 @@ class JSONPolling(XHRPollingTransport):
 
     def write(self, data):
         """Just quote out stuff before sending it out"""
-        args = urlparse.parse_qs(self.handler.environ.get("QUERY_STRING"))
+        args = parse_qs(self.handler.environ.get("QUERY_STRING"))
         if "i" in args:
             i = args["i"]
         else:
