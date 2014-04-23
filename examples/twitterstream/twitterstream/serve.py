@@ -25,7 +25,7 @@ def send_tweets(server, user, password):
 
 
 def get_credentials():
-    user = raw_input("Twitter username: ")
+    user = input("Twitter username: ")
     password = getpass.getpass("Twitter password: ")
     return (user, password)
 
