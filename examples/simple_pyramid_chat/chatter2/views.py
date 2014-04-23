@@ -33,7 +33,7 @@ class NamedUsersRoomsMixin(BroadcastMixin):
                    args=args,
                    endpoint=self.ns_name)
         room_name = self._get_room_name(room)
-        for sessid, socket in self.socket.server.sockets.iteritems():
+        for sessid, socket in self.socket.server.sockets.items():
             if not hasattr(socket, 'rooms'):
                 continue
             if room_name in socket.rooms:

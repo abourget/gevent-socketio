@@ -30,7 +30,7 @@ class RoomsMixin(object):
                    args=args,
                    endpoint=self.ns_name)
         room_name = self._get_room_name(room)
-        for sessid, socket in self.socket.server.sockets.iteritems():
+        for sessid, socket in self.socket.server.sockets.items():
             if 'rooms' not in socket.session:
                 continue
             if room_name in socket.session['rooms'] and self.socket != socket:
@@ -55,7 +55,7 @@ class BroadcastMixin(object):
                    args=args,
                    endpoint=self.ns_name)
 
-        for sessid, socket in self.socket.server.sockets.iteritems():
+        for sessid, socket in self.socket.server.sockets.items():
             socket.send_packet(pkt)
 
     def broadcast_event_not_me(self, event, *args):
@@ -68,6 +68,6 @@ class BroadcastMixin(object):
                    args=args,
                    endpoint=self.ns_name)
 
-        for sessid, socket in self.socket.server.sockets.iteritems():
+        for sessid, socket in self.socket.server.sockets.items():
             if socket is not self.socket:
                 socket.send_packet(pkt)

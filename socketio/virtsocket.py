@@ -311,7 +311,7 @@ class Socket(object):
                        :meth:`~socketio.namespace.BaseNamespace.disconnect`
                        calls.
         """
-        for ns_name, ns in list(self.active_ns.iteritems()):
+        for ns_name, ns in list(self.active_ns.items()):
             ns.recv_disconnect()
 
     def remove_namespace(self, namespace):
@@ -436,7 +436,7 @@ class Socket(object):
         while True:
             gevent.sleep(1.0)
             if not self.connected:
-                for ns_name, ns in list(self.active_ns.iteritems()):
+                for ns_name, ns in list(self.active_ns.items()):
                     ns.recv_disconnect()
                 # Killing Socket-level jobs
                 gevent.killall(self.jobs)

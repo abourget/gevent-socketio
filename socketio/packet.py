@@ -12,7 +12,7 @@ MSG_TYPES = {
     'noop': 8,
     }
 
-MSG_VALUES = dict((v, k) for k, v in MSG_TYPES.iteritems())
+MSG_VALUES = dict((v, k) for k, v in MSG_TYPES.items())
 
 ERROR_REASONS = {
     'transport not supported': 0,
@@ -20,13 +20,13 @@ ERROR_REASONS = {
     'unauthorized': 2
     }
 
-REASONS_VALUES = dict((v, k) for k, v in ERROR_REASONS.iteritems())
+REASONS_VALUES = dict((v, k) for k, v in ERROR_REASONS.items())
 
 ERROR_ADVICES = {
     'reconnect': 0,
     }
 
-ADVICES_VALUES = dict((v, k) for k, v in ERROR_ADVICES.iteritems())
+ADVICES_VALUES = dict((v, k) for k, v in ERROR_ADVICES.items())
 
 socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args',
                               'ackId', 'reason', 'advice', 'qs', 'id']

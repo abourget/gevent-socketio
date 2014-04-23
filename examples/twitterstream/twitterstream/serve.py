@@ -14,7 +14,7 @@ def broadcast_msg(server, ns_name, event, *args):
                args=args,
                endpoint=ns_name)
 
-    for sessid, socket in server.sockets.iteritems():
+    for sessid, socket in server.sockets.items():
         socket.send_packet(pkt)
 
 
