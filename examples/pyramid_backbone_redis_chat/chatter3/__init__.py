@@ -11,7 +11,7 @@ def simple_route(config, name, url, fn):
 
 def main(global_config, **settings):
     config = Configurator()
-
+    config.include('pyramid_mako')
     simple_route(config, 'index', '/', index)
     simple_route(config, 'socket_io', 'socket.io/*remaining', socketio_service)
 
