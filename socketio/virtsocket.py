@@ -404,7 +404,7 @@ class Socket(object):
 
             # Has the client requested an 'ack' with the reply parameters ?
             if pkt.get('ack') == "data" and pkt.get('id'):
-                if type(retval) is tuple:
+                if isinstance(retval, tuple):
                     args = list(retval)
                 else:
                     args = [retval]
