@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 from django.db import models
 from django.template.defaultfilters import slugify
 
@@ -22,6 +22,7 @@ class ChatRoom(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super(ChatRoom, self).save(*args, **kwargs)
+
 
 class ChatUser(models.Model):
 

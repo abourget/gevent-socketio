@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 from re import match
 from thread import start_new_thread
 from time import sleep
@@ -15,6 +15,7 @@ from socketio.server import SocketIOServer
 
 RELOAD = False
 
+
 def reload_watcher():
     global RELOAD
     while True:
@@ -23,12 +24,13 @@ def reload_watcher():
             kill(getpid(), SIGINT)
         sleep(1)
 
+
 class Command(BaseCommand):
 
     def handle(self, addrport="", *args, **options):
 
         if not addrport:
-            self.addr = ''
+            self.addr = '127.0.0.1'
             self.port = DEFAULT_PORT
         else:
             m = match(naiveip_re, addrport)
@@ -48,7 +50,7 @@ class Command(BaseCommand):
         try:
             bind = (self.addr, int(self.port))
             print
-            print "SocketIOServer running on %s:%s" % bind
+            print "SocketIOServer running on http://%s:%s" % bind
             print
             handler = self.get_handler(*args, **options)
             server = SocketIOServer(bind, handler, resource="socket.io", policy_server=True)

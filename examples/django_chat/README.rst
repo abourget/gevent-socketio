@@ -5,7 +5,6 @@ Installation
 Steps to setup this example::
 
     $ cd examples/django_chat
-    $ python bootstrap.py
-    $ ./bin/buildout
-    $ ./bin/django syncdb
-    $ ./bin/django runserver_socketio
+    $ pip install -r requirements.txt
+    $ ./manage.py syncdb
+    $ ./manage.py runserver_socketio

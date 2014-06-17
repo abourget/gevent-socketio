@@ -1,11 +1,11 @@
+# -*- coding: utf-8 -*-
+from django.conf.urls import patterns, include, url
+from socketio import sdjango
 
-from django.conf.urls.defaults import patterns, include, url
-import socketio.sdjango
-
-socketio.sdjango.autodiscover()
+sdjango.autodiscover()
 
 urlpatterns = patterns("chat.views",
-    url("^socket\.io", include(socketio.sdjango.urls)),
+    url("^socket\.io", include(sdjango.urls)),
     url("^$", "rooms", name="rooms"),
     url("^create/$", "create", name="create"),
     url("^(?P<slug>.*)$", "room", name="room"),

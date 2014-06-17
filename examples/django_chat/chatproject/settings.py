@@ -1,8 +1,16 @@
+# -*- coding: utf-8 -*-
+''' Base settings
+'''
+from __future__ import unicode_literals, absolute_import
 
-import os, sys
+import os
+import sys
+
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
 full_path = lambda *parts: os.path.join(PROJECT_ROOT, *parts)
 example_path = full_path("..", "..")
 if example_path not in sys.path:
@@ -62,23 +70,22 @@ LOGGING = {
         },
     },
     'handlers': {
-        'console':{
-            'level':'DEBUG',
-            'class':'logging.StreamHandler',
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
     },
     'loggers': {
         'django': {
-            'handlers':['console'],
+            'handlers': ['console'],
             'propagate': True,
-            'level':'INFO',
+            'level': 'INFO',
         },
         'socketio': {
-            'handlers':['console'],
+            'handlers': ['console'],
             'propagate': True,
-            'level':'INFO',
+            'level': 'INFO',
         },
     },
 }
-
