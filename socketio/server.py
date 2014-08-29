@@ -69,7 +69,11 @@ class SocketIOServer(WSGIServer):
                 try:
                     address = args[0].address[0]
                 except AttributeError:
-                    address = args[0].cfg_addr[0]
+                    try:
+                        address = args[0].cfg_addr[0]
+                    except AttributeError:
+                        address = args[0].getsockname()[0]
+
             policylistener = kwargs.pop('policy_listener', (address, 10843))
             self.policy_server = FlashPolicyServer(policylistener)
         else:
