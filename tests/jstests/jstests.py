@@ -1,8 +1,21 @@
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey;
+import sys
+
+monkey.patch_all()
 
 from socketio import socketio_manage
 from socketio.server import SocketIOServer
 from socketio.namespace import BaseNamespace
+import logging
+
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+root.addHandler(ch)
 
 
 TestHtml = """
@@ -16,7 +29,6 @@ TestHtml = """
 </head>
 <body>
   <div id="qunit"></div>
-  <script src="/static/qunit.js"></script>
   <script src="/static/socket.io.js"></script>
   <script src="/tests/suite.js"></script>
 </body>
@@ -29,6 +41,7 @@ class TestNamespace(BaseNamespace):
 
     def on_requestackonevalue(self, val):
         return val
+
 
 class Application(object):
     def __init__(self):

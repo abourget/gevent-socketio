@@ -1,7 +1,7 @@
 from unittest import TestCase, main
 
 from socketio.namespace import BaseNamespace
-from socketio.virtsocket import Socket
+from socketio.engine.virtsocket import Socket
 
 
 class MockSocketIOServer(object):

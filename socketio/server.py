@@ -1,14 +1,13 @@
 import sys
 import traceback
-
 from socket import error
 
 from gevent.pywsgi import WSGIServer
+from geventwebsocket.handler import WebSocketHandler
 
 from socketio.handler import SocketIOHandler
 from socketio.policyserver import FlashPolicyServer
-from socketio.virtsocket import Socket
-from geventwebsocket.handler import WebSocketHandler
+
 
 __all__ = ['SocketIOServer']
 
@@ -92,7 +91,6 @@ class SocketIOServer(WSGIServer):
         if not 'handler_class' in kwargs:
             kwargs['handler_class'] = SocketIOHandler
 
-
         if not 'ws_handler_class' in kwargs:
             self.ws_handler_class = WebSocketHandler
         else:
@@ -126,21 +124,6 @@ class SocketIOServer(WSGIServer):
         # Pass in the config about timeouts, heartbeats, also...
         handler = self.handler_class(self.config, socket, address, self)
         handler.handle()
-
-    def get_socket(self, sessid=''):
-        """Return an existing or new client Socket."""
-
-        socket = self.sockets.get(sessid)
-
-        if sessid and not socket:
-            return None  # you ask for a session that doesn't exist!
-        if socket is None:
-            socket = Socket(self, self.config)
-            self.sockets[socket.sessid] = socket
-        else:
-            socket.incr_hits()
-
-        return socket
 
 
 def serve(app, **kw):
