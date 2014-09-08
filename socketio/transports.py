@@ -173,15 +173,18 @@ class JSONPolling(XHRPollingTransport):
             data = data.decode("unicode_escape").encode("utf-8")
         return data
 
-    def write(self, data):
-        """Just quote out stuff before sending it out"""
-        args = urlparse.parse_qs(self.handler.environ.get("QUERY_STRING"))
-        if "i" in args:
-            i = args["i"]
+    def write(self, data=""):
+        """Do not add JSON padding for responses to HTTP POST"""
+        if self.handler.environ.get('REQUEST_METHOD') == 'POST':
+            super(JSONPolling, self).write(data)
         else:
-            i = "0"
-        # TODO: don't we need to quote this data in here ?
-        super(JSONPolling, self).write("io.j[%s]('%s');" % (i, data))
+            args = urlparse.parse_qs(self.handler.environ.get("QUERY_STRING"))
+            if "i" in args:
+                i = args["i"]
+            else:
+                i = "0"
+            # TODO: don't we need to quote this data in here ?
+            super(JSONPolling, self).write("io.j[%s]('%s');" % (i, data))
 
 
 class XHRMultipartTransport(XHRPollingTransport):
