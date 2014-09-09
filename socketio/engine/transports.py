@@ -54,6 +54,9 @@ class BaseTransport(EventEmitter):
         self.writable = False
         self.should_close = False
 
+    def join(self):
+        raise NotImplementedError()
+
     def write(self, data=""):
         # Gevent v 0.13
         if hasattr(self.handler, 'response_headers_list'):
@@ -81,20 +84,20 @@ class BaseTransport(EventEmitter):
         self.request = None
         self.handler = None
 
-    def on_handler(self, handler):
-        self.handler = handler
-        self.request = handler.request
+    def on_request(self, request):
+        self.handler = request.handler
+        self.request = request
 
         self.handler.on("cleanup", self._cleanup)
 
-    def on_error(self, message, description=None):
+    def on_error(self, message):
         if self.listeners('error'):
             self.emit('error', {
                 'type': 'TransportError',
-                'description': description
+                'description': message
             })
         else:
-            logger.debug("Ignored transoport error %s (%s)" % (message, description))
+            logger.debug("Ignored transoport error %s" % message)
 
     def on_packet(self, packet):
         self.emit('packet', packet)
@@ -114,10 +117,9 @@ class PollingTransport(BaseTransport):
         self.data_request = None
         super(PollingTransport, self).__init__(*args, **kwargs)
 
-    def on_handler(self, handler):
-        super(PollingTransport, self).on_handler(handler)
+    def on_request(self, request):
+        super(PollingTransport, self).on_request(request)
 
-        request = handler.request
         if request.method == 'GET':
             self.on_poll_request(request)
         elif request.method == 'POST':
@@ -145,7 +147,12 @@ class PollingTransport(BaseTransport):
         # TODO setup response clean up logic
 
         self.writable = True
-        self.emit('drain')
+
+        # Now we should wait or block for following events:
+        # 1. Some data packet needs to be sent.
+        # 2. A heart beat packet should be sent. This can be fulfilled with 1. as long
+        #    as we enqueue the ping packet to the sending buffer
+        # SO we should wait till something can be sent
 
         if self.writable and self.should_close:
             logger.debug('triggering empty send to append close packet')
@@ -157,20 +164,13 @@ class PollingTransport(BaseTransport):
         :param request:
         :return:
         """
-        if self.data_request is not request:
-            self.on_error('data request overlap from client')
-            # TODO write 500
-            return
-
         is_binary = 'application/octet-stream' == request.headers['content-type']
         self.data_request = request
-        # TODO SET DATA RESPONSE
-        # TODO SET UP CLEAN LOGIC
 
         chunks = bytearray() if is_binary else ''
 
         chunks += self.data_request.body
-        self.emit('data', chunks)
+        self.on_data(chunks)
         self.handler.response.status = 200
         self.handler.response.headers = self.handler.request.headers
         self.handler.response.headers.update({
@@ -179,7 +179,6 @@ class PollingTransport(BaseTransport):
         })
         self.handler.response.body = 'ok'
         return
-
 
     def on_data(self, data):
         """
@@ -190,7 +189,7 @@ class PollingTransport(BaseTransport):
 
         logger.debug('received %s', data)
 
-        for packet in Parser.decode_payload(data):
+        for packet, index, total in Parser.decode_payload(data):
             if packet['type'] == 'close':
                 logger.debug('got xhr close packet')
                 # TODO close this
@@ -206,7 +205,7 @@ class PollingTransport(BaseTransport):
         """
         if self.should_close:
             packets.push({type: 'close'})
-            self.on('should_close') # Use event as callback to do the close logic
+            self.on('should_close')
             self.should_close = False
 
         encoded = Parser.encode_payload(packets, self.supports_binary)
@@ -238,15 +237,13 @@ class PollingTransport(BaseTransport):
 
 class XHRPollingTransport(PollingTransport):
 
-    def on_handler(self, handler):
-        super(XHRPollingTransport, self).on_handler(handler)
+    def on_request(self, request):
+        super(XHRPollingTransport, self).on_request(request)
 
-        request = handler.request
         if 'OPTIONS' == request.method:
-            self.handler.response.headers = self.handler.request.headers
-            self.handler.response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-            self.handler.response.status = 200
-
+            request.response.headers = self.handler.request.headers
+            request.response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+            request.response.status = 200
 
     def do_write(self, data):
         is_string = type(data) == str
@@ -262,10 +259,10 @@ class XHRPollingTransport(PollingTransport):
         if ua and (ua.find(';MSIE') == -1 or ua.find('Trident/') == -1):
             headers['X-XSS-Protection'] = '0'
 
-        self.handler.response.status = 200
         headers = self.merge_headers(self.request, headers)
-        self.handler.response.headers = headers
-        self.handler.response.body = bytes(data)
+        self.request.response.headers = headers
+        self.request.response.body += bytes(data)
+        self.request.response.end()
 
     def merge_headers(self, request, headers=None):
         if not headers:
@@ -304,7 +301,7 @@ class JSONPollingTransport(PollingTransport):
         else:
             i = "0"
 
-        super(JSONPollingTransport, self).write("io.j[%s]('%s');" % (i, data))
+        super(JSONPollingTransport, self).write("io.j[%s]('%s');" % (i, js))
 
 
 class WebsocketTransport(BaseTransport):

@@ -4,7 +4,6 @@ and used by socketio.socket.
 """
 
 import random
-import weakref
 import logging
 
 import gevent
@@ -13,9 +12,17 @@ from gevent.event import Event
 from pyee import EventEmitter
 
 from socketio.defaultjson import default_json_loads, default_json_dumps
+from socketio.engine import transports
 
+__all__ = ['Socket']
 
 logger = logging.getLogger(__name__)
+
+handler_types = {
+    'websocket': transports.WebsocketTransport,
+    'flashsocket': transports.FlashSocketTransport,
+    'polling': transports.XHRPollingTransport,
+}
 
 
 def default_error_handler(socket, error_name, error_message, endpoint,
@@ -48,7 +55,19 @@ def default_error_handler(socket, error_name, error_message, endpoint,
 
 class Socket(EventEmitter):
     """
-    The engine socket which handles engine related protocol
+    Socket is the abstraction of the underlying transport
+    it sends heartbeat packet periodically
+    handles upgrade logic
+
+    Internal:
+    It creates several eventlet:
+        heartbeat
+        Server message handling
+        Client message handling
+
+    The main thread (gevent thread) should block during the request lifecycle.
+
+
     """
 
     STATE_NEW = "NEW"
@@ -60,7 +79,7 @@ class Socket(EventEmitter):
     json_loads = staticmethod(default_json_loads)
     json_dumps = staticmethod(default_json_dumps)
 
-    def __init__(self, transport, ping_interval=5000, error_handler=None):
+    def __init__(self, request, ping_interval=5000, error_handler=None):
         super(Socket, self).__init__()
 
         self.sessid = str(random.random())[2:]
@@ -68,7 +87,9 @@ class Socket(EventEmitter):
         self.environ = None
         self.upgraded = False
 
-        self.write_buffer = []  # queue for messages to client
+        self.ping_interval = ping_interval
+
+        self.write_buffer = Queue()  # queue for messages to client
         self.server_queue = Queue()  # queue for messages to server
 
         self.timeout = Event()
@@ -80,6 +101,12 @@ class Socket(EventEmitter):
         self.check_eventlet = None
         self.upgrade_eventlet = None
 
+        transport_name = request.GET.get("transport", None)
+
+        if transport_name not in handler_types:
+            raise Exception('transport name not in query string')
+
+        transport = handler_types[transport_name](request.handler, {})
         self._set_transport(transport)
 
         if error_handler is not None:
@@ -111,6 +138,12 @@ class Socket(EventEmitter):
         )
         self.emit("open")
         self._set_ping_timeout_eventlet()
+        logger.debug('start heartbeat')
+        gevent.spawn(self._heartbeat)
+        logger.debug('heatbeat eventlet spawned')
+
+    def on_request(self, request):
+        self.transport.on_request(request)
 
     def on_packet(self, packet):
         if self.STATE_OPEN == self.ready_state:
@@ -135,7 +168,7 @@ class Socket(EventEmitter):
         else:
             logger.debug("Packet received with closed socket")
 
-    def on_error(self, error):
+    def on_error(self, error=None):
         logger.debug("transport error: %s" % error)
         self.on_close('transport error', error)
 
@@ -156,7 +189,7 @@ class Socket(EventEmitter):
             self._clear_transport()
             self.ready_state = self.STATE_CLOSED
             self.emit("close", reason, description)
-            self.write_buffer = []
+            self.write_buffer = Queue()
 
     def _fail_upgrade(self, transport):
         logger.debug('client did not complete upgrade - closing transport')
@@ -215,6 +248,7 @@ class Socket(EventEmitter):
                 transport.close()
 
     def _set_ping_timeout_eventlet(self):
+        return
         if self.ping_timeout_eventlet:
             self.ping_timeout_eventlet.kill()
 
@@ -222,7 +256,7 @@ class Socket(EventEmitter):
             self.on_close('ping timeout')
 
         # TODO THIS IS TIMEOUT + INTERVAL, FIX THIS
-        self.ping_timeout_eventlet = gevent.spawn_later(4000, time_out)
+        self.ping_timeout_eventlet = gevent.spawn_later(self.ping_interval, time_out)
 
     def _set_environ(self, environ):
         """Save the WSGI environ, for future use.
@@ -279,8 +313,8 @@ class Socket(EventEmitter):
         result = ['sessid=%r' % self.sessid]
         if self.ready_state == self.STATE_OPEN:
             result.append('open')
-        if self.write_buffer:
-            result.append('client_queue[%s]' % len(self.write_buffer))
+        if self.write_buffer.qsize():
+            result.append('client_queue[%s]' % self.write_buffer.qsize())
         if self.server_queue.qsize():
             result.append('server_queue[%s]' % self.server_queue.qsize())
 
@@ -307,7 +341,7 @@ class Socket(EventEmitter):
 
     write = send
 
-    def send_packet(self, packet_type, data=None, callback=None):
+    def send_packet(self, packet_type, data=None):
         """
         the primary send_packet method
         """
@@ -323,22 +357,18 @@ class Socket(EventEmitter):
 
         if self.ready_state != self.STATE_CLOSING:
             self.put_client_msg(packet)
-            if callback:
-                self.send_packet_callbacks.append(callback)
             self.flush()
 
     def flush(self):
-        logger.debug("entering flushing buffer to transport " + str(self.transport.writable) + " " + str(len(self.write_buffer)))
-        if self.ready_state != self.STATE_CLOSED and self.transport.writable and self.write_buffer:
-            logger.debug("flushing buffer to transport")
-            self.emit("flush", self.write_buffer)
-            local_buf = self.write_buffer
-            self.write_buffer = []
+        logger.debug("entering flushing buffer to transport " + str(self.transport.writable) + " " + str(self.write_buffer.qsize()))
+        if self.ready_state != self.STATE_CLOSED and self.transport.writable:
+            logger.debug('wait for the queue %s' % self.write_buffer.qsize())
+            msg = [self.write_buffer.get()]
+            while self.write_buffer.qsize():
+                msg.append(self.write_buffer.get())
 
-            # TODO CALL BACK?
-            self.transport.send(local_buf)
-            self.emit('drain')
-            # TODO SERVER EMIT DRAIN?
+            logger.debug("flushing buffer to transport")
+            self.transport.send(msg)
 
     def get_available_upgrades(self):
         availabel_upgrades = ["websocket"]
@@ -376,13 +406,13 @@ class Socket(EventEmitter):
         conjunction with kill(), once all the jobs are dead, detach the
         socket for garbage collection."""
 
-        logger.debug("Removing %s from server sockets" % self)
-        if self.sessid in self.server.sockets:
-            self.server.sockets.pop(self.sessid)
+        logger.debug("Removing %s sockets" % self)
+        if self.sessid in self.handler.clients:
+            self.handler.clients.pop(self.sessid)
 
     def put_client_msg(self, msg):
         """Writes to the client's pipe, to end up in the browser"""
-        self.write_buffer.append(msg)
+        self.write_buffer.put(msg)
 
     def error(self, error_name, error_message, endpoint=None, msg_id=None,
               quiet=False):
@@ -423,12 +453,8 @@ class Socket(EventEmitter):
 
     def _heartbeat(self):
         """Start the heartbeat Greenlet to check connection health."""
-        interval = self.ping_interval
+        interval = self.ping_interval / 1000
         while Socket.STATE_OPEN == self.ready_state:
+            logger.debug('sending heartbeat')
             gevent.sleep(interval)
-            # TODO: this process could use a timeout object like the disconnect
-            # timeout thing, and ONLY send packets when none are sent!
-            # We would do that by calling timeout.set() for a "sending"
-            #       timeout.  If we're sending 100 messages a second, there is
-            #       no need to push some heartbeats in there also.
-            self.send_packet("ping")
+            self.send_packet({"type": "ping"})

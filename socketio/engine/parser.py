@@ -86,7 +86,7 @@ class Parser(object):
                 # TODO catch and throw an customized exception? Or not
                 data = data.decode('utf-8')
 
-            packet_type = Parser.packet_type_lists[bytearray(packet_type)[0]]
+            packet_type = Parser.packet_type_lists[int(packet_type)]
 
             if len(data) > 1:
                 return {
@@ -100,9 +100,9 @@ class Parser(object):
                 }
 
         # Binary data
-        packet_type = data[0]
+        packet_type = int(chr(data[0]))
         return {
-            "type": Parser.packet_type_lists[int(packet_type)],
+            "type": Parser.packet_type_lists[packet_type],
             "data": data[1:]
         }
 

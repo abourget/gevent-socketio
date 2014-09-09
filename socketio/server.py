@@ -96,10 +96,6 @@ class SocketIOServer(WSGIServer):
         else:
             self.ws_handler_class = kwargs.pop('ws_handler_class')
 
-        log_file = kwargs.pop('log_file', None)
-        if log_file:
-            kwargs['log'] = open(log_file, 'a')
-
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def start_accepting(self):
