@@ -4,9 +4,9 @@ from pyee import EventEmitter
 
 class Socket(EventEmitter):
 
-    def __init__(self, namespace, engine_socket):
+    def __init__(self, namespace, client):
         super(Socket, self).__init__()
 
         # Underlying engine socket
         self.namespace = namespace
-        self.engine_socket = engine_socket
+        self.engine_socket = client.engine_socket

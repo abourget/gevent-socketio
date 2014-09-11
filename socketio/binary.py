@@ -3,7 +3,6 @@
 Binary class deconstruct, reconstruct packet
 """
 import copy
-import datetime
 
 
 class Binary(object):
@@ -60,7 +59,6 @@ class Binary(object):
             'buffers': buffers
         }
 
-
     @staticmethod
     def reconstruct_packet(packet, buffers):
         def _reconstruct_packet(data):
@@ -86,9 +84,6 @@ class Binary(object):
         del packet['attachments']
         return packet
 
-    # TODO Add the remove blob function which removes FileObject async
-    # In gevent, file object reading should be async by default, so we should just read file and convert it as
-    # bytearray and return
     @staticmethod
     def remove_blobs(data):
         def _remove_blobs(obj, cur_key=None, containing_obj=None):
