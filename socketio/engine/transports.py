@@ -156,6 +156,10 @@ class PollingTransport(BaseTransport):
         request.response.on('pre_end', pre_end)
 
         self.writable = True
+
+        # Flush the socket in case some buffered message
+        self.emit('drain')
+
         if self.should_close:
             logger.debug('triggering empty send to append close packet')
             self.send([{'type': 'noop'}])
@@ -215,7 +219,6 @@ class PollingTransport(BaseTransport):
         logger.debug('writing %s' % data)
 
         self.do_write(data)
-        self.writable = False
 
     def do_write(self, data):
         raise NotImplementedError()
@@ -273,8 +276,6 @@ class XHRPollingTransport(PollingTransport):
             headers['Access-Control-Allow-Origin'] = request.headers['origin']
         else:
             headers['Access-Control-Allow-Origin'] = '*'
-
-        self.emit('headers', headers)
         return headers
 
 

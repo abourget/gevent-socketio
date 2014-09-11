@@ -3,7 +3,9 @@ from unittest import TestCase
 import gevent
 from gevent.monkey import patch_all
 import sys
+from socketio.engine.handler import EngineHandler
 from socketio.engine.parser import Parser
+from socketio.engine.socket import Socket
 from socketio.server import serve
 import requests
 import logging
@@ -66,7 +68,7 @@ class EngineHandlerTestCase(TestCase):
             "type": "ping"
         }])
 
-        gevent.sleep(0.5)
+        # Work around the bug which not sending pre buffered message
         response = requests.post(self.root_url + ('?transport=polling&sid=%s' % sid),
                                  data=encoded,
                                  headers={'Content-Type': 'application/octet-stream'})
@@ -78,3 +80,30 @@ class EngineHandlerTestCase(TestCase):
         for p, i, t in Parser.decode_payload(bytearray(response.content)):
             self.assertEqual(p['type'], 'pong')
             break
+
+    def test_data_transfer(self):
+        response = requests.get(self.root_url + '?transport=polling')
+        sid = None
+        for p, i, t in Parser.decode_payload(bytearray(response.content)):
+            data = json.loads(p['data'])
+            sid = data['sid']
+            break
+
+        def get_request(url):
+            return requests.get(url)
+
+        get_job = gevent.spawn(get_request, self.root_url + ('?transport=polling&sid=%s' % sid))
+        socket = EngineHandler.clients[sid]
+        self.assertIsNotNone(socket)
+
+        socket.send_packet('message', 'hello')
+        get_job.join()
+
+        response = get_job.value
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(len([Parser.decode_payload(bytearray(response.content))]), 1)
+        for p, i, t in Parser.decode_payload(bytearray(response.content)):
+            self.assertEqual(p['type'], 'message')
+            data = p['data']
+            self.assertEqual(data, 'hello')

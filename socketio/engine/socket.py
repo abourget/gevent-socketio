@@ -117,7 +117,9 @@ class Socket(EventEmitter):
         self.transport = transport
         self.transport.once('error', self.on_error)
         self.transport.on('packet', self.on_packet)
-        self.transport.on('drain', self.flush)
+
+        # On drain event, we call flush_nowait which sends out buffered messages
+        self.transport.on('drain', self.flush_nowait)
         self.transport.once('close', self.on_close)
 
     def _clear_transport(self):
@@ -352,6 +354,16 @@ class Socket(EventEmitter):
         if self.ready_state != self.STATE_CLOSING:
             self.put_client_msg(packet)
             self.flush()
+
+    def flush_nowait(self):
+        logger.debug("entering flushing buffer to transport " + str(self.transport.writable) + " " + str(self.write_buffer.qsize()))
+        if self.ready_state != self.STATE_CLOSED and self.transport.writable and self.write_buffer.qsize():
+            msg = []
+            while self.write_buffer.qsize():
+                msg.append(self.write_buffer.get())
+
+            logger.debug("flushing buffer to transport")
+            self.transport.send(msg)
 
     def flush(self):
         logger.debug("entering flushing buffer to transport " + str(self.transport.writable) + " " + str(self.write_buffer.qsize()))
