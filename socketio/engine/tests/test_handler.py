@@ -1,3 +1,4 @@
+import json
 from unittest import TestCase
 import gevent
 from gevent.monkey import patch_all
@@ -9,6 +10,7 @@ import logging
 
 logging.basicConfig(stream=sys.stderr)
 
+
 def application(environ, start_response):
     body = 'ok'
     headers = [('Content-Type', 'text/html; charset=utf8'),
@@ -18,19 +20,61 @@ def application(environ, start_response):
 
 
 class EngineHandlerTestCase(TestCase):
-    def setUp(self):
+    def __init__(self, *args, **kwargs):
         patch_all()
-        # start the server
-        self.job = gevent.spawn(serve, application, host='localhost', port='3030')
+        super(EngineHandlerTestCase, self).__init__(*args, **kwargs)
+
+        self.port = 3030
+        self.host = 'localhost'
+        self.root_url = 'http://%(host)s:%(port)d/socket.io/' % {
+            'host': self.host,
+            'port': self.port
+        }
+        self.job = None
+
+    def setUp(self):
+        self.job = gevent.spawn(serve, application, host=self.host, port=self.port)
 
     def tearDown(self):
         gevent.kill(self.job)
 
     def test_handshake(self):
-        response = requests.get('http://localhost:3030/socket.io/?transport=polling')
+        response = requests.get(self.root_url + '?transport=polling')
         self.assertEqual(response.status_code, 200)
         for p, i, t in Parser.decode_payload(bytearray(response.content)):
             self.assertIsNotNone(p)
             self.assertEqual(p['type'], 'open')
+            data = json.loads(p['data'])
+            self.assertIsNotNone(data['sid'])
 
+    def test_heartbeat(self):
+        response = requests.get(self.root_url + '?transport=polling')
+        sid = None
+        for p, i, t in Parser.decode_payload(bytearray(response.content)):
+            data = json.loads(p['data'])
+            sid = data['sid']
+            break
 
+        self.assertIsNotNone(sid)
+
+        def get_request(url):
+            return requests.get(url)
+
+        get_job = gevent.spawn(get_request, self.root_url + ('?transport=polling&sid=%s' % sid))
+
+        encoded = Parser.encode_payload([{
+            "type": "ping"
+        }])
+
+        gevent.sleep(0.5)
+        response = requests.post(self.root_url + ('?transport=polling&sid=%s' % sid),
+                                 data=encoded,
+                                 headers={'Content-Type': 'application/octet-stream'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'ok')
+
+        get_job.join()
+        response = get_job.value
+        for p, i, t in Parser.decode_payload(bytearray(response.content)):
+            self.assertEqual(p['type'], 'pong')
+            break

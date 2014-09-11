@@ -41,6 +41,8 @@ class EngineHandler(WSGIHandler, EventEmitter):
         The socket is the abstraction of transport and parser
         :return:
         """
+        request = None
+
         try:
             path = self.environ.get('PATH_INFO')
 
@@ -70,9 +72,7 @@ class EngineHandler(WSGIHandler, EventEmitter):
 
             self.application = request.response
             super(EngineHandler, self).handle_one_response()
-
         finally:
-            self.emit("cleanup")
             if hasattr(self, 'websocket') and self.websocket:
                 if hasattr(self.websocket, 'environ'):
                     del self.websocket.environ

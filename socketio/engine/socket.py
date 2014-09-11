@@ -79,7 +79,7 @@ class Socket(EventEmitter):
     json_loads = staticmethod(default_json_loads)
     json_dumps = staticmethod(default_json_dumps)
 
-    def __init__(self, request, ping_interval=5000, error_handler=None):
+    def __init__(self, request, ping_interval=5000, ping_timeout=10000, error_handler=None):
         super(Socket, self).__init__()
 
         self.sessid = str(random.random())[2:]
@@ -88,6 +88,7 @@ class Socket(EventEmitter):
         self.upgraded = False
 
         self.ping_interval = ping_interval
+        self.ping_timeout = ping_timeout
 
         self.write_buffer = Queue()  # queue for messages to client
         self.server_queue = Queue()  # queue for messages to server
@@ -138,9 +139,6 @@ class Socket(EventEmitter):
         )
         self.emit("open")
         self._set_ping_timeout_eventlet()
-        logger.debug('start heartbeat')
-        gevent.spawn(self._heartbeat)
-        logger.debug('heatbeat eventlet spawned')
 
     def on_request(self, request):
         self.transport.on_request(request)
@@ -157,7 +155,6 @@ class Socket(EventEmitter):
             if packet_type == 'ping':
                 logger.debug("got ping")
                 self.send_packet('pong')
-                self.emit("heartbeat")  # TODO DO WE REALLY NEED THIS?
 
             elif packet_type == 'message':
                 self.emit("message", packet['data'])
@@ -248,15 +245,12 @@ class Socket(EventEmitter):
                 transport.close()
 
     def _set_ping_timeout_eventlet(self):
-        return
         if self.ping_timeout_eventlet:
             self.ping_timeout_eventlet.kill()
 
         def time_out():
             self.on_close('ping timeout')
-
-        # TODO THIS IS TIMEOUT + INTERVAL, FIX THIS
-        self.ping_timeout_eventlet = gevent.spawn_later(self.ping_interval, time_out)
+        self.ping_timeout_eventlet = gevent.spawn_later(self.ping_interval + self.ping_timeout, time_out)
 
     def _set_environ(self, environ):
         """Save the WSGI environ, for future use.
@@ -450,11 +444,3 @@ class Socket(EventEmitter):
         job = gevent.spawn(fn, *args, **kwargs)
         self.jobs.append(job)
         return job
-
-    def _heartbeat(self):
-        """Start the heartbeat Greenlet to check connection health."""
-        interval = self.ping_interval / 1000
-        while Socket.STATE_OPEN == self.ready_state:
-            logger.debug('sending heartbeat')
-            gevent.sleep(interval)
-            self.send_packet({"type": "ping"})

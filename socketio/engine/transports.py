@@ -118,7 +118,7 @@ class PollingTransport(BaseTransport):
         super(PollingTransport, self).__init__(*args, **kwargs)
 
     def on_request(self, request):
-        super(PollingTransport, self).on_request(request)
+        # We intentionally not call super
 
         if request.method == 'GET':
             self.on_poll_request(request)
@@ -128,33 +128,35 @@ class PollingTransport(BaseTransport):
             pass
 
     def _cleanup(self):
-        self.request = None
-        self.data_request = None
+        self._cleanup_data()
+        self._cleanup_poll()
         super(PollingTransport, self)._cleanup()
 
+    def _cleanup_poll(self):
+        self.request.response.remove_listener('post_end', self._cleanup_poll)
+        self.request = None
+
+    def _cleanup_data(self):
+        self.data_request.response.remove_listener('post_end', self._cleanup_data)
+        self.data_request = None
+
     def on_poll_request(self, request):
-        if self.request is not request:
+        if self.request is not None and self.request is not request:
             logger.debug('request overlap')
             self.on_error('overlap from client')
-            self.handler.response.status = 500
-            return
+            self.request.response.end(500)
 
         logger.debug('setting request')
 
         self.request = request
-        # TODO set response?
+        request.response.on('post_end', self._cleanup_poll)
 
-        # TODO setup response clean up logic
+        def pre_end():
+            self.writable = False
+        request.response.on('pre_end', pre_end)
 
         self.writable = True
-
-        # Now we should wait or block for following events:
-        # 1. Some data packet needs to be sent.
-        # 2. A heart beat packet should be sent. This can be fulfilled with 1. as long
-        #    as we enqueue the ping packet to the sending buffer
-        # SO we should wait till something can be sent
-
-        if self.writable and self.should_close:
+        if self.should_close:
             logger.debug('triggering empty send to append close packet')
             self.send([{'type': 'noop'}])
 
@@ -164,21 +166,20 @@ class PollingTransport(BaseTransport):
         :param request:
         :return:
         """
-        is_binary = 'application/octet-stream' == request.headers['content-type']
+        is_binary = 'application/octet-stream' == request.headers.get('content-type', 'None')
         self.data_request = request
+        self.data_request.response.on('post_end', self._cleanup_data)
 
         chunks = bytearray() if is_binary else ''
 
         chunks += self.data_request.body
         self.on_data(chunks)
-        self.handler.response.status = 200
-        self.handler.response.headers = self.handler.request.headers
-        self.handler.response.headers.update({
+        self.data_request.response.headers = self.data_request.headers
+        self.data_request.response.headers.update({
             'Content-Length': 2,
             'Content-Type': 'text/html'
         })
-        self.handler.response.body = 'ok'
-        return
+        self.data_request.response.end(status_code=200, body='ok')
 
     def on_data(self, data):
         """
@@ -192,7 +193,6 @@ class PollingTransport(BaseTransport):
         for packet, index, total in Parser.decode_payload(data):
             if packet['type'] == 'close':
                 logger.debug('got xhr close packet')
-                # TODO close this
                 self.on_close()
                 break
             self.on_packet(packet)
@@ -232,7 +232,7 @@ class PollingTransport(BaseTransport):
 
         else:
             logger.debug('transport not writable - buffering orderly close')
-            self.should_close = True # TODO SHOULD CLOSE IS A CALLBACK PASSED BY DO_CLOSE
+            self.should_close = True
 
 
 class XHRPollingTransport(PollingTransport):
