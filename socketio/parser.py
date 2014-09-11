@@ -38,12 +38,11 @@ error_packet = {
     'data': 'parser error'
 }
 
+
 class Encoder(object):
 
     @staticmethod
     def encode(obj):
-        logger.debug('encoding packet %s' % json.dumps(obj))
-
         if types['BINARY_EVENT'] == obj['type'] or types['BINARY_ACK'] == obj['type']:
             return Encoder.encode_as_binary(obj)
         else:
@@ -51,40 +50,40 @@ class Encoder(object):
 
     @staticmethod
     def encode_as_string(obj):
-        str = ''
+        string = ''
         nsp = False
 
         _type = obj['type']
         # first is type
-        str += _type
+        string += str(_type)
 
         # attachments if we have them
         if _type == types['BINARY_EVENT'] or _type == types['BINARY_ACK']:
-            str += obj['attachments']
-            str += '-'
+            string += str(obj['attachments'])
+            string += '-'
 
         # if we have a namespace other than '/'
         # we append it followed by a comma ','
         if 'nsp' in obj and '/' != obj['nsp']:
             nsp = True
-            str += obj['nsp']
+            string += obj['nsp']
 
         # immediately followed by the id
         if 'id' in obj:
             if nsp:
-                str += ','
+                string += ','
                 nsp = False
 
-            str += obj['id']
+            string += str(obj['id'])
 
         # json data
         if 'data' in obj:
             if nsp:
-                str += ','
-            str += json.dumps(obj['data'])
+                string += ','
+            string += json.dumps(obj['data'])
 
-        logger.debug('encoded object as %s' % str)
-        return str
+        logger.debug('encoded object as %s' % string)
+        return string
 
     @staticmethod
     def encode_as_binary(obj):
@@ -130,7 +129,7 @@ class Decoder(EventEmitter):
                 self.emit('decoded', packet)
 
         else:
-            raise ValueError('Unknown type: ' + obj)
+            raise ValueError('Unknown type: %s' % str(obj))
 
 
     @staticmethod
@@ -160,7 +159,7 @@ class Decoder(EventEmitter):
             namespace = ''
 
             i += 1
-            while i:
+            while i < len(string):
                 c = string[i]
 
                 if ',' == c:
@@ -169,31 +168,29 @@ class Decoder(EventEmitter):
                 namespace += c
                 i += 1
 
-                if i + 1 == len(string):
-                    break
-
             p['nsp'] = namespace
 
         else:
             p['nsp'] = '/'
 
         # look up id
-        n = string[i+1]
+        if i + 1< len(string):
+            n = string[i+1]
+            if n.isdigit():
+                _id = ''
 
-        if n != '' and n.isdigit():
-            _id = ''
+                i += 1
+                while i < len(string):
+                    c = string[i]
 
-            i += 1
-            while i < len(string):
-                c = string[i]
+                    if not c.isdigit():
+                        i -= 1
+                        break
 
-                if not c.isdigit():
-                    i -= 1
-                    break
+                    _id += c
+                    i += 1
 
-                _id += c
-
-            p['id'] = _id
+                p['id'] = _id
 
         # look up json data
         i += 1
@@ -227,6 +224,6 @@ class BinaryReconstructor(object):
 
         return None
 
-    def finish_recontruction(self):
+    def finish_reconstruction(self):
         self.recon_pack = None
         self.buffers = []
