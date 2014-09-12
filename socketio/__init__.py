@@ -6,6 +6,13 @@ import gevent
 log = logging.getLogger(__name__)
 
 
+def has_bin(*args):
+    for arg in args:
+        if type(arg) is bytearray:
+            return True
+
+    return False
+
 def socketio_manage(environ, namespaces, request=None, error_handler=None,
                     json_loads=None, json_dumps=None):
     """Main SocketIO management function, call from within your Framework of

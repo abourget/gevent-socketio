@@ -1,6 +1,9 @@
 # coding=utf-8
+from __future__ import absolute_import
 import logging
 from pyee import EventEmitter
+from socketio import has_bin
+from socketio.adapter import Adapter
 from socketio.socket import Socket
 from engine.socket import Socket as EngineSocket
 import socketio.parser as SocketIOParser
@@ -21,6 +24,7 @@ class Namespace(EventEmitter):
         self.rooms = {}
         self.rooms_send_to = None
         self.jobs = []
+        self.adapter = Adapter(self)
         super(Namespace, self).__init__()
 
     def to(self, name):
@@ -57,31 +61,15 @@ class Namespace(EventEmitter):
         if event in ['connect', 'connection', 'newListener']:
             self.emit(event, *args)
         else:
-            ids = set()
             _type = SocketIOParser.EVENT
 
             if has_bin(args):
                 _type = SocketIOParser.BINARY_EVENT
 
-            packet = {'type': _type, 'data': args, 'nsp': self.name}
-            encoded = SocketIOParser.Encoder.encode(packet)
-
-            if self.rooms_send_to:
-                for room in self.rooms_send_to:
-                    if room not in self.rooms:
-                        continue
-                    for id in self.rooms[room]:
-                        if id in ids:
-                            continue
-                        socket = self.connected[id]
-                        if socket:
-                            socket.packet(encoded, pre_encoded=True)
-                            ids.add(socket.id)
-            else:
-                for id, socket in self.connected.items():
-                    if socket:
-                        socket.packet(encoded, pre_encoded=True)
-
+            packet = {'type': _type, 'data': args}
+            self.adapter.broadcast(packet, {
+                'rooms': self.rooms,
+            })
             self.rooms = None
 
         return self
@@ -105,11 +93,3 @@ class Namespace(EventEmitter):
             self.ids += 1
 
         return result
-
-
-def has_bin(*args):
-    for arg in args:
-        if type(arg) is bytearray:
-            return True
-
-    return False
