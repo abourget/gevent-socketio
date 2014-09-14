@@ -5,7 +5,6 @@ from gevent.monkey import patch_all
 import sys
 from socketio.engine.handler import EngineHandler
 from socketio.engine.parser import Parser
-from socketio.engine.socket import Socket
 from socketio.server import serve
 import requests
 import logging

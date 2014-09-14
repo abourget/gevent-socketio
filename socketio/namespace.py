@@ -5,7 +5,7 @@ from pyee import EventEmitter
 from socketio import has_bin
 from socketio.adapter import Adapter
 from socketio.socket import Socket
-from engine.socket import Socket as EngineSocket
+from socketio.engine.socket import Socket as EngineSocket
 import socketio.parser as SocketIOParser
 
 logger = logging.getLogger(__name__)

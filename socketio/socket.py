@@ -63,11 +63,10 @@ class Socket(EventEmitter):
             super(Socket, self).emit(event, *args)
 
         else:
-            packet = {}
-            packet['type'] = Parser.EVENT
+            packet = {'type': parser.EVENT}
 
             if has_bin(args):
-                packet['type'] = Parser.BINARY_EVENT
+                packet['type'] = parser.BINARY_EVENT
 
             packet['data'] = args
 
@@ -139,8 +138,82 @@ class Socket(EventEmitter):
     def on_connect(self):
         logger.debug('socket connected - writing packet')
         self.join(self.id)
-        self.packet({ 'type': parser.CONNECT })
+        self.packet({'type': parser.CONNECT})
         self.namespace.connected[self.id] = self
 
     def on_packet(self, packet):
         logger.debug('got packet %s', packet['type'])
+
+        _type = packet['type']
+
+        if _type == parser.EVENT:
+            self.on_event(packet)
+        elif _type == parser.BINARY_EVENT:
+            self.on_event(packet)
+        elif _type == parser.ACK:
+            self.on_ack(packet)
+        elif _type == parser.BINARY_ACK:
+            self.on_ack(packet)
+        elif _type == parser.DISCONNECT:
+            self.on_disconnect()
+        elif _type == parser.ERROR:
+            self.emit('error', packet["data"])
+
+    def on_event(self, packet):
+        packet_data = packet['data'] if 'data' in packet else []
+
+        if 'id' in packet:
+            callback = self.ack(packet['id'])
+            raise NotImplementedError()
+
+        self.emit('message', packet_data)
+
+    def ack(self, id):
+        def cb(data):
+            _type = parser.ACK if not has_bin(data) else parser.BINARY_ACK
+            self.packet({
+                'id': id,
+                'type': _type,
+                'data': data
+            })
+        return cb
+
+    def on_ack(self, packet):
+        if 'id' not in packet or packet['id'] not in self.acks:
+            logger.debug('bad ack %s', packet['id'])
+        else:
+            _id = packet['id']
+            ack = self.acks[_id]
+            ack(packet['data'])
+            self.acks.pop(_id)
+
+    def on_disconnect(self):
+        logger.debug('got disconnect packet')
+        self.on_close('client namespace disconnect')
+
+    def on_close(self, reason):
+        if not self.connected:
+            return
+
+        logger.debug('closing socket - reason %s', reason)
+        self.leave_all()
+        self.namespace.remove(self)
+        self.client.remove(self)
+        self.connected = False
+        self.disconnected = True
+        del self.namespace.connected[self.id]
+        self.emit('disconnect', reason)
+
+    def disconnect(self, close):
+        if not self.connected:
+            return self
+
+        if close:
+            self.client.disconnect()
+        else:
+            self.packet({
+                'type': parser.DISCONNECT
+            })
+            self.on_close('server namespace disconnect')
+
+        return self

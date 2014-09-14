@@ -4,7 +4,6 @@ The wsgi handler for Engine, it accepts requests for engine protocol
 """
 from __future__ import absolute_import
 
-import weakref
 import gevent
 from gevent.pywsgi import WSGIHandler
 from pyee import EventEmitter
@@ -92,3 +91,5 @@ class EngineHandler(WSGIHandler, EventEmitter):
 
         request.response.headers['Set-Cookie'] = 'io=%s' % socket.sessid
         socket.on_open()
+
+        self.emit('connection', socket)
