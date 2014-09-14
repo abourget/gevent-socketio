@@ -54,7 +54,7 @@ class Encoder(object):
         if types['BINARY_EVENT'] == obj['type'] or types['BINARY_ACK'] == obj['type']:
             return Encoder.encode_as_binary(obj)
         else:
-            return Encoder.encode_as_string(obj)
+            return [Encoder.encode_as_string(obj)]
 
     @staticmethod
     def encode_as_string(obj):

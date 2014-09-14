@@ -16,7 +16,8 @@ class Client(EventEmitter):
 
         self.server = server
         self.engine_socket = engine_socket
-        self.sid = engine_socket.sid
+        self.request = engine_socket.request
+        self.id = engine_socket.id
         self.sockets = []
         self.namespace_socket = {}
         self.connect_buffer = []
@@ -56,7 +57,7 @@ class Client(EventEmitter):
             self.connect_buffer.append(name)
             return
 
-        def callback():
+        def callback(socket):
             self.sockets.append(socket)
             self.namespace_socket[name] = socket
 
@@ -65,7 +66,7 @@ class Client(EventEmitter):
                     self.connect(n)
                 self.connect_buffer = []
 
-        socket = namespace.add(self, callback)
+        namespace.add(self, callback)
 
     def disconnect(self):
         while self.sockets:
@@ -89,7 +90,7 @@ class Client(EventEmitter):
             self.on_close('forced server close')
 
     def packet(self, packet, pre_encoded=False):
-        if self.engine_socket.state == EngineSocket.STATE_OPEN:
+        if self.engine_socket.ready_state == EngineSocket.STATE_OPEN:
             logger.debug('writing packet %s', str(packet))
 
             if not pre_encoded:

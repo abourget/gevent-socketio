@@ -76,9 +76,13 @@ class EngineHandlerTestCase(TestCase):
 
         get_job.join()
         response = get_job.value
+
+        ponged = False
         for p, i, t in Parser.decode_payload(bytearray(response.content)):
-            self.assertEqual(p['type'], 'pong')
-            break
+            if p['type'] == 'pong':
+                ponged = True
+                break
+        self.assertTrue(ponged)
 
     def test_data_transfer(self):
         response = requests.get(self.root_url + '?transport=polling')

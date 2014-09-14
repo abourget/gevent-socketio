@@ -13,6 +13,7 @@ class SocketIOServer(EngineServer):
 
     def __init__(self, *args, **kwargs):
         self.namespaces = {}
+        self.root_namespace = self.of('/')
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def of(self, name, callback=None):

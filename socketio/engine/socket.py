@@ -82,7 +82,9 @@ class Socket(EventEmitter):
     def __init__(self, request, ping_interval=5000, ping_timeout=10000, error_handler=None):
         super(Socket, self).__init__()
 
-        self.sessid = str(random.random())[2:]
+        self.request = request
+
+        self.id = str(random.random())[2:]
         self.ready_state = self.STATE_NEW
         self.environ = None
         self.upgraded = False
@@ -133,7 +135,7 @@ class Socket(EventEmitter):
         self.send_packet(
             "open",
             self.json_dumps({
-                "sid": self.sessid,
+                "sid": self.id,
                 # "upgrades": ["websocket"],
                 "upgrades": [],
                 "pingInterval": 15000,
@@ -306,7 +308,7 @@ class Socket(EventEmitter):
         return self.ack_callbacks.pop(msgid)
 
     def __str__(self):
-        result = ['sessid=%r' % self.sessid]
+        result = ['sessid=%r' % self.id]
         if self.ready_state == self.STATE_OPEN:
             result.append('open')
         if self.write_buffer.qsize():
@@ -413,8 +415,8 @@ class Socket(EventEmitter):
         socket for garbage collection."""
 
         logger.debug("Removing %s sockets" % self)
-        if self.sessid in self.handler.clients:
-            self.handler.clients.pop(self.sessid)
+        if self.id in self.handler.clients:
+            self.handler.clients.pop(self.id)
 
     def put_client_msg(self, msg):
         """Writes to the client's pipe, to end up in the browser"""

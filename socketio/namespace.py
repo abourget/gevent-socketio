@@ -42,7 +42,7 @@ class Namespace(EventEmitter):
             self.sockets.append(socket)
             #socket.on_connect()
             if callback:
-                callback()
+                callback(socket)
 
             self.emit('connect', socket)
             self.emit('connection', socket)
@@ -59,7 +59,7 @@ class Namespace(EventEmitter):
 
     def emit(self, event, *args):
         if event in ['connect', 'connection', 'newListener']:
-            self.emit(event, *args)
+            super(Namespace, self).emit(event, *args)
         else:
             _type = SocketIOParser.EVENT
 

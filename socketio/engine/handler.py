@@ -87,9 +87,9 @@ class EngineHandler(WSGIHandler, EventEmitter):
         socket = Socket(request)
         socket.on_request(request)
 
-        self.clients[socket.sessid] = socket
+        self.clients[socket.id] = socket
 
-        request.response.headers['Set-Cookie'] = 'io=%s' % socket.sessid
+        request.response.headers['Set-Cookie'] = 'io=%s' % socket.id
         socket.on_open()
 
         self.emit('connection', socket)

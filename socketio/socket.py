@@ -50,10 +50,10 @@ class Socket(EventEmitter):
             'headers': self.request.headers,
             'time': str(datetime.now()),
             # FIXME set remote_address in engine_socket
-            'address': self.engine_socket.remote_address,
-            'xdomain': self.request.headers['origin'],
+            # 'address': self.engine_socket.remote_address,
+            'xdomain': self.request.headers.get('origin', None),
             # FIXME how to get the schema?
-            'secure': self.request.connection.encrypted,
+            'secure': self.request.scheme == 'https',
             'url': self.request.url,
             'query': self.request.GET
         }
