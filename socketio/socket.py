@@ -191,7 +191,7 @@ class Socket(EventEmitter):
         logger.debug('got disconnect packet')
         self.on_close('client namespace disconnect')
 
-    def on_close(self, reason):
+    def on_close(self, reason=None):
         if not self.connected:
             return
 

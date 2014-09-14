@@ -5,6 +5,7 @@ from gevent.monkey import patch_all
 import requests
 from socketio.server import serve
 from socketio.engine.parser import Parser as EngineParser
+import socketio.parser as SocketIoParser
 
 
 def application(environ, start_response):
@@ -42,3 +43,22 @@ class ServerTest(TestCase):
             break
 
         self.assertIsNotNone(sid)
+
+        socket_encoded = SocketIoParser.Encoder.encode({
+            'type': SocketIoParser.EVENT,
+            'data': 'hello'
+        })
+
+        engine_encoded = EngineParser.encode_payload({
+            'type': 'message',
+            'data': socket_encoded[0]
+        })
+
+        # Work around the bug which not sending pre buffered message
+        response = requests.post(self.root_url + ('?transport=polling&sid=%s' % sid),
+                                 data=engine_encoded,
+                                 headers={'Content-Type': 'application/octet-stream'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'ok')
+
+

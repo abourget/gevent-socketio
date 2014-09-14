@@ -24,6 +24,7 @@ class Client(EventEmitter):
 
         self.decoder = Parser.Decoder()
         self.encoder = Parser.Encoder()
+        self.setup()
 
     def setup(self):
         """
@@ -32,7 +33,7 @@ class Client(EventEmitter):
         """
 
         self.decoder.on('decoded', self.on_decoded)
-        self.engine_socket.on('data', self.on_data)
+        self.engine_socket.on('message', self.on_data)
         self.engine_socket.on('close', self.on_close)
 
     def connect(self, name):

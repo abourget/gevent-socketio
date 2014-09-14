@@ -18,7 +18,7 @@ class ParserTest(TestCase):
                 self.assertEqual(p['data'], packet['data'])
 
         decoder.on('decoded', decoded)
-        decoder.add(encoded)
+        decoder.add(encoded[0])
 
     def _test_bin_packet(self, packet):
         encoded = Parser.Encoder.encode(packet)

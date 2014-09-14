@@ -47,7 +47,8 @@ class Adapter(EventEmitter):
                 if not self.rooms[room]:
                     del self.rooms[room]
 
-        del self.sids[id]
+        if id in self.sids:
+            del self.sids[id]
 
     def broadcast(self, packet, options):
         rooms = options.get('rooms', None)
