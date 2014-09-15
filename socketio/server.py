@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class SocketIOServer(EngineServer):
+    global_server = None
 
     def __init__(self, *args, **kwargs):
         self.namespaces = {}
@@ -42,6 +43,7 @@ class SocketIOServer(EngineServer):
         client = Client(self, engine_socket)
         client.connect('/')
 
+
 def serve(app, **kw):
     _quiet = kw.pop('_quiet', False)
     _resource = kw.pop('resource', 'socket.io')
@@ -71,6 +73,9 @@ def serve(app, **kw):
                             transports=transports,
                             policy_server=policy_server,
                             **kw)
+
+    SocketIOServer.global_server = server
+
     if not _quiet:
         print('serving on http://%s:%s' % (host, port))
     server.serve_forever()

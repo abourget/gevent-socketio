@@ -3,7 +3,7 @@ from unittest import TestCase
 import gevent
 from gevent.monkey import patch_all
 import requests
-from socketio.server import serve
+from socketio.server import serve, SocketIOServer
 from socketio.engine.parser import Parser as EngineParser
 import socketio.parser as SocketIoParser
 
@@ -35,7 +35,21 @@ class ServerTest(TestCase):
         gevent.kill(self.job)
 
     def test_server(self):
+        gevent.sleep(0.5)
+        result = {'socket': None}
+
+        def message(socket):
+            result['socket'] = socket
+
+            def onevent(packet_data):
+                result['packet'] = packet_data
+
+            socket.on('message', onevent)
+
+        SocketIOServer.global_server.namespaces['/'].on('connection', message)
+
         response = requests.get(self.root_url + '?transport=polling')
+
         sid = None
         for p, i, t in EngineParser.decode_payload(bytearray(response.content)):
             data = json.loads(p['data'])
@@ -43,6 +57,7 @@ class ServerTest(TestCase):
             break
 
         self.assertIsNotNone(sid)
+        self.assertIsNotNone(result['socket'])
 
         socket_encoded = SocketIoParser.Encoder.encode({
             'type': SocketIoParser.EVENT,
@@ -60,5 +75,10 @@ class ServerTest(TestCase):
                                  headers={'Content-Type': 'application/octet-stream'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'ok')
+
+        self.assertIsNotNone(result['packet'])
+
+
+
 
 

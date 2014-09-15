@@ -31,9 +31,7 @@ class Socket(EventEmitter):
         self.namespace = namespace
         self.adapter = namespace.adapter
         self.server = namespace.server
-        # FIXME where assigned client id?
         self.id = client.id
-        # FIXME not able to get request
         self.request = client.request
         self.client = client
         self.engine_socket = client.engine_socket
@@ -52,7 +50,6 @@ class Socket(EventEmitter):
             # FIXME set remote_address in engine_socket
             # 'address': self.engine_socket.remote_address,
             'xdomain': self.request.headers.get('origin', None),
-            # FIXME how to get the schema?
             'secure': self.request.scheme == 'https',
             'url': self.request.url,
             'query': self.request.GET
@@ -166,7 +163,8 @@ class Socket(EventEmitter):
             callback = self.ack(packet['id'])
             raise NotImplementedError()
 
-        self.emit('message', packet_data)
+        # Use the EventEmitter's emit to notify all listener
+        super(Socket, self).emit('message', packet_data)
 
     def ack(self, id):
         def cb(data):
