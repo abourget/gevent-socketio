@@ -104,6 +104,8 @@ class Socket(EventEmitter):
         self.check_eventlet = None
         self.upgrade_eventlet = None
 
+        self.context = {} # Holder for framework specific data.
+
         transport_name = request.GET.get("transport", None)
 
         if transport_name not in handler_types:

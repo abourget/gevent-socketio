@@ -21,3 +21,9 @@ Installation
 ============
 
 TODO
+
+TODO
+============
+
+* websocket transport
+* Framework support

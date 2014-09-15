@@ -25,22 +25,7 @@ class Server(WSGIServer):
         self.resource = kwargs.pop('resource', 'socketio')
         self.server_side = kwargs.pop('server_side', True)
 
-        if kwargs.pop('policy_server', True):
-            try:
-                address = args[0][0]
-            except TypeError:
-                try:
-                    address = args[0].address[0]
-                except AttributeError:
-                    try:
-                        address = args[0].cfg_addr[0]
-                    except AttributeError:
-                        address = args[0].getsockname()[0]
-
-            policylistener = kwargs.pop('policy_listener', (address, 10843))
-            self.policy_server = FlashPolicyServer(policylistener)
-        else:
-            self.policy_server = None
+        kwargs.pop('policy_server', True)
 
         # Extract other config options
         self.config = {
@@ -61,24 +46,6 @@ class Server(WSGIServer):
             self.ws_handler_class = kwargs.pop('ws_handler_class')
 
         super(Server, self).__init__(*args, **kwargs)
-
-    def start_accepting(self):
-        if self.policy_server is not None:
-            try:
-                if not self.policy_server.started:
-                    self.policy_server.start()
-            except error, ex:
-                sys.stderr.write(
-                    'FAILED to start flash policy server: %s\n' % (ex, ))
-            except Exception:
-                traceback.print_exc()
-                sys.stderr.write('FAILED to start flash policy server.\n\n')
-        super(Server, self).start_accepting()
-
-    def stop(self, timeout=None):
-        if self.policy_server is not None:
-            self.policy_server.stop()
-        super(Server, self).stop(timeout=timeout)
 
     def handle(self, socket, address):
         # Pass in the config about timeouts, heartbeats, also...

@@ -76,9 +76,4 @@ class ServerTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, 'ok')
 
-        self.assertIsNotNone(result['packet'])
-
-
-
-
-
+        self.assertEqual(result['packet'], 'hello')

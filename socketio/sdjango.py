@@ -59,11 +59,12 @@ class namespace(object):
         return handler
 
 
-
 @csrf_exempt
 def socketio(request):
     try:
-        socketio_manage(request.environ, SOCKETIO_NS, request)
+        socket = request.environ.get('engine_socket', None)
+        if socket is not None:
+            socket.context['request'] = request
     except:
         logging.getLogger("socketio").error("Exception while handling socketio connection", exc_info=True)
     return HttpResponse("")

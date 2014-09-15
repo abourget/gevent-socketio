@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import gevent
 from gevent.pywsgi import WSGIHandler
 from pyee import EventEmitter
+import sys
 from webob import Request
 from .response import Response
 from .socket import Socket
@@ -35,13 +36,6 @@ class EngineHandler(WSGIHandler, EventEmitter):
             self.transports = self.server.transports
 
     def handle_one_response(self):
-        """
-        If there is no socket, then do handshake, which creates a virtual socket.
-        The socket is the abstraction of transport and parser
-        :return:
-        """
-        request = None
-
         try:
             path = self.environ.get('PATH_INFO')
 
@@ -65,6 +59,14 @@ class EngineHandler(WSGIHandler, EventEmitter):
                 raise NotImplementedError()
             else:
                 gevent.spawn(socket.on_request, request)
+
+            # Run framework's wsgi application to hook up framework specific info eg. request to socket
+            self.environ['engine_socket'] = socket
+            try:
+                start_response = lambda status, headers, exc=None: None
+                self.application(self.environ, start_response)
+            except:
+                self.handle_error(*sys.exc_info())
 
             # wait till the response ends
             request.response.join()
