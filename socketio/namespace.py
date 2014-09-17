@@ -1,5 +1,6 @@
 # coding=utf-8
 from __future__ import absolute_import
+from functools import partial
 import logging
 from pyee import EventEmitter
 from socketio import has_bin
@@ -25,6 +26,7 @@ class Namespace(EventEmitter):
         self.rooms_send_to = None
         self.jobs = []
         self.adapter = Adapter(self)
+
         super(Namespace, self).__init__()
 
     def to(self, name):
@@ -41,6 +43,7 @@ class Namespace(EventEmitter):
         if client.engine_socket.ready_state == EngineSocket.STATE_OPEN:
             self.sockets.append(socket)
             socket.on_connect()
+
             if callback:
                 callback(socket)
 

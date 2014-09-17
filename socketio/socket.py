@@ -65,7 +65,7 @@ class Socket(EventEmitter):
             if has_bin(args):
                 packet['type'] = parser.BINARY_EVENT
 
-            packet['data'] = args
+            packet['data'] = [event] + list(args)
 
             # TODO ADD ack callback
 
@@ -163,8 +163,12 @@ class Socket(EventEmitter):
             callback = self.ack(packet['id'])
             raise NotImplementedError()
 
+        event = packet_data.pop(0)
+        if len(packet_data) == 1:
+            packet_data = packet_data[0]
+
         # Use the EventEmitter's emit to notify all listener
-        super(Socket, self).emit('message', packet_data)
+        super(Socket, self).emit(event, packet_data)
 
     def ack(self, id):
         def cb(data):

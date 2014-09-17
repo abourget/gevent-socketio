@@ -66,3 +66,12 @@ class ParserTest(TestCase):
             'type': Parser.types['BINARY_EVENT'],
             'data': bytearray([1,2,3]),
         })
+
+        self._test_packet({
+            'type': Parser.types['CONNECT'],
+            'nsp': '/',
+            'data': {
+                'message': 'what the hell',
+                'content': 'I have no idea'
+            }
+        })
