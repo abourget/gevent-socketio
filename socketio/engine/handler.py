@@ -53,7 +53,7 @@ class EngineHandler(WSGIHandler, EventEmitter):
             socket = self.clients.get(sid, None)
 
             if socket is None:
-                self._do_handshake(b64=b64, request=request)
+                socket = self._do_handshake(b64=b64, request=request)
             elif 'Upgrade' in request.headers:
                 upgrade = request.headers['Upgrade']
                 raise NotImplementedError()
@@ -95,3 +95,4 @@ class EngineHandler(WSGIHandler, EventEmitter):
         socket.on_open()
 
         self.emit('connection', socket)
+        return socket

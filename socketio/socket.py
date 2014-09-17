@@ -196,10 +196,10 @@ class Socket(EventEmitter):
         logger.debug('closing socket - reason %s', reason)
         self.leave_all()
         self.namespace.remove(self)
+        self.namespace.connected.pop(self.id)
         self.client.remove(self)
         self.connected = False
         self.disconnected = True
-        del self.namespace.connected[self.id]
         self.emit('disconnect', reason)
 
     def disconnect(self, close):
@@ -215,3 +215,7 @@ class Socket(EventEmitter):
             self.on_close('server namespace disconnect')
 
         return self
+
+    @property
+    def context(self):
+        return self.engine_socket.context

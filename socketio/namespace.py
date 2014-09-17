@@ -40,7 +40,7 @@ class Namespace(EventEmitter):
 
         if client.engine_socket.ready_state == EngineSocket.STATE_OPEN:
             self.sockets.append(socket)
-            #socket.on_connect()
+            socket.on_connect()
             if callback:
                 callback(socket)
 

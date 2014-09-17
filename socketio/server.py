@@ -15,6 +15,7 @@ class SocketIOServer(EngineServer):
     def __init__(self, *args, **kwargs):
         self.namespaces = {}
         self.root_namespace = self.of('/')
+        SocketIOServer.global_server = self
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
     def of(self, name, callback=None):
@@ -73,8 +74,6 @@ def serve(app, **kw):
                             transports=transports,
                             policy_server=policy_server,
                             **kw)
-
-    SocketIOServer.global_server = server
 
     if not _quiet:
         print('serving on http://%s:%s' % (host, port))
