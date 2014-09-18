@@ -1,5 +1,8 @@
 from functools import partial
 from socketio.server import SocketIOServer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class namespace(object):
@@ -8,6 +11,9 @@ class namespace(object):
 
     def __call__(self, handler):
         methods = [method for method in dir(handler) if callable(getattr(handler, method)) and method.startswith('on_')]
+        if SocketIOServer.global_server is None:
+            logger.warning('namespace decorator called but SocketIOServer not initialised')
+            return
         ns = SocketIOServer.global_server.of(self.name)
 
         def register(socket):

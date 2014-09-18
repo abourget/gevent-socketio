@@ -30,7 +30,7 @@ TestHtml = """
 <body>
   <div id="qunit"></div>
   <script src="/static/socket.io.js"></script>
-  <script src="/tests/suite.js"></script>
+  <script src="/tests/index.js"></script>
 </body>
 </html>
 """
