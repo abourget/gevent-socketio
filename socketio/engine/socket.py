@@ -203,7 +203,7 @@ class Socket(EventEmitter):
             self.check_eventlet.kill()
             self.check_eventlet = None
 
-        if 'open' == transport.readyState:
+        if 'open' == transport.ready_state:
             transport.close()
 
     def maybe_upgrade(self, transport):
@@ -240,12 +240,12 @@ class Socket(EventEmitter):
                 logger.debug("got upgrade packet - upgrading")
                 self.upgraded = True
                 self._clear_transport()
+                self._set_transport(transport)
                 self.emit("upgrade", transport)
                 self._set_ping_timeout_eventlet()
                 self.upgrade_eventlet.kill()
-                self.flush()
+                self.flush_nowait()
                 transport.remove_listener('packet', on_packet)
-
             else:
                 transport.close()
 
@@ -418,8 +418,8 @@ class Socket(EventEmitter):
         socket for garbage collection."""
 
         logger.debug("Removing %s sockets" % self)
-        if self.id in self.handler.clients:
-            self.handler.clients.pop(self.id)
+        if self.id in self.request.handler.clients:
+            self.request.handler.clients.pop(self.id)
 
     def put_client_msg(self, msg):
         """Writes to the client's pipe, to end up in the browser"""

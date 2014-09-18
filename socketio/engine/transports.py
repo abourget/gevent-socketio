@@ -72,7 +72,7 @@ class BaseTransport(EventEmitter):
 
     def close(self):
         self.ready_state = 'closing'
-        if not self.request.response.is_set():
+        if not self.request.response.is_set:
             # Close the response when the transport closes
             self.request.response.end(200, 'closed')
         self.do_close()
@@ -328,6 +328,7 @@ class WebsocketTransport(BaseTransport):
 
                     if message is None:
                         break
+
                     self.on_data(message)
 
             job = gevent.spawn(read_from_ws)
