@@ -40,10 +40,7 @@ class Server(WSGIServer):
         if not 'handler_class' in kwargs:
             kwargs['handler_class'] = EngineHandler
 
-        if not 'ws_handler_class' in kwargs:
-            self.ws_handler_class = WebSocketHandler
-        else:
-            self.ws_handler_class = kwargs.pop('ws_handler_class')
+        self.ws_handler_class = WebSocketHandler
 
         super(Server, self).__init__(*args, **kwargs)
 

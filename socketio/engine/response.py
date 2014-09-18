@@ -30,3 +30,7 @@ class Response(WSGIResponse, EventEmitter):
 
     def join(self):
         return self.event.wait()
+
+    @property
+    def is_set(self):
+        return self.event.is_set()

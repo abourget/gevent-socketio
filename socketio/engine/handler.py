@@ -12,6 +12,7 @@ from webob import Request
 from .response import Response
 from .socket import Socket
 import logging
+from socketio.engine.transports import WebsocketTransport
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,16 @@ class EngineHandler(WSGIHandler, EventEmitter):
             if socket is None:
                 socket = self._do_handshake(b64=b64, request=request)
             elif 'Upgrade' in request.headers:
-                upgrade = request.headers['Upgrade']
-                raise NotImplementedError()
+                # This is the ws upgrade request, here we handles the upgrade
+                ws_handler = self.server.ws_handler_class(self.socket, self.client_address, self.server)
+                ws_handler.__dict__.update(self.__dict__)
+                ws_handler.prevent_wsgi_call = True
+                ws_handler.handle_one_response()
+                # Suppose here we have an websocket connection
+                setattr(request, 'websocket', ws_handler.websocket)
+                ws_transport = WebsocketTransport(self, {})
+                ws_transport.on_request(request)
+                socket.maybe_upgrade(ws_transport)
             else:
                 gevent.spawn(socket.on_request, request)
 

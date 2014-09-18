@@ -1,9 +1,8 @@
 import json
-import urllib
 import urlparse
+import gevent
 
 from geventwebsocket import WebSocketError
-from gevent.queue import Empty
 from pyee import EventEmitter
 
 import logging
@@ -54,9 +53,6 @@ class BaseTransport(EventEmitter):
         self.writable = False
         self.should_close = False
 
-    def join(self):
-        raise NotImplementedError()
-
     def write(self, data=""):
         # Gevent v 0.13
         if hasattr(self.handler, 'response_headers_list'):
@@ -71,12 +67,15 @@ class BaseTransport(EventEmitter):
 
         self.handler.write_smart(data)
 
-    def _close(self):
+    def do_close(self):
         raise NotImplementedError()
 
     def close(self):
         self.ready_state = 'closing'
-        self._close()
+        if not self.request.response.is_set():
+            # Close the response when the transport closes
+            self.request.response.end(200, 'closed')
+        self.do_close()
 
     def _cleanup(self):
         logger.debug('clean up in transport')
@@ -307,37 +306,46 @@ class JSONPollingTransport(PollingTransport):
 
 class WebsocketTransport(BaseTransport):
     name = 'websocket'
+    handles_upgrades = True
+    supports_framing = True
 
-    def do_exchange(self, socket, request_method):
-        websocket = self.handler.environ['wsgi.websocket']
-        websocket.send("1::")  # 'connect' packet
+    def __init__(self, *args, **kwargs):
+        self.websocket = None
+        self.jobs = []
+        super(WebsocketTransport, self).__init__(*args, **kwargs)
 
-        def send_into_ws():
-            while True:
-                message = socket.get_client_msg()
+    def on_request(self, request):
+        self.request = request
+        if hasattr(request, 'websocket'):
+            self.websocket = request.websocket
 
-                if message is None:
-                    break
-                try:
-                    websocket.send(message)
-                except (WebSocketError, TypeError):
-                    # We can't send a message on the socket
-                    # it is dead, let the other sockets know
-                    socket.disconnect()
+            def read_from_ws():
+                while True:
+                    try:
+                        message = self.websocket.receive()
+                    except WebSocketError:
+                        self.close()
 
-        def read_from_ws():
-            while True:
-                message = websocket.receive()
+                    if message is None:
+                        break
+                    self.on_data(message)
 
-                if message is None:
-                    break
-                else:
-                    if message is not None:
-                        socket.put_server_msg(message)
+            job = gevent.spawn(read_from_ws)
+            self.jobs.append(job)
 
-        socket.spawn(send_into_ws)
-        socket.spawn(read_from_ws)
+        else:
+            request.response.end(500, 'not able to create websocket')
 
+    def send(self, packets):
+        for packet in packets:
+            encoded = Parser.encode_packet(packet, self.supports_binary)
+            logger.debug('writing %s', encoded)
+            self.writable = False
+            self.websocket.send(encoded)
+            self.writable = True
 
-class FlashSocketTransport(WebsocketTransport):
-    pass
+    def do_close(self):
+        logger.debug('clean all the jobs')
+        for job in self.jobs:
+            gevent.kill(job)
+        self.websocket.close()

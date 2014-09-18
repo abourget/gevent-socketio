@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 handler_types = {
     'websocket': transports.WebsocketTransport,
-    'flashsocket': transports.FlashSocketTransport,
     'polling': transports.XHRPollingTransport,
 }
 
@@ -138,9 +137,9 @@ class Socket(EventEmitter):
             "open",
             self.json_dumps({
                 "sid": self.id,
-                # "upgrades": ["websocket"],
-                "upgrades": [],
-                "pingInterval": 15000,
+                "upgrades": ["websocket"],
+                # "upgrades": [],
+                "pingInterval": 30000,
                 "pingTimeout": 60000})
         )
         self.emit("open")
@@ -208,7 +207,7 @@ class Socket(EventEmitter):
             transport.close()
 
     def maybe_upgrade(self, transport):
-        logger.debug("might upgrade from %s to %s" % self.transport.name, transport.name)
+        logger.debug("might upgrade from %s to %s" % (self.transport.name, transport.name))
 
         # TODO MAKE TIME OUT CONFIGURABLE
         self.upgrade_eventlet = gevent.spawn_later(1, self._fail_upgrade, transport)
@@ -220,7 +219,6 @@ class Socket(EventEmitter):
                                          "type": "noop"
                                      }])
 
-        @transport.on("packet")
         def on_packet(packet):
             if "ping" == packet["type"] and "probe" == packet["data"]:
                 transport.send([{
@@ -228,7 +226,8 @@ class Socket(EventEmitter):
                                     "data": "probe"
                                 }])
 
-                self.check_eventlet.kill()
+                if self.check_eventlet is not None:
+                    self.check_eventlet.kill()
 
                 def loop():
                     while True:
@@ -249,6 +248,8 @@ class Socket(EventEmitter):
 
             else:
                 transport.close()
+
+        transport.on("packet", on_packet)
 
     def _set_ping_timeout_eventlet(self):
         if self.ping_timeout_eventlet:
