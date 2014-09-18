@@ -17,10 +17,14 @@ class namespace(object):
         ns = SocketIOServer.global_server.of(self.name)
 
         def register(socket):
+            class Listener(object):
+                    def __init__(self, handler, method, socket):
+                        self.method = getattr(handler, m)
+                        self.socket = socket
+
+                    def __call__(self, data, *args, **kwargs):
+                        self.method(socket, data)
             for m in methods:
-                def listener(data):
-                    method = getattr(handler, m)
-                    method(socket, data)
-                socket.on(m.lstrip('on_'), listener)
+                socket.on(m.lstrip('on_'), Listener(handler, m, socket))
 
         ns.on('connect', register)
