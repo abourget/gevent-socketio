@@ -16,6 +16,12 @@ class namespace(object):
             return
         ns = SocketIOServer.global_server.of(self.name)
 
+        # register connect disconnect on namespace
+        for msg in ('connect', 'disconnect'):
+            if 'on_' + msg in methods:
+                methods.remove('on_' + msg)
+                ns.on(msg, getattr(handler, 'on_' + msg))
+
         def register(socket):
             class Listener(object):
                     def __init__(self, handler, method, socket):

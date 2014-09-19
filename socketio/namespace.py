@@ -57,6 +57,7 @@ class Namespace(EventEmitter):
     def remove(self, socket):
         if socket in self.sockets:
             self.sockets.remove(socket)
+            super(Namespace, self).emit('disconnect', socket)
         else:
             logger.debug('ignoring remove for %s', socket.id)
 
