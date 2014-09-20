@@ -1,1 +1,0 @@
-from chatproject.settings import *

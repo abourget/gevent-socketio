@@ -1,8 +1,7 @@
 Introduction
 ============
 
-gevent_socketio2 is socketio 1.0 implementation. It is a fork from gevent_socketio, with lots of modification to apply to socketio1.0. It is under heavy development, production usage is not 
-recommended.
+gevent_socketio2 is socketio 1.0 implementation. It based on gevent_socketio, with lots of modifications in source code to support socketio protocol 1.0. It is under heavy development, production usage is not recommended.
 
 Technical overview
 ==================
@@ -15,15 +14,15 @@ pyee is the EventEmitter for python. Since this is a port from socketio, there i
 Documentation and References
 ============================
 
-TODO
+TBD
+
 
 Installation
 ============
 
-TODO
+TBD
 
 TODO
 ============
 
-* websocket transport
 * Framework support
