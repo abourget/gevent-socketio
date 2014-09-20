@@ -11,8 +11,8 @@ events = [
     'error',
     'connect',
     'disconnect',
-    'newListener',
-    'removeListener'
+    'new_listener',
+    'remove_listener'
 ]
 
 flags = [

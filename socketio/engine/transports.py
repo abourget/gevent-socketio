@@ -342,7 +342,11 @@ class WebsocketTransport(BaseTransport):
             encoded = Parser.encode_packet(packet, self.supports_binary)
             logger.debug('writing %s', encoded)
             self.writable = False
-            self.websocket.send(encoded)
+            try:
+                self.websocket.send(encoded)
+            except WebSocketError:
+                self.close()
+
             self.writable = True
 
     def do_close(self):
