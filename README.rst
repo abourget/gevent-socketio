@@ -1,3 +1,8 @@
+Heads up
+============
+This project is deprecated by [gevent_socketio2](https://github.com/shuoli84/gevent_socketio2). 
+
+
 Introduction
 ============
 
