@@ -153,7 +153,7 @@ def decode(rawstr, json_loads=default_json_loads):
     elif msg_type == "5":  # event
         try:
             data = json_loads(data)
-        except ValueError, e:
+        except ValueError as e:
             print("Invalid JSON event message", data)
             decoded_msg['args'] = []
         else:
