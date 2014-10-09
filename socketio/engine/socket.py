@@ -2,17 +2,17 @@
 Engine socket, a abstract layer for all transports internal api. It is created by Engine.handler with proper parameters
 and used by socketio.socket.
 """
+import json
 
 import random
 import logging
 
+import transports
 import gevent
 from gevent.queue import Queue
 from gevent.event import Event
 from pyee import EventEmitter
 
-from socketio.defaultjson import default_json_loads, default_json_dumps
-from socketio.engine import transports
 
 __all__ = ['Socket']
 
@@ -44,7 +44,7 @@ def default_error_handler(socket, error_name, error_message, endpoint,
 
     # Send an error event through the Socket
     if not quiet:
-        socket.send_packet('event', default_json_dumps(pkt))
+        socket.send_packet('event', json.dumps(pkt))
 
     # Log that error somewhere for debugging...
     logger.error(u"default_error_handler: {}, {} (endpoint={}, msg_id={})".format(
@@ -74,9 +74,6 @@ class Socket(EventEmitter):
     STATE_OPEN = "OPEN"
     STATE_CLOSING = "CLOSING"
     STATE_CLOSED = "CLOSED"
-
-    json_loads = staticmethod(default_json_loads)
-    json_dumps = staticmethod(default_json_dumps)
 
     def __init__(self, request, ping_interval=5000, ping_timeout=10000, error_handler=None):
         super(Socket, self).__init__()
@@ -135,7 +132,7 @@ class Socket(EventEmitter):
         self.ready_state = self.STATE_OPEN
         self.send_packet(
             "open",
-            self.json_dumps({
+            json.dumps({
                 "sid": self.id,
                 "upgrades": ["websocket"],
                 # "upgrades": [],
@@ -273,30 +270,6 @@ class Socket(EventEmitter):
         """
         self.error_handler = error_handler
 
-    def _set_json_loads(self, json_loads):
-        """Change the default JSON decoder.
-
-        This should be a callable that accepts a single string, and returns
-        a well-formed object.
-        """
-        self.json_loads = json_loads
-
-    def _set_json_dumps(self, json_dumps):
-        """Change the default JSON decoder.
-
-        This should be a callable that accepts a single string, and returns
-        a well-formed object.
-        """
-        self.json_dumps = json_dumps
-
-    def _get_next_msgid(self):
-        """This retrieves the next value for the 'id' field when sending
-        an 'event' or 'message' or 'json' that asks the remote client
-        to 'ack' back, so that we trigger the local callback.
-        """
-        self.ack_counter += 1
-        return self.ack_counter
-
     def _save_ack_callback(self, msgid, callback):
         """Keep a reference of the callback on this socket."""
         if msgid in self.ack_callbacks:
@@ -381,10 +354,9 @@ class Socket(EventEmitter):
             logger.debug("flushing buffer to transport")
             self.transport.send(msg)
 
-    def get_available_upgrades(self):
-        availabel_upgrades = ["websocket"]
-        # TODO FIX THIS, HOOK UP WITH SERVER
-        return availabel_upgrades
+    @staticmethod
+    def get_available_upgrades():
+        return ["websocket"]
 
     def close(self):
         if self.STATE_OPEN == self.ready_state:

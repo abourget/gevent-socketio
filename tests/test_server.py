@@ -1,7 +1,10 @@
+from gevent.monkey import patch_all
+patch_all()
+
 import json
 from unittest import TestCase
 import gevent
-from gevent.monkey import patch_all
+
 import requests
 from socketio.server import serve, SocketIOServer
 from socketio.engine.parser import Parser as EngineParser
@@ -18,7 +21,6 @@ def application(environ, start_response):
 
 class ServerTest(TestCase):
     def __init__(self, *args, **kwarg):
-        patch_all()
 
         self.host = '127.0.0.1'
         self.port = 3030

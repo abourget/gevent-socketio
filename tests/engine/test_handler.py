@@ -1,7 +1,9 @@
+from gevent.monkey import patch_all
+patch_all()
+
 import json
 from unittest import TestCase
 import gevent
-from gevent.monkey import patch_all
 import sys
 from socketio.engine.handler import EngineHandler
 from socketio.engine.parser import Parser
@@ -22,7 +24,6 @@ def application(environ, start_response):
 
 class EngineHandlerTestCase(TestCase):
     def __init__(self, *args, **kwargs):
-        patch_all()
         super(EngineHandlerTestCase, self).__init__(*args, **kwargs)
 
         self.port = 3030
