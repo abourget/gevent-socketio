@@ -1,7 +1,0 @@
-A sample pyramid application using socket.io, backbone.js, persistence, and
-redis for pubsub
-
-To get the app running:
-python setup.py develop
-python chatter4/scripts/populate.py development.ini 
-python serve.py

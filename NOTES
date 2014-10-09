@@ -1,0 +1,25 @@
+old gevent socketio
+
+xhr polling:
+
+The loop blocks at socket get_multiple_client_msgs, which call client_queue.get() (it passed a timeout parameter to prevent blocking forever)
+
+
+websocket:
+
+The handler handle_one_response() waits with gevent.joinall(socket.jobs) 
+  * All jobs spawned for the socket is maintained in socket's jobs array. 
+    (what about the timeout?)
+    A: The transport send_into_ws do a try except, when a WebSocketError raised, (Fllowing is wrong: it will call socket's disconnect() which kills all jobs)
+     (Correction: The socket will spawn a watcher, which kills all the jobs and disconnect all namespaces)
+     The socket has a kill method, which cleaned all resources, all jobs, disconnect all namespaces etc
+    BUG: The disconnect for the socket not set state as closing or closed
+
+
+socketio_manage has two usages:
+  * hook up the request from framework to socket
+    This still valid in GS2, we still need a way to hook the framework's request and pass it to namespaces. 
+      We need to pass the request to framework's application and assign the request to socket. The socket has a context (to distinguish from environ), it holds a value for framework_request.
+
+  * wait on the socket's receiver loop
+    This is not required since now the main loop waits on response's event, at any point that needs to end the loop, the response's end should be called.

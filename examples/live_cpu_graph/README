@@ -1,5 +1,0 @@
-A simple live CPU graph.
-
-To run:
-
-python serve.py
