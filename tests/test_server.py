@@ -61,7 +61,7 @@ class ServerTest(TestCase):
 
         socket_encoded = SocketIoParser.Encoder.encode({
             'type': SocketIoParser.EVENT,
-            'data': 'hello'
+            'data': ['message', 'hello']
         })
 
         engine_encoded = EngineParser.encode_payload({

@@ -1,15 +1,9 @@
 from __future__ import absolute_import
 
-import sys
-import traceback
-import logging
-from socket import error
-
 from gevent.pywsgi import WSGIServer
 from geventwebsocket.handler import WebSocketHandler
 from socketio.engine.handler import EngineHandler
-
-from socketio.policyserver import FlashPolicyServer
+import logging
 
 __all__ = ['Server']
 
@@ -17,15 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class Server(WSGIServer):
+    """
 
+    """
     def __init__(self, *args, **kwargs):
         self.sockets = {}
         self.transports = kwargs.pop('transports', None)
 
         self.resource = kwargs.pop('resource', 'socketio')
         self.server_side = kwargs.pop('server_side', True)
-
-        kwargs.pop('policy_server', True)
 
         # Extract other config options
         self.config = {

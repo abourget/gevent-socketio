@@ -54,16 +54,9 @@ class BaseTransport(EventEmitter):
         self.should_close = False
 
     def write(self, data=""):
-        # Gevent v 0.13
-        if hasattr(self.handler, 'response_headers_list'):
-            if 'Content-Length' not in self.handler.response_headers_list:
-                self.handler.response_headers.append(('Content-Length', len(data)))
-                self.handler.response_headers_list.append('Content-Length')
-        elif not hasattr(self.handler, 'provided_content_length') or self.handler.provided_content_length is None:
-            # Gevent 1.0bX
-            l = len(data)
-            self.handler.provided_content_length = l
-            self.handler.response_headers.append(('Content-Length', l))
+        if 'Content-Length' not in self.handler.response_headers_list:
+            self.handler.response_headers.append(('Content-Length', len(data)))
+            self.handler.response_headers_list.append('Content-Length')
 
         self.handler.write_smart(data)
 

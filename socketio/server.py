@@ -1,5 +1,4 @@
 import logging
-from socketio.adapter import Adapter
 from socketio.client import Client
 from socketio.namespace import Namespace
 from engine.server import Server as EngineServer
@@ -10,15 +9,31 @@ logger = logging.getLogger(__name__)
 
 
 class SocketIOServer(EngineServer):
+    """
+    SocketIOServer holds all server level resources. And it inherit from EngineIO, which handles all incoming connection
+    """
+
+    # TODO FIX THIS, now use a class level instance to store a ref to server instance
     global_server = None
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize an socketio server object.
+        :param args:
+        :param kwargs:
+        :return:
+        """
         self.namespaces = {}
         self.root_namespace = self.of('/')
         SocketIOServer.global_server = self
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
-    def of(self, name, callback=None):
+    def of(self, name):
+        """
+        Create or get a namespace object for name
+        :param name: The name
+        :return:
+        """
         if not name.startswith('/'):
             name = '/' + name
 
@@ -27,12 +42,15 @@ class SocketIOServer(EngineServer):
             namespace = Namespace(self, name)
             self.namespaces[name] = namespace
 
-        if callback:
-            self.namespaces[name].on('connect', callback)
-
         return self.namespaces[name]
 
     def close(self):
+        """
+        Close all active socket in this server, and all socket connected to root namespace
+        :return: None
+        """
+
+        logger.debug('closing socketio server')
         if '/' in self.namespaces:
             for socket in self.namespaces['/'].sockets:
                 socket.on_close()
@@ -40,19 +58,18 @@ class SocketIOServer(EngineServer):
         super(SocketIOServer, self).close()
 
     def on_connection(self, engine_socket):
+        """
+        Called when a new underlying socket connected. It creates a client object and connect it to root namespace
+        :param engine_socket:
+        :return:
+        """
         logger.debug('incoming connection with id %s', engine_socket.id)
         client = Client(self, engine_socket)
         client.connect('/')
 
 
 def serve(app, **kw):
-    _quiet = kw.pop('_quiet', False)
-    _resource = kw.pop('resource', 'socket.io')
-    if not _quiet: # pragma: no cover
-        # idempotent if logging has already been set up
-        import logging
-        logging.basicConfig()
-
+    resource = 'socket.io'
     host = kw.pop('host', '127.0.0.1')
     port = int(kw.pop('port', 6543))
 
@@ -60,33 +77,11 @@ def serve(app, **kw):
     if transports:
         transports = [x.strip() for x in transports.split(',')]
 
-    policy_server = kw.pop('policy_server', False)
-    if policy_server in (True, 'True', 'true', 'enable', 'yes', 'on', '1'):
-        policy_listener_host = kw.pop('policy_listener_host', host)
-        policy_listener_port = int(kw.pop('policy_listener_port', 10843))
-        kw['policy_listener'] = (policy_listener_host, policy_listener_port)
-    else:
-        policy_server = False
-
     server = SocketIOServer((host, port),
                             app,
-                            resource=_resource,
+                            resource=resource,
                             transports=transports,
-                            policy_server=policy_server,
                             **kw)
 
-    if not _quiet:
-        print('serving on http://%s:%s' % (host, port))
+    print('serving on http://%s:%s' % (host, port))
     server.serve_forever()
-
-
-def serve_paste(app, global_conf, **kw):
-    """pserve / paster serve / waitress replacement / integration
-
-    You can pass as parameters:
-
-    transports = websockets, xhr-multipart, xhr-longpolling, etc...
-    policy_server = True
-    """
-    serve(app, **kw)
-    return 0

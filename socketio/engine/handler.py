@@ -22,12 +22,6 @@ class EngineHandler(WSGIHandler, EventEmitter):
     clients = {}
 
     def __init__(self, config, *args, **kwargs):
-        """Create a new SocketIOHandler.
-
-        :param config: dict Configuration for timeouts and intervals
-          that will go down to the other components, transports, etc..
-
-        """
         self.config = config
 
         super(EngineHandler, self).__init__(*args, **kwargs)

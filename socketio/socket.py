@@ -7,6 +7,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['Socket', 'events', 'flags']
+
 events = [
     'error',
     'connect',
@@ -23,16 +25,17 @@ flags = [
 
 
 class Socket(EventEmitter):
+    """
+    [connection, namespace] defines a socket
+    """
 
     def __init__(self, namespace, client):
         super(Socket, self).__init__()
 
-        # Underlying engine socket
         self.namespace = namespace
         self.adapter = namespace.adapter
         self.server = namespace.server
         self.id = client.id
-        self.request = client.request
         self.client = client
         self.engine_socket = client.engine_socket
         self.rooms = []
@@ -41,19 +44,6 @@ class Socket(EventEmitter):
         self.acks = {}
         self.connected = True
         self.disconnected = False
-        self.handshake = self.build_handshake()
-
-    def build_handshake(self):
-        return {
-            'headers': self.request.headers,
-            'time': str(datetime.now()),
-            # FIXME set remote_address in engine_socket
-            # 'address': self.engine_socket.remote_address,
-            'xdomain': self.request.headers.get('origin', None),
-            'secure': self.request.scheme == 'https',
-            'url': self.request.url,
-            'query': self.request.GET
-        }
 
     def emit(self, event, *args):
         if event in events:
@@ -157,11 +147,11 @@ class Socket(EventEmitter):
             self.emit('error', packet["data"])
 
     def on_event(self, packet):
-        packet_data = packet['data'] if 'data' in packet else []
-
         if 'id' in packet:
             callback = self.ack(packet['id'])
             raise NotImplementedError()
+
+        packet_data = packet.get('data', [])
 
         event = packet_data.pop(0)
         if len(packet_data) == 1:
