@@ -189,7 +189,7 @@ class SocketIOHandler(WSGIHandler):
                     socket.wsgi_app_greenlet = gevent.spawn(self.application,
                                                             self.environ,
                                                             start_response)
-            except:
+            except Exception:
                 self.handle_error(*sys.exc_info())
 
         # we need to keep the connection open if we are an open socket

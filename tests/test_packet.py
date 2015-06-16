@@ -119,7 +119,8 @@ class TestEncodeMessage(TestCase):
                                   'endpoint': '',
                                   'args': [{"a":"b"}, 2,"3"]
                                   })
-        self.assertEqual(encoded_message,
+        if encoded_message != '5:::{"name":"edwald","args":[{"a":"b"},2,"3"]}':
+            self.assertEqual(encoded_message,
                           '5:::{"args":[{"a":"b"},2,"3"],"name":"edwald"}')
 
     def test_encode_ack(self):
@@ -349,7 +350,7 @@ class TestDecodeMessage(TestCase):
         try:
             decoded_message = decode('99::')
         except Exception as e:
-            self.assertEqual(e.message, "Unknown message type: 99")
+            self.assertEqual(e.args[0], "Unknown message type: 99")
         else:
             self.assertEqual(decoded_message, None,
                     "We should not get a valid message")

@@ -64,7 +64,7 @@ class namespace(object):
 def socketio(request):
     try:
         socketio_manage(request.environ, SOCKETIO_NS, request)
-    except:
+    except Exception:
         logging.getLogger("socketio").error("Exception while handling socketio connection", exc_info=True)
     return HttpResponse("")
 

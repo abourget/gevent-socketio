@@ -1,3 +1,4 @@
+from __future__ import print_function
 import gevent
 import re
 import logging
@@ -21,11 +22,11 @@ class BaseNamespace(object):
       :linenos:
 
       def on_my_event(self, my_first_arg, my_second_arg):
-          print "This is the my_first_arg object", my_first_arg
-          print "This is the my_second_arg object", my_second_arg
+          print("This is the my_first_arg object", my_first_arg)
+          print("This is the my_second_arg object", my_second_arg)
 
       def on_my_second_event(self, whatever):
-          print "This holds the first arg that was passed", whatever
+          print("This holds the first arg that was passed", whatever)
 
     Handlers are automatically dispatched based on the name of the incoming
     event. For example, a 'user message' event will be handled by
@@ -38,8 +39,8 @@ class BaseNamespace(object):
       :linenos:
 
       def on_third_event(self, packet):
-          print "The full packet", packet
-          print "See the BaseNamespace::call_method() method for details"
+          print("The full packet", packet)
+          print("See the BaseNamespace::call_method() method for details")
     """
     def __init__(self, environ, ns_name, request=None):
         self.environ = environ
@@ -167,14 +168,14 @@ class BaseNamespace(object):
         elif packet_type == 'ack':
             callback = self.socket._pop_ack_callback(packet['ackId'])
             if not callback:
-                print "ERROR: No such callback for ackId %s" % packet['ackId']
+                print("ERROR: No such callback for ackId %s" % packet['ackId'])
                 return
             return callback(*(packet['args']))
         elif packet_type == 'disconnect':
             # Force a disconnect on the namespace.
             return self.call_method_with_acl('recv_disconnect', packet)
         else:
-            print "Unprocessed packet", packet
+            print("Unprocessed packet", packet)
         # TODO: manage the other packet types: disconnect
 
     def process_event(self, packet):
