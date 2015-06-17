@@ -1,3 +1,4 @@
+from __future__ import print_function
 from gevent import monkey; monkey.patch_all()
 
 from bottle import Bottle, request
@@ -8,7 +9,7 @@ app = Bottle()
 class Hello(namespace.BaseNamespace):
 
     def on_hello(self, data):
-        print "hello", data
+        print("hello", data)
         self.emit('greetings', {'from': 'sockets'})
 
 
