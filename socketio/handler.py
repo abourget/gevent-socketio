@@ -1,6 +1,8 @@
 import sys
 import re
 import gevent
+from gevent.hub import text_type
+
 try:
     import urllib.parse as urlparse
 except ImportError:
@@ -70,7 +72,11 @@ class SocketIOHandler(WSGIHandler):
         self.start_response("200 OK", [
             ("Content-Type", "application/javascript"),
         ])
-        self.result = ['io.j[%s]("%s");' % (wrapper, data)]
+        if isinstance(wrapper, text_type):
+            wrapper = wrapper.encode('utf-8')
+        if isinstance(data, text_type):
+            data = data.encode('utf-8')
+        self.result = [(b'io.j[%s]("%s");' % (wrapper, data))]
 
     def write_plain_result(self, data):
         self.start_response("200 OK", [
@@ -80,6 +86,8 @@ class SocketIOHandler(WSGIHandler):
             ("Access-Control-Max-Age", 3600),
             ("Content-Type", "text/plain"),
         ])
+        if isinstance(data, text_type):
+            data = data.encode('utf-8')
         self.result = [data]
 
     def write_smart(self, data):
