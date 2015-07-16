@@ -1,7 +1,10 @@
 import gevent
 import urllib
 import urlparse
-from geventwebsocket import WebSocketError
+try:
+    from geventwebsocket import WebSocketError
+except ImportError:
+    from geventwebsocket.exceptions import WebSocketError
 from gevent.queue import Empty
 
 
