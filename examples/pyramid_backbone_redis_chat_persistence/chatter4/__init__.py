@@ -20,6 +20,7 @@ def simple_route(config, name, url, fn, renderer=None):
 def main(global_config, **settings):
     config = Configurator()
 
+    config.include('pyramid_mako')
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
 
