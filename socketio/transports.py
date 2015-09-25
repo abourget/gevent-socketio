@@ -21,7 +21,7 @@ class BaseTransport(object):
             ("Access-Control-Allow-Origin", "*"),
             ("Access-Control-Allow-Credentials", "true"),
             ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
-            ("Access-Control-Max-Age", 3600),
+            ("Access-Control-Max-Age", "3600"),
         ]
         self.handler = handler
         self.config = config
