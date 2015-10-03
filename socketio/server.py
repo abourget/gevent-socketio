@@ -96,7 +96,12 @@ class SocketIOServer(WSGIServer):
 
         log_file = kwargs.pop('log_file', None)
         if log_file:
-            kwargs['log'] = open(log_file, 'a')
+            if hasattr(log_file, 'log'):
+                # logger object
+                kwargs['log'] = log_file
+            else:
+                # file name
+                kwargs['log'] = open(log_file, 'a')
 
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
