@@ -57,10 +57,11 @@ class SocketIOHandler(WSGIHandler):
             self.log_error("socket.io URL mismatch")
         else:
             socket = self.server.get_socket()
-            data = "%s:%s:%s:%s" % (socket.sessid,
+            data_str = "%s:%s:%s:%s" % (socket.sessid,
                                     self.config['heartbeat_timeout'] or '',
                                     self.config['close_timeout'] or '',
                                     ",".join(self.transports))
+            data = data_str.encode('utf-8')
             self.write_smart(data)
 
     def write_jsonp_result(self, data, wrapper="0"):
