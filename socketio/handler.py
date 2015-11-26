@@ -1,7 +1,7 @@
 import sys
 import re
 import gevent
-import urlparse
+from six.moves.urllib import parse as urlparse
 
 from gevent.pywsgi import WSGIHandler
 from socketio import transports
