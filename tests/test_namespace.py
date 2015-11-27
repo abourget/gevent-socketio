@@ -278,12 +278,12 @@ class TestChatNamespace(TestCase):
 
         self.ns.process_packet(pkt)
 
-        args = [ 
+        args = [
                 'method_access_denied',
                 'You do not have access to method "on_bar"',
         ]
 
-        kwargs = dict( 
+        kwargs = dict(
                 msg_id=None,
                 endpoint='/chat',
                 quiet=False
@@ -313,7 +313,7 @@ class TestChatNamespace(TestCase):
 
         self.ns.process_packet(pkt)
 
-        args = [ 
+        args = [
                 'method_access_denied',
                 'You do not have access to method "on_foo"',
         ]

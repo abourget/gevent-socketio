@@ -40,7 +40,7 @@ class TestEncodeMessage(TestCase):
         self.assertEqual(encoded_message, '2::')
 
     def test_encode_message(self):
-        """encoding a message packet """        
+        """encoding a message packet """
         encoded_message = encode({'type': 'message',
                                   'endpoint': '',
                                   'data': 'woot'
@@ -190,14 +190,14 @@ class TestEncodeMessage(TestCase):
 
 
 class TestDecodeMessage(TestCase):
-    
+
     def test_decode_deconnect(self):
         """decoding a disconnection packet """
         decoded_message = decode('0::/woot')
         self.assertEqual(decoded_message, {'type': 'disconnect',
                                            'endpoint': '/woot'
                                            })
-        
+
     def test_decode_connect(self):
         """decoding a connection packet """
         decoded_message = decode('1::/tobi')
@@ -287,7 +287,7 @@ class TestDecodeMessage(TestCase):
                                            'ackId': 140,
                                            'endpoint': '',
                                            'args': []})
-        
+
         # Decode with endpoint
         decoded_message = decode('6::/chat:140')
         self.assertEqual(decoded_message, {'type': 'ack',
