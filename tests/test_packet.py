@@ -349,7 +349,7 @@ class TestDecodeMessage(TestCase):
         try:
             decoded_message = decode('99::')
         except Exception as e:
-            self.assertEqual(e.message, "Unknown message type: 99")
+            self.assertEqual(e.args[0], "Unknown message type: 99")
         else:
             self.assertEqual(decoded_message, None,
                     "We should not get a valid message")

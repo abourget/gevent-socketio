@@ -206,7 +206,7 @@ class TestBaseNamespace(TestCase):
         except ValueError as e:
             self.assertEqual(
                 message,
-                e.message,
+                e.args[0],
             )
         else:
             raise Exception("""We should not be able to delete an acl that
