@@ -14,6 +14,11 @@ of code are required to tie-in ``gevent-socketio`` in your framework.
 Note: you need to use the ``gevent`` python WSGI server to use
 ``gevent-socketio``.
 
+Community, rise up!
+===================
+
+ANNOUNCEMENT: This project is in need of a solid maintainer to navigate through the 27+ open Pull Requests, merge what needs to be merged, and continue on with newer developments. @abourget is not putting as much time as he'd like on this project these days.  This project has nearly 1000 GitHub Stars.. it's used by major corporations. It's a great project for you to lead. Contact me on Twitter @bourgetalexndre to take more leadership.
+
 
 Technical overview
 ==================
