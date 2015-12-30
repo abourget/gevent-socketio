@@ -51,7 +51,7 @@ $(function () {
 
     $('#send-message').submit(function () {
 	    message('me', $('#message').val());
-	    socket.emit('user message', $('#message').val());
+	    socket.emit('user message', window.room, $('#message').val());
 	    clear();
 	    $('#lines').get(0).scrollTop = 10000000;
 	    return false;

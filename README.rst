@@ -1,3 +1,14 @@
+Caution!!!
+============
+
+This is an experimental fork of ``gevent-socketio`` that adds support for 
+pluggable backends to create and manage the lifecycle of sockets across multiple 
+workers and implements a Redis-based version of such a backend.
+
+There are significant changes to the original code and it won't be 
+backward-compatible with existing projects. However it should be relatively 
+trivial to switch, if you know what you are doing.
+
 Presentation
 ============
 

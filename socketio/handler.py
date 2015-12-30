@@ -1,3 +1,5 @@
+from __future__ import with_statement #for python < 2.5
+
 import sys
 import re
 import gevent
@@ -56,8 +58,10 @@ class SocketIOHandler(WSGIHandler):
         if tokens["resource"] != self.server.resource:
             self.log_error("socket.io URL mismatch")
         else:
-            socket = self.server.get_socket()
-            data = "%s:%s:%s:%s" % (socket.sessid,
+            manager = self.server.socket_manager
+            sessid = manager.next_socket_id()
+            manager.handshake(sessid)
+            data = "%s:%s:%s:%s" % (sessid,
                                     self.config['heartbeat_timeout'] or '',
                                     self.config['close_timeout'] or '',
                                     ",".join(self.transports))
@@ -132,7 +136,8 @@ class SocketIOHandler(WSGIHandler):
 
         # Setup socket
         sessid = tokens["sessid"]
-        socket = self.server.get_socket(sessid)
+        manager = self.server.socket_manager
+        socket = manager.get_socket(sessid)
         if not socket:
             self.handle_bad_request()
             return []  # Do not say the session is not found, just bad request
@@ -172,22 +177,19 @@ class SocketIOHandler(WSGIHandler):
         if not socket.connection_established:
             # This is executed only on the *first* packet of the establishment
             # of the virtual Socket connection.
-            socket.connection_established = True
-            socket.state = socket.STATE_CONNECTED
-            socket._spawn_heartbeat()
-            socket._spawn_watcher()
+            socket.manager.init_connection(socket)
 
-            try:
-                # We'll run the WSGI app if it wasn't already done.
-                if socket.wsgi_app_greenlet is None:
-                    # TODO: why don't we spawn a call to handle_one_response here ?
-                    #       why call directly the WSGI machinery ?
-                    start_response = lambda status, headers, exc=None: None
-                    socket.wsgi_app_greenlet = gevent.spawn(self.application,
-                                                            self.environ,
-                                                            start_response)
-            except:
-                self.handle_error(*sys.exc_info())
+        try:
+            # We'll run the WSGI app if it wasn't already done.
+            if socket.wsgi_app_greenlet is None:
+                # TODO: why don't we spawn a call to handle_one_response here ?
+                #       why call directly the WSGI machinery ?
+                start_response = lambda status, headers, exc=None: None
+                socket.wsgi_app_greenlet = gevent.spawn(self.application,
+                                                        self.environ,
+                                                        start_response)
+        except:
+            self.handle_error(*sys.exc_info())
 
         # we need to keep the connection open if we are an open socket
         if tokens['transport_id'] in ['flashsocket', 'websocket']:

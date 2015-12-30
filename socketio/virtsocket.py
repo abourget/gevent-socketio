@@ -9,12 +9,12 @@ in a different way
 :moduleauthor: Alexandre Bourget <alexandre.bourget@savoirfairelinux.com>
 
 """
-import random
+from __future__ import with_statement
+
 import weakref
 import logging
 
 import gevent
-from gevent.queue import Queue
 from gevent.event import Event
 
 from socketio import packet
@@ -36,6 +36,10 @@ def default_error_handler(socket, error_name, error_message, endpoint,
     :param quiet: if quiet, this handler will not send a packet to the
                   user, but only log for the server developer.
     """
+    
+    if endpoint is None:
+        endpoint = ''
+        
     pkt = dict(type='event', name='error',
                args=[error_name, error_message],
                endpoint=endpoint)
@@ -51,6 +55,8 @@ def default_error_handler(socket, error_name, error_message, endpoint,
         error_name, error_message, endpoint, msg_id
     ))
 
+
+QUEUE_NAMES = ('client_queue', 'server_queue')
 
 class Socket(object):
     """
@@ -74,15 +80,17 @@ class Socket(object):
     json_loads = staticmethod(default_json_loads)
     json_dumps = staticmethod(default_json_dumps)
 
-    def __init__(self, server, config, error_handler=None):
-        self.server = weakref.proxy(server)
-        self.sessid = str(random.random())[2:]
-        self.session = {}  # the session dict, for general developer usage
-        self.client_queue = Queue()  # queue for messages to client
-        self.server_queue = Queue()  # queue for messages to server
+    def __init__(self, sessid, manager, config,  error_handler=None):
+        self.manager = weakref.proxy(manager)
+        self.sessid = sessid
+        
+        self.session = manager.make_session(sessid)  # the session dict, for general developer usage
+        for qname in QUEUE_NAMES:
+            setattr(self, qname, manager.make_queue(sessid, qname))
         self.hits = 0
         self.heartbeats = 0
-        self.timeout = Event()
+        self.hb_check_timeout = Event()
+        self.hb_send_timeout = Event()
         self.wsgi_app_greenlet = None
         self.state = "NEW"
         self.connection_established = False
@@ -185,12 +193,17 @@ class Socket(object):
         ACLs, etc..) with:
 
           adminnamespace.socket['/chat'].add_acl_method('kick-ban')
+          
+        @todo This will be tough to do with distributed sockets, need to think it through carefully
 
         """
         return self.active_ns[key]
 
     def __hasitem__(self, key):
-        """Verifies if the namespace is active (was initialized)"""
+        """Verifies if the namespace is active (was initialized)
+        
+        @todo This will be tough to do right with distributed sockets, need to think it through carefully
+        """
         return key in self.active_ns
 
     @property
@@ -207,7 +220,15 @@ class Socket(object):
 
         This clear the heartbeat disconnect timeout (resets for X seconds).
         """
-        self.timeout.set()
+        self.hb_check_timeout.set()
+        
+    def heartbeat_sent(self):
+        """This delays sending the heart beat for another X seconds.  Call this when
+        you've sent a heartbeat packet out.
+
+        This clear the heartbeat sending timeout (resets for X seconds).
+        """
+        self.hb_send_timeout.set()
 
     def kill(self, detach=False):
         """This function must/will be called when a socket is to be completely
@@ -230,22 +251,13 @@ class Socket(object):
                 self.disconnect()
 
         if detach:
-            self.detach()
+            self.manager.detach(self.sessid)
 
         gevent.killall(self.jobs)
 
-    def detach(self):
-        """Detach this socket from the server. This should be done in
-        conjunction with kill(), once all the jobs are dead, detach the
-        socket for garbage collection."""
-
-        log.debug("Removing %s from server sockets" % self)
-        if self.sessid in self.server.sockets:
-            self.server.sockets.pop(self.sessid)
-
     def put_server_msg(self, msg):
         """Writes to the server's pipe, to end up in in the Namespaces"""
-        self.heartbeat()
+        self.manager.heartbeat_received(self.sessid)
         self.server_queue.put_nowait(msg)
 
     def put_client_msg(self, msg):
@@ -256,7 +268,7 @@ class Socket(object):
         """Grab a message to send it to the browser"""
         return self.client_queue.get(**kwargs)
 
-    def get_server_msg(self, **kwargs):
+    def  get_server_msg(self, **kwargs):
         """Grab a message, to process it by the server and dispatch calls
         """
         return self.server_queue.get(**kwargs)
@@ -266,10 +278,7 @@ class Socket(object):
         XHR-polling methods, on which we can pack more than one message if the
         rate is high, and encode the payload for the HTTP channel."""
         client_queue = self.client_queue
-        msgs = [client_queue.get(**kwargs)]
-        while client_queue.qsize():
-            msgs.append(client_queue.get())
-        return msgs
+        return self.manager.read_queue(client_queue, **kwargs)
 
     def error(self, error_name, error_message, endpoint=None, msg_id=None,
               quiet=False):
@@ -313,6 +322,21 @@ class Socket(object):
         """
         for ns_name, ns in list(self.active_ns.iteritems()):
             ns.recv_disconnect()
+            
+    def add_namespace(self, namespace):
+        new_ns_class = self.namespaces[namespace]
+        ns = new_ns_class(self.environ, namespace,
+                                request=self.request)
+        # This calls initialize() on all the classes and mixins, etc..
+        # in the order of the MRO
+        for cls in type(ns).__mro__:
+            if hasattr(cls, 'initialize'):
+                cls.initialize(ns)  # use this instead of __init__,
+                                        # for less confusion
+
+        self.active_ns[namespace] = ns
+        self.manager.activate_endpoint(self.sessid, namespace)
+        return ns
 
     def remove_namespace(self, namespace):
         """This removes a Namespace object from the socket.
@@ -323,8 +347,9 @@ class Socket(object):
         """
         if namespace in self.active_ns:
             del self.active_ns[namespace]
+            self.manager.deactivate_endpoint(self.sessid, namespace)
 
-        if len(self.active_ns) == 0 and self.connected:
+        if self.connected and not self.manager.active_endpoints(self.sessid):
             self.kill(detach=True)
 
     def send_packet(self, pkt):
@@ -369,7 +394,7 @@ class Socket(object):
                 continue
 
             if pkt['type'] == 'heartbeat':
-                # This is already dealth with in put_server_msg() when
+                # This is already dealt with in put_server_msg() when
                 # any incoming raw data arrives.
                 continue
 
@@ -377,51 +402,42 @@ class Socket(object):
                 # On global namespace, we kill everything.
                 self.kill(detach=True)
                 continue
-
-            endpoint = pkt['endpoint']
-
-            if endpoint not in self.namespaces:
-                self.error("no_such_namespace",
-                    "The endpoint you tried to connect to "
-                    "doesn't exist: %s" % endpoint, endpoint=endpoint)
-                continue
-            elif endpoint in self.active_ns:
-                pkt_ns = self.active_ns[endpoint]
-            else:
-                new_ns_class = self.namespaces[endpoint]
-                pkt_ns = new_ns_class(self.environ, endpoint,
-                                        request=self.request)
-                # This calls initialize() on all the classes and mixins, etc..
-                # in the order of the MRO
-                for cls in type(pkt_ns).__mro__:
-                    if hasattr(cls, 'initialize'):
-                        cls.initialize(pkt_ns)  # use this instead of __init__,
-                                                # for less confusion
-
-                self.active_ns[endpoint] = pkt_ns
-
-            retval = pkt_ns.process_packet(pkt)
-
-            # Has the client requested an 'ack' with the reply parameters ?
-            if pkt.get('ack') == "data" and pkt.get('id'):
-                if type(retval) is tuple:
-                    args = list(retval)
+            
+            with self.manager.lock_socket(self.sessid):
+                endpoint = pkt['endpoint']
+    
+                if endpoint not in self.namespaces:
+                    self.error("no_such_namespace",
+                        "The endpoint you tried to connect to "
+                        "doesn't exist: %s" % endpoint, endpoint=endpoint)
+                    continue
+                elif endpoint in self.active_ns:
+                    pkt_ns = self.active_ns[endpoint]
                 else:
-                    args = [retval]
-                returning_ack = dict(type='ack', ackId=pkt['id'],
-                                     args=args,
-                                     endpoint=pkt.get('endpoint', ''))
-                self.send_packet(returning_ack)
-
-            # Now, are we still connected ?
-            if not self.connected:
-                self.kill(detach=True)  # ?? what,s the best clean-up
-                                        # when its not a
-                                        # user-initiated disconnect
-                return
+                    pkt_ns = self.add_namespace(endpoint)
+                    
+                retval = pkt_ns.process_packet(pkt)
+    
+                # Has the client requested an 'ack' with the reply parameters ?
+                if pkt.get('ack') == "data" and pkt.get('id'):
+                    if type(retval) is tuple:
+                        args = list(retval)
+                    else:
+                        args = [retval]
+                    returning_ack = dict(type='ack', ackId=pkt['id'],
+                                         args=args,
+                                         endpoint=pkt.get('endpoint', ''))
+                    self.send_packet(returning_ack)
+    
+                # Now, are we still connected ?
+                if not self.connected:
+                    self.kill(detach=True)  # ?? what,s the best clean-up
+                                            # when its not a
+                                            # user-initiated disconnect
+                    return
 
     def _spawn_receiver_loop(self):
-        """Spawns the reader loop.  This is called internall by
+        """Spawns the reader loop.  This is called internally by
         socketio_manage().
         """
         job = gevent.spawn(self._receiver_loop)
@@ -448,32 +464,32 @@ class Socket(object):
         job = gevent.spawn(self._watcher)
         return job
 
-    def _heartbeat(self):
+    def _heartbeat_send(self):
         """Start the heartbeat Greenlet to check connection health."""
-        interval = self.config['heartbeat_interval']
+        timeout = float(self.config['heartbeat_interval'])
         while self.connected:
-            gevent.sleep(interval)
-            # TODO: this process could use a timeout object like the disconnect
-            #       timeout thing, and ONLY send packets when none are sent!
-            #       We would do that by calling timeout.set() for a "sending"
-            #       timeout.  If we're sending 100 messages a second, there is
-            #       no need to push some heartbeats in there also.
-            self.put_client_msg("2::")
+            self.hb_send_timeout.clear()
+            gevent.sleep(0)
+            wait_res = self.hb_send_timeout.wait(timeout=timeout)
+            if not wait_res:#send only if timeouted, i.e. nothing called hb_send_timeout.set()
+                self.put_client_msg("2::")
+                self.manager.heartbeat_sent(self.sessid)#notify the manager so it can notify any distributed copies of the socket 
 
-    def _heartbeat_timeout(self):
+    def _heartbeat_check(self):
         timeout = float(self.config['heartbeat_timeout'])
         while True:
-            self.timeout.clear()
+            self.hb_check_timeout.clear()
             gevent.sleep(0)
-            wait_res = self.timeout.wait(timeout=timeout)
+            wait_res = self.hb_check_timeout.wait(timeout=timeout)
             if not wait_res:
                 if self.connected:
                     log.debug("heartbeat timed out, killing socket")
-                    self.kill(detach=True)
+                    self.kill(detach = True)
                 return
-
+            else:
+                self.heartbeats += 1
 
     def _spawn_heartbeat(self):
         """This functions returns a list of jobs"""
-        self.spawn(self._heartbeat)
-        self.spawn(self._heartbeat_timeout)
+        self.spawn(self._heartbeat_send)
+        self.spawn(self._heartbeat_check)

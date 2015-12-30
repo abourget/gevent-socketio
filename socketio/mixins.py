@@ -4,40 +4,46 @@ generally useful for most simple projects, e.g. Rooms, Broadcast.
 
 You'll likely want to create your own Mixins.
 """
-
-
+                
 class RoomsMixin(object):
-    def __init__(self, *args, **kwargs):
-        super(RoomsMixin, self).__init__(*args, **kwargs)
-        if 'rooms' not in self.session:
-            self.session['rooms'] = set()  # a set of simple strings
-
+    def initialize(self):
+        self.socket.manager.add_endpoint_listener(self.ns_name, 'room_emit', self.room_listener)
+        
     def join(self, room):
         """Lets a user join a room on a specific Namespace."""
-        self.session['rooms'].add(self._get_room_name(room))
-
+        rooms = self.session.get('rooms', None)
+        if rooms is None:
+            rooms = set()# a set of simple strings
+        rooms.add(self.make_room_name(room))
+        self.session['rooms'] = rooms #@todo for now distributed sessions don't detect complex changes
+        
     def leave(self, room):
         """Lets a user leave a room on a specific Namespace."""
-        self.session['rooms'].remove(self._get_room_name(room))
+        rooms = self.session.get('rooms')
+        if rooms:
+            rooms.remove(self.make_room_name(room))
+            self.session['rooms'] = rooms #@todo for now distributed sessions don't detect complex changes
 
-    def _get_room_name(self, room):
+    def make_room_name(self, room):
         return self.ns_name + '_' + room
 
     def emit_to_room(self, room, event, *args):
         """This is sent to all in the room (in this particular Namespace)"""
-        pkt = dict(type="event",
-                   name=event,
-                   args=args,
-                   endpoint=self.ns_name)
-        room_name = self._get_room_name(room)
-        for sessid, socket in self.socket.server.sockets.iteritems():
-            if 'rooms' not in socket.session:
-                continue
-            if room_name in socket.session['rooms'] and self.socket != socket:
-                socket.send_packet(pkt)
-
+        self.socket.manager.notify_endpoint(self.ns_name, 'room_emit', self.socket.sessid, room, event, *args)     
+        
+    def room_listener(self, _manager, _endpoint, _event, sender_sessid, room, room_event, *args):
+        #@todo This is slow
+        rooms = self.session.get('rooms')
+        if rooms and self.socket.sessid != sender_sessid:
+            
+            room_name = self.make_room_name(room)
+            if room_name in rooms:
+                self.emit(room_event, *args)   
 
 class BroadcastMixin(object):
+    def initialize(self):
+        self.socket.manager.add_endpoint_listener(self.ns_name, 'broadcast', self.broadcast_listener)
+        
     """Mix in this class with your Namespace to have a broadcast event method.
 
     Use it like this:
@@ -50,24 +56,16 @@ class BroadcastMixin(object):
         This is sent to all in the sockets in this particular Namespace,
         including itself.
         """
-        pkt = dict(type="event",
-                   name=event,
-                   args=args,
-                   endpoint=self.ns_name)
-
-        for sessid, socket in self.socket.server.sockets.iteritems():
-            socket.send_packet(pkt)
-
+        self.socket.manager.notify_endpoint(self.ns_name, 'broadcast', self.socket.sessid, event, *args)
+        
     def broadcast_event_not_me(self, event, *args):
         """
-        This is sent to all in the sockets in this particular Namespace,
+        This is sent to all the sockets in this particular Namespace,
         except itself.
         """
-        pkt = dict(type="event",
-                   name=event,
-                   args=args,
-                   endpoint=self.ns_name)
-
-        for sessid, socket in self.socket.server.sockets.iteritems():
-            if socket is not self.socket:
-                socket.send_packet(pkt)
+        self.socket.manager.notify_endpoint(self.ns_name, 'broadcast', self.socket.sessid, event, *args, not_me = True)
+        
+    def broadcast_listener(self, _manager, _endpoint, _event, sender_sessid, broadcast_event, *args, **kwargs):
+        not_me = kwargs.get('not_me', False)
+        if not (not_me and sender_sessid == self.socket.sessid):
+            self.emit(broadcast_event, *args) 

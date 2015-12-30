@@ -5,13 +5,13 @@ from socket import error
 
 from gevent.pywsgi import WSGIServer
 
-from socketio.handler import SocketIOHandler
-from socketio.policyserver import FlashPolicyServer
-from socketio.virtsocket import Socket
 from geventwebsocket.handler import WebSocketHandler
 
-__all__ = ['SocketIOServer']
+from socketio.handler import SocketIOHandler
+from socketio.policyserver import FlashPolicyServer
+from socketio.socket_manager import SocketManager
 
+__all__ = ['SocketIOServer']
 
 class SocketIOServer(WSGIServer):
     """A WSGI Server with a resource that acts like an SocketIO."""
@@ -53,7 +53,6 @@ class SocketIOServer(WSGIServer):
             is sent to `stderr` (with gevent 0.13).
 
         """
-        self.sockets = {}
         if 'namespace' in kwargs:
             print("DEPRECATION WARNING: use resource instead of namespace")
             self.resource = kwargs.pop('namespace', 'socket.io')
@@ -87,7 +86,7 @@ class SocketIOServer(WSGIServer):
 
         if not 'handler_class' in kwargs:
             kwargs['handler_class'] = SocketIOHandler
-
+        
 
         if not 'ws_handler_class' in kwargs:
             self.ws_handler_class = WebSocketHandler
@@ -97,9 +96,31 @@ class SocketIOServer(WSGIServer):
         log_file = kwargs.pop('log_file', None)
         if log_file:
             kwargs['log'] = open(log_file, 'a')
+            
+        if not 'socket_manager_config' in kwargs:
+            socket_manager_config = {}
+        else:
+            socket_manager_config = kwargs.pop('socket_manager_config')
 
+        self.config['socket_manager'] = socket_manager_config
+            
+        socket_manager_class = socket_manager_config.get("class", None)
+        if not socket_manager_class:
+            socket_manager_class = SocketManager
+        else:
+            #dynamically import the manager class (must be absolute class path!)
+            module_name, class_name = socket_manager_class.rsplit('.', 1)
+            mod = __import__(module_name, fromlist=[class_name])
+            socket_manager_class = getattr(mod, class_name)
+            
+        self.socket_manager = socket_manager_class(self.config)
+        
         super(SocketIOServer, self).__init__(*args, **kwargs)
 
+    def start(self):
+        self.socket_manager.start()
+        super(SocketIOServer, self).start()
+        
     def start_accepting(self):
         if self.policy_server is not None:
             try:
@@ -111,32 +132,21 @@ class SocketIOServer(WSGIServer):
             except Exception:
                 traceback.print_exc()
                 sys.stderr.write('FAILED to start flash policy server.\n\n')
+                
         super(SocketIOServer, self).start_accepting()
 
     def stop(self, timeout=None):
         if self.policy_server is not None:
             self.policy_server.stop()
+            
+        self.socket_manager.stop()
+        
         super(SocketIOServer, self).stop(timeout=timeout)
 
     def handle(self, socket, address):
         # Pass in the config about timeouts, heartbeats, also...
         handler = self.handler_class(self.config, socket, address, self)
         handler.handle()
-
-    def get_socket(self, sessid=''):
-        """Return an existing or new client Socket."""
-
-        socket = self.sockets.get(sessid)
-
-        if sessid and not socket:
-            return None  # you ask for a session that doesn't exist!
-        if socket is None:
-            socket = Socket(self, self.config)
-            self.sockets[socket.sessid] = socket
-        else:
-            socket.incr_hits()
-
-        return socket
 
 
 def serve(app, **kw):
