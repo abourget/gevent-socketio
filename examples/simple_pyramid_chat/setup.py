@@ -22,9 +22,6 @@ requires = [
     , 'gevent-websocket'
 ]
 
-if sys.version_info[:3] < (2, 5, 0):
-    requires.append('pysqlite')
-
 
 class PyTest(Command):
     user_options = []

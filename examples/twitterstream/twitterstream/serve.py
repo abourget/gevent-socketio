@@ -14,7 +14,7 @@ def broadcast_msg(server, ns_name, event, *args):
                args=args,
                endpoint=ns_name)
 
-    for sessid, socket in server.sockets.iteritems():
+    for sessid, socket in server.sockets.items():
         socket.send_packet(pkt)
 
 
@@ -25,7 +25,7 @@ def send_tweets(server, user, password):
 
 
 def get_credentials():
-    user = raw_input("Twitter username: ")
+    user = input("Twitter username: ")
     password = getpass.getpass("Twitter password: ")
     return (user, password)
 
@@ -68,7 +68,7 @@ def not_found(start_response):
 
 if __name__ == '__main__':
     user, password = get_credentials()
-    print 'Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)'
+    print('Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)')
     server = SocketIOServer(('0.0.0.0', 8080), Application(),
         resource="socket.io", policy_server=True,
         policy_listener=('0.0.0.0', 10843))

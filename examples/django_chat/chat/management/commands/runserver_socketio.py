@@ -47,16 +47,16 @@ class Command(BaseCommand):
         start_new_thread(reload_watcher, ())
         try:
             bind = (self.addr, int(self.port))
-            print
-            print "SocketIOServer running on %s:%s" % bind
-            print
+            print()
+            print("SocketIOServer running on %s:%s" % bind)
+            print()
             handler = self.get_handler(*args, **options)
             server = SocketIOServer(bind, handler, resource="socket.io", policy_server=True)
             server.serve_forever()
         except KeyboardInterrupt:
             if RELOAD:
                 server.stop()
-                print "Reloading..."
+                print("Reloading...")
                 restart_with_reloader()
             else:
                 raise

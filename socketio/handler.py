@@ -1,7 +1,11 @@
 import sys
 import re
 import gevent
-import urlparse
+
+try:
+    from urlparse.parse import parse_qs
+except ImportError:
+    from urlparse import parse_qs
 
 from gevent.pywsgi import WSGIHandler
 from socketio import transports
@@ -80,7 +84,7 @@ class SocketIOHandler(WSGIHandler):
         self.result = [data]
 
     def write_smart(self, data):
-        args = urlparse.parse_qs(self.environ.get("QUERY_STRING"))
+        args = parse_qs(self.environ.get("QUERY_STRING"))
 
         if "jsonp" in args:
             self.write_jsonp_result(data, args["jsonp"][0])
