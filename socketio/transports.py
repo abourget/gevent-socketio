@@ -1,6 +1,6 @@
 import gevent
 import urllib
-import urlparse
+from six.moves.urllib import parse as urlparse
 from geventwebsocket import WebSocketError
 from gevent.queue import Empty
 
@@ -26,7 +26,9 @@ class BaseTransport(object):
         self.handler = handler
         self.config = config
 
-    def write(self, data=""):
+    def write(self, data=b""):
+        if not isinstance(data, bytes):
+            data = data.encode('latin-1')
         # Gevent v 0.13
         if hasattr(self.handler, 'response_headers_list'):
             if 'Content-Length' not in self.handler.response_headers_list:
