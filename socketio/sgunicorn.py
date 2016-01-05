@@ -123,7 +123,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 # Force kill all active the handlers
                 self.log.warning("Worker graceful timeout (pid:%s)" % self.pid)
                 [server.stop(timeout=1) for server in servers]
-            except:
+            except Exception:
                 pass
         else:
             self.socket.setblocking(1)
@@ -175,7 +175,7 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
                 # Force kill all active the handlers
                 self.log.warning("Worker graceful timeout (pid:%s)" % self.pid)
                 server.stop(timeout=1)
-            except:
+            except Exception:
                 pass
 
 
