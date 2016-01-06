@@ -6,7 +6,9 @@ python:
 before_install: "sudo apt-get install python-dev libevent-dev"
 
 # command to install dependencies
-install: pip install nosetests; python setup.py install
+# NOTE gevent-websocket's install_requires equals to a string instead of tuple,
+#  fortunately "pip install" can handle this while "setup.py install" can not
+install: pip install nose gevent-websocket; python setup.py install
 
 # command to run tests
 script: nosetests

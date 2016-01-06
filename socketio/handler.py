@@ -63,11 +63,14 @@ class SocketIOHandler(WSGIHandler):
                                     ",".join(self.transports))
             self.write_smart(data)
 
-    def write_jsonp_result(self, data, wrapper="0"):
+    def write_jsonp_result(self, data, wrapper=None):
         self.start_response("200 OK", [
             ("Content-Type", "application/javascript"),
         ])
-        self.result = ['io.j[%s]("%s");' % (wrapper, data)]
+        if wrapper:
+            self.result = ['io.j[%s]("%s");' % (wrapper, data)]
+        else:
+            self.result = [data]
 
     def write_plain_result(self, data):
         self.start_response("200 OK", [
@@ -84,6 +87,8 @@ class SocketIOHandler(WSGIHandler):
 
         if "jsonp" in args:
             self.write_jsonp_result(data, args["jsonp"][0])
+        elif data.startswith('io.j['):
+            self.write_jsonp_result(data)
         else:
             self.write_plain_result(data)
 
@@ -214,6 +219,7 @@ class SocketIOHandler(WSGIHandler):
             ('Connection', 'close'),
             ('Content-Length', 0)
         ])
+        self.write(None)
 
 
     def handle_disconnect_request(self):
@@ -223,3 +229,4 @@ class SocketIOHandler(WSGIHandler):
             ('Connection', 'close'),
             ('Content-Length', 0)
         ])
+        self.write(None)
