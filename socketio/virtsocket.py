@@ -362,7 +362,7 @@ class Socket(object):
                 continue  # or close the connection ?
             try:
                 pkt = packet.decode(rawdata, self.json_loads)
-            except (ValueError, KeyError, Exception), e:
+            except (ValueError, KeyError, Exception) as e:
                 self.error('invalid_packet',
                     "There was a decoding error when dealing with packet "
                     "with event: %s... (%s)" % (rawdata[:20], e))

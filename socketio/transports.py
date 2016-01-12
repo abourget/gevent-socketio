@@ -1,6 +1,6 @@
 import gevent
 import urllib
-import urlparse
+from urllib.parse import urlparse
 from geventwebsocket import WebSocketError
 from gevent.queue import Empty
 
