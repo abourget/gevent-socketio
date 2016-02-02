@@ -3,7 +3,7 @@ import logging
 from socketio import socketio_manage
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.importlib import import_module
+from importlib import import_module
 
 # for Django 1.3 support
 try:
