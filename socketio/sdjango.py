@@ -3,7 +3,13 @@ import logging
 from socketio import socketio_manage
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.importlib import import_module
+
+try:
+    # Django versions >= 1.9
+    from django.utils.module_loading import import_module
+except ImportError:
+    # Django versions < 1.9
+    from django.utils.importlib import import_module
 
 # for Django 1.3 support
 try:
