@@ -10,6 +10,7 @@ before_install: "sudo apt-get install python-dev libevent-dev"
 
 # command to install dependencies
 #install: pip install nose gevent>=1.1rc5; python setup.py install
+install: "pip install -r pip-requirements.txt; pip install -r pip-requirements-test.txt;"
 
 # command to run tests
 #script: nosetests
