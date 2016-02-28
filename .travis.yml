@@ -2,11 +2,12 @@ language: python
 python:
   - "2.6"
   - "2.7"
+sudo: true
 
 before_install: "sudo apt-get install python-dev libevent-dev"
 
 # command to install dependencies
-install: pip install nosetests; python setup.py install
+install: pip install nose gevent; python setup.py install
 
 # command to run tests
 script: nosetests

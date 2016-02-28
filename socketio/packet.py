@@ -1,3 +1,4 @@
+import six
 from socketio.defaultjson import default_json_dumps, default_json_loads
 
 MSG_TYPES = {
@@ -12,7 +13,7 @@ MSG_TYPES = {
     'noop': 8,
     }
 
-MSG_VALUES = dict((v, k) for k, v in MSG_TYPES.iteritems())
+MSG_VALUES = dict((v, k) for k, v in six.iteritems(MSG_TYPES))
 
 ERROR_REASONS = {
     'transport not supported': 0,
@@ -20,13 +21,13 @@ ERROR_REASONS = {
     'unauthorized': 2
     }
 
-REASONS_VALUES = dict((v, k) for k, v in ERROR_REASONS.iteritems())
+REASONS_VALUES = dict((v, k) for k, v in six.iteritems(ERROR_REASONS))
 
 ERROR_ADVICES = {
     'reconnect': 0,
     }
 
-ADVICES_VALUES = dict((v, k) for k, v in ERROR_ADVICES.iteritems())
+ADVICES_VALUES = dict((v, k) for k, v in six.iteritems(ERROR_ADVICES))
 
 socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args',
                               'ackId', 'reason', 'advice', 'qs', 'id']
@@ -107,7 +108,7 @@ def decode(rawstr, json_loads=default_json_loads):
     Decode a rawstr packet arriving from the socket into a dict.
     """
     decoded_msg = {}
-    split_data = rawstr.split(":", 3)
+    split_data = rawstr.decode('utf-8').split(":", 3)
     msg_type = split_data[0]
     msg_id = split_data[1]
     endpoint = split_data[2]
@@ -153,7 +154,7 @@ def decode(rawstr, json_loads=default_json_loads):
     elif msg_type == "5":  # event
         try:
             data = json_loads(data)
-        except ValueError, e:
+        except ValueError:
             print("Invalid JSON event message", data)
             decoded_msg['args'] = []
         else:
@@ -183,6 +184,7 @@ def decode(rawstr, json_loads=default_json_loads):
                 decoded_msg['reason'] = REASONS_VALUES[int(data)]
             else:
                 decoded_msg['reason'] = ''
+
     elif msg_type == "8":  # noop
         pass
 
