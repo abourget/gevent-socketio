@@ -15,6 +15,7 @@ except ImportError:
 
 def default_json_dumps(data):
     return json.dumps(data, separators=(',', ':'),
+                      sort_keys=True,
                       **json_decimal_args)
 
 def default_json_loads(data):
