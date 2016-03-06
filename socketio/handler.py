@@ -74,7 +74,7 @@ class SocketIOHandler(WSGIHandler):
             ("Access-Control-Allow-Origin", self.environ.get('HTTP_ORIGIN', '*')),
             ("Access-Control-Allow-Credentials", "true"),
             ("Access-Control-Allow-Methods", "POST, GET, OPTIONS"),
-            ("Access-Control-Max-Age", 3600),
+            ("Access-Control-Max-Age", '3600'),
             ("Content-Type", "text/plain"),
         ])
         self.result = [data]
