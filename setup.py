@@ -1,7 +1,20 @@
+import os
+
 from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
 
+CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
+
+def get_reqs(*fns):
+    lst = []
+    for fn in fns:
+        for package in open(os.path.join(CURRENT_DIR, fn)).readlines():
+            package = package.strip()
+            if not package:
+                continue
+            lst.append(package.strip())
+    return lst
 
 class PyTest(TestCommand):
     def finalize_options(self):
@@ -27,10 +40,10 @@ setup(
     license="BSD",
     url="https://github.com/abourget/gevent-socketio",
     download_url="https://github.com/abourget/gevent-socketio",
-    install_requires=("gevent", "gevent-websocket",),
+    install_requires=get_reqs('pip-requirements.txt'),
     setup_requires=('versiontools >= 1.7'),
     cmdclass = {'test': PyTest},
-    tests_require=['pytest', 'mock'],
+    tests_require=get_reqs('pip-requirements-test.txt'),
     packages=find_packages(exclude=["examples", "tests"]),
     classifiers=[
         "Development Status :: 4 - Beta",

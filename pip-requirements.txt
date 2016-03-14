@@ -1,0 +1,3 @@
+gevent>=1.1rc5
+gevent-websocket
+six

@@ -73,3 +73,14 @@ If you want to do all of that in a virtualenv, run::
    . env/bin/activate
    python setup.py develop   # or install
 
+To execute all tests, run:
+
+    tox
+
+To execute all tests for a specific Python version, run something like:
+
+    tox -e py27
+    
+To execute a specific test for a specific Python version, run something like:
+
+    tox -e py27 -- test_packet.py::TestEncodeMessage::test_encode_event
