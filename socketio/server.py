@@ -66,10 +66,17 @@ class SocketIOServer(WSGIServer):
             try:
                 address = args[0][0]
             except TypeError:
-                try:
-                    address = args[0].address[0]
-                except AttributeError:
-                    address = args[0].cfg_addr[0]
+                socket = args[0]
+                if hasattr(socket, 'address'):
+                    # gunicorn < 0.17 socket, might not be bound yet
+                    address = socket.address[0]
+                elif hasattr(socket, 'cfg_addr'):
+                    # gunicorn >= 0.17 socket, might not be bound yet
+                    address = socket.cfg_addr[0]
+                else:
+                    # gunicorn >= 0.19 or other socket.socket. We need to
+                    # assume that it is bound.
+                    address = socket.getsockname()[0]
             policylistener = kwargs.pop('policy_listener', (address, 10843))
             self.policy_server = FlashPolicyServer(policylistener)
         else:
