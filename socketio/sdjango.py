@@ -1,6 +1,8 @@
 import logging
 
 from socketio import socketio_manage
+import django
+from django.conf.urls import url
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -10,8 +12,6 @@ try:
 except ImportError:
     # Django versions < 1.9
     from django.utils.importlib import import_module
-
-from django.conf.urls import patterns, url, include
 
 
 SOCKETIO_NS = {}
@@ -69,4 +69,8 @@ def socketio(request):
     return HttpResponse("")
 
 
-urls = patterns("", (r'', socketio))
+if django.VERSION >= (1, 8,):
+    urls = [url(r'', socketio)]
+else:
+    from django.conf.urls import patterns
+    urls = patterns("", (r'', socketio))
