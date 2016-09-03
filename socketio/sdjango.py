@@ -11,11 +11,7 @@ except ImportError:
     # Django versions < 1.9
     from django.utils.importlib import import_module
 
-# for Django 1.3 support
-try:
-    from django.conf.urls import patterns, url, include
-except ImportError:
-    from django.conf.urls.defaults import patterns, url, include
+from django.conf.urls import patterns, url, include
 
 
 SOCKETIO_NS = {}
@@ -24,7 +20,6 @@ SOCKETIO_NS = {}
 LOADING_SOCKETIO = False
 
 
-        
 def autodiscover():
     """
     Auto-discover INSTALLED_APPS sockets.py modules and fail silently when
@@ -59,11 +54,10 @@ def autodiscover():
 class namespace(object):
     def __init__(self, name=''):
         self.name = name
- 
+
     def __call__(self, handler):
         SOCKETIO_NS[self.name] = handler
         return handler
-
 
 
 @csrf_exempt
