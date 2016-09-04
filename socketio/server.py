@@ -63,13 +63,17 @@ class SocketIOServer(WSGIServer):
         self.transports = kwargs.pop('transports', None)
 
         if kwargs.pop('policy_server', True):
+            wsock = args[0]
             try:
-                address = args[0][0]
-            except TypeError:
-                try:
-                    address = args[0].address[0]
-                except AttributeError:
-                    address = args[0].cfg_addr[0]
+                address, port = wsock.getsockname()
+            except AttributeError:
+              try:
+                  address = wsock[0]
+              except TypeError:
+                  try:
+                      address = wsock.address[0]
+                  except AttributeError:
+                      address = wsock.cfg_addr[0]
             policylistener = kwargs.pop('policy_listener', (address, 10843))
             self.policy_server = FlashPolicyServer(policylistener)
         else:
