@@ -18,6 +18,7 @@ CHANGES = ''
 
 requires = [
     'pyramid'
+    , 'pyramid_mako'
     , 'gevent'
     , 'gevent-socketio'
     , 'pyramid_socketio'
