@@ -32,7 +32,7 @@ Django and BYOF (bring your own framework!).
 Documentation and References
 ============================
 
-You can read the renderered Sphinx docs at:
+You can read the rendered Sphinx docs at:
 
 * http://readthedocs.org/docs/gevent-socketio/en/latest/
 
