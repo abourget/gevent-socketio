@@ -54,7 +54,7 @@ class SocketIOHandler(WSGIHandler):
                     list(self.handler_types.keys()))
 
     def _do_handshake(self, tokens):
-        if tokens["resource"] != self.server.resource:
+        if not tokens["resource"].startswith(self.server.resource):
             self.log_error("socket.io URL mismatch")
         else:
             socket = self.server.get_socket()
