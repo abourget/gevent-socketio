@@ -20,6 +20,7 @@ requires = [
     'pyramid'
     , 'gevent-socketio'
     , 'gevent-websocket'
+    , 'pyramid_mako'
 ]
 
 if sys.version_info[:3] < (2, 5, 0):
