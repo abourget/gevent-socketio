@@ -17,6 +17,7 @@ def simple_route(config, name, url, fn):
 
 def main(global_config, **settings):
     config = Configurator()
+    config.include('pyramid_mako')
 
     simple_route(config, 'index', '/', index)
 
