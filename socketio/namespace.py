@@ -167,14 +167,14 @@ class BaseNamespace(object):
         elif packet_type == 'ack':
             callback = self.socket._pop_ack_callback(packet['ackId'])
             if not callback:
-                print("ERROR: No such callback for ackId %s" % packet['ackId'])
+                print(("ERROR: No such callback for ackId %s" % packet['ackId']))
                 return
             return callback(*(packet['args']))
         elif packet_type == 'disconnect':
             # Force a disconnect on the namespace.
             return self.call_method_with_acl('recv_disconnect', packet)
         else:
-            print("Unprocessed packet", packet)
+            print(("Unprocessed packet", packet))
         # TODO: manage the other packet types: disconnect
 
     def process_event(self, packet):

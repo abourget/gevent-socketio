@@ -248,7 +248,7 @@ class TestDecodeMessage(TestCase):
                                            'id': 1,
                                            'endpoint': '',
                                            'ack': 'data',
-                                           'data': {u'a': u'b'}})
+                                           'data': {'a': 'b'}})
     def test_decode_event(self):
         """decoding an event packet """
         decoded_message = decode('5:::{"name":"woot", "args": ["foo"]}')
@@ -300,7 +300,7 @@ class TestDecodeMessage(TestCase):
         self.assertEqual(decoded_message, {'type': 'ack',
                                            'ackId': 140,
                                            'endpoint': '/chat',
-                                           'args': [u"bob", u"bob2"]})
+                                           'args': ["bob", "bob2"]})
 
     def test_decode_error(self):
         """decoding error packet """

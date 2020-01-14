@@ -51,3 +51,8 @@ nohup.out
 .pydevproject
 .idea/
 /.cache/
+
+
+# envs
+.gevent-socketio_env/
+

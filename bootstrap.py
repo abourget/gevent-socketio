@@ -24,6 +24,7 @@ import sys
 import tempfile
 
 from optparse import OptionParser
+import imp
 
 tmpeggs = tempfile.mkdtemp()
 
@@ -73,7 +74,7 @@ except ImportError:
     try:
         from urllib.request import urlopen
     except ImportError:
-        from urllib2 import urlopen
+        from urllib.request import urlopen
 
     # XXX use a more permanent ez_setup.py URL when available.
     exec(urlopen('https://bitbucket.org/pypa/setuptools/raw/0.7.2/ez_setup.py'
@@ -82,7 +83,7 @@ except ImportError:
     ez['use_setuptools'](**setup_args)
 
     if to_reload:
-        reload(pkg_resources)
+        imp.reload(pkg_resources)
     import pkg_resources
     # This does not (always?) update the default working set.  We will
     # do it.

@@ -18,8 +18,9 @@ The script accepts buildout command-line options, so you can
 use the -c option to specify an alternate configuration file.
 """
 
-import os, shutil, sys, tempfile, urllib, urllib2, subprocess
+import os, shutil, sys, tempfile, urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse, subprocess
 from optparse import OptionParser
+import imp
 
 if sys.platform == 'win32':
     def quote(c):
@@ -50,7 +51,7 @@ if not has_broken_dash_S and 'site' in sys.modules:
     # We will restart with python -S.
     args = sys.argv[:]
     args[0:0] = [sys.executable, '-S']
-    args = map(quote, args)
+    args = list(map(quote, args))
     os.execv(sys.executable, args)
 # Now we are running with -S.  We'll get the clean sys.path, import site
 # because distutils will do it later, and then reset the path and clean
@@ -59,7 +60,7 @@ if not has_broken_dash_S and 'site' in sys.modules:
 clean_path = sys.path[:]
 import site  # imported because of its side effects
 sys.path[:] = clean_path
-for k, v in sys.modules.items():
+for k, v in list(sys.modules.items()):
     if k in ('setuptools', 'pkg_resources') or (
         hasattr(v, '__path__') and
         len(v.__path__) == 1 and
@@ -78,7 +79,7 @@ def normalize_to_url(option, opt_str, value, parser):
     if value:
         if '://' not in value:  # It doesn't smell like a URL.
             value = 'file://%s' % (
-                urllib.pathname2url(
+                urllib.request.pathname2url(
                     os.path.abspath(os.path.expanduser(value))),)
         if opt_str == '--download-base' and not value.endswith('/'):
             # Download base needs a trailing slash to make the world happy.
@@ -161,10 +162,10 @@ try:
     if not hasattr(pkg_resources, '_distribute'):
         raise ImportError
 except ImportError:
-    ez_code = urllib2.urlopen(
+    ez_code = urllib.request.urlopen(
         options.setup_source).read().replace('\r\n', '\n')
     ez = {}
-    exec ez_code in ez
+    exec(ez_code, ez)
     setup_args = dict(to_dir=eggs_dir, download_delay=0)
     if options.download_base:
         setup_args['download_base'] = options.download_base
@@ -172,7 +173,7 @@ except ImportError:
         setup_args['no_fake'] = True
     ez['use_setuptools'](**setup_args)
     if 'pkg_resources' in sys.modules:
-        reload(sys.modules['pkg_resources'])
+        imp.reload(sys.modules['pkg_resources'])
     import pkg_resources
     # This does not (always?) update the default working set.  We will
     # do it.
