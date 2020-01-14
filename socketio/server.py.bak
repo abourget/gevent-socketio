@@ -170,7 +170,7 @@ def serve(app, **kw):
                             policy_server=policy_server,
                             **kw)
     if not _quiet:
-        print(('serving on http://%s:%s' % (host, port)))
+        print('serving on http://%s:%s' % (host, port))
     server.serve_forever()
 
 

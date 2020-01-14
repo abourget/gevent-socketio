@@ -8,7 +8,7 @@ app = Bottle()
 class Hello(namespace.BaseNamespace):
 
     def on_hello(self, data):
-        print("hello", data)
+        print "hello", data
         self.emit('greetings', {'from': 'sockets'})
 
 

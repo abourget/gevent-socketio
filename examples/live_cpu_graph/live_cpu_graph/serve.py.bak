@@ -1,33 +1,26 @@
 from gevent import monkey; monkey.patch_all()
 import gevent
-import tweetstream
-import getpass
+import psutil
 
 from socketio import socketio_manage
 from socketio.server import SocketIOServer
 from socketio.namespace import BaseNamespace
+from socketio.mixins import BroadcastMixin
 
 
-def broadcast_msg(server, ns_name, event, *args):
-    pkt = dict(type="event",
-               name=event,
-               args=args,
-               endpoint=ns_name)
+class CPUNamespace(BaseNamespace, BroadcastMixin):
+    def recv_connect(self):
+        def sendcpu():
+            prev = None
+            while True:
+                vals = psutil.cpu_percent(interval=1, percpu=True)
 
-    for sessid, socket in server.sockets.items():
-        socket.send_packet(pkt)
-
-
-def send_tweets(server, user, password):
-    stream = tweetstream.SampleStream(user, password)
-    for tweet in stream:
-        broadcast_msg(server, '/tweets', 'tweet', tweet)
-
-
-def get_credentials():
-    user = input("Twitter username: ")
-    password = getpass.getpass("Twitter password: ")
-    return (user, password)
+                if prev:
+                    percent = (sum(vals) - sum(prev))
+                    self.emit('cpu_data', {'point': percent})
+                prev = vals
+                gevent.sleep(0.1)
+        self.spawn(sendcpu)
 
 
 class Application(object):
@@ -56,7 +49,7 @@ class Application(object):
             return [data]
 
         if path.startswith("socket.io"):
-            socketio_manage(environ, {'/tweets': BaseNamespace})
+            socketio_manage(environ, {'/cpu': CPUNamespace})
         else:
             return not_found(start_response)
 
@@ -67,10 +60,7 @@ def not_found(start_response):
 
 
 if __name__ == '__main__':
-    user, password = get_credentials()
-    print('Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)')
-    server = SocketIOServer(('0.0.0.0', 8080), Application(),
+    print 'Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)'
+    SocketIOServer(('0.0.0.0', 8080), Application(),
         resource="socket.io", policy_server=True,
-        policy_listener=('0.0.0.0', 10843))
-    gevent.spawn(send_tweets, server, user, password)
-    server.serve_forever()
+        policy_listener=('0.0.0.0', 10843)).serve_forever()

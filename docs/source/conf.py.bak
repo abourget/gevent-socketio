@@ -41,7 +41,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'gevent-socketio'
+project = u'gevent-socketio'
 copyright = '2011-%s, Jeffrey Gelens, Alexandre Bourget, and John Anderson' % datetime.datetime.now().year
 
 
@@ -185,8 +185,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'gevent-socketio.tex', 'gevent-socketio Documentation',
-   'Jeffrey Gelens,Alex Bourget,John Anderson', 'manual'),
+  ('index', 'gevent-socketio.tex', u'gevent-socketio Documentation',
+   u'Jeffrey Gelens,Alex Bourget,John Anderson', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -215,8 +215,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'gevent-socketio', 'gevent-socketio Documentation',
-     ['Jeffrey Gelens,Alex Bourget,John Anderson'], 1)
+    ('index', 'gevent-socketio', u'gevent-socketio Documentation',
+     [u'Jeffrey Gelens,Alex Bourget,John Anderson'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -229,8 +229,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'gevent-socketio', 'gevent-socketio Documentation',
-   'Jeffrey Gelens,Alex Bourget,John Anderson', 'gevent-socketio', 'One line description of project.',
+  ('index', 'gevent-socketio', u'gevent-socketio Documentation',
+   u'Jeffrey Gelens,Alex Bourget,John Anderson', 'gevent-socketio', 'One line description of project.',
    'Miscellaneous'),
 ]
 

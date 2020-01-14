@@ -122,7 +122,7 @@ class TestBaseNamespace(TestCase):
                'id': 1,
                'endpoint': '',
                'ack': 'data',
-               'data': {'a': 'b'}}
+               'data': {u'a': u'b'}}
         data = self.ns.process_packet(pkt)
         self.assertEqual(data, pkt['data'])
         assert not self.environ['socketio'].error.called

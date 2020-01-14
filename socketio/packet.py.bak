@@ -160,7 +160,7 @@ def decode(rawstr, json_loads=default_json_loads):
         try:
             data = json_loads(data)
         except ValueError:
-            print(("Invalid JSON event message", data))
+            print("Invalid JSON event message", data)
             decoded_msg['args'] = []
         else:
             decoded_msg['name'] = data.pop('name')
