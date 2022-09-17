@@ -370,7 +370,7 @@ class Socket(object):
                 continue
 
             if pkt['type'] == 'heartbeat':
-                # This is already dealth with in put_server_msg() when
+                # This is already dealt with in put_server_msg() when
                 # any incoming raw data arrives.
                 continue
 

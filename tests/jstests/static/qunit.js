@@ -1024,7 +1024,7 @@ addEvent( window, "load", QUnit.load );
 onErrorFnPrev = window.onerror;
 
 // Cover uncaught exceptions
-// Returning true will surpress the default browser handler,
+// Returning true will suppress the default browser handler,
 // returning false will let it run.
 window.onerror = function ( error, filePath, linerNr ) {
 	var ret = false;
